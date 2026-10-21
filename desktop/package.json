@@ -1,0 +1,37 @@
+{
+  "name": "ebot-desktop",
+  "productName": "E·BOT",
+  "version": "1.0.0",
+  "description": "用自己的 Claude Code 指揮多個 AI 機器人",
+  "author": "歪計劃 YZ PROJECT STUDIO",
+  "license": "MIT",
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "prepare-app": "node build.mjs",
+    "serve": "node build.mjs && node server.mjs",
+    "start": "node build.mjs && electron .",
+    "dist": "node build.mjs && electron-builder --win --publish never",
+    "release": "node build.mjs && electron-builder --publish always"
+  },
+  "dependencies": {
+    "@playwright/mcp": "0.0.83",
+    "qrcode": "1.5.4",
+    "sql.js": "1.14.2"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "tw.yzproject.ebot",
+    "productName": "E·BOT",
+    "artifactName": "EBOT-Setup-${version}.${ext}",
+    "files": ["main.mjs", "server.mjs", "web/**", "api.js", "schema.sql", "icon.png", "package.json"],
+    "asarUnpack": ["node_modules/@playwright/**", "node_modules/playwright/**", "node_modules/playwright-core/**"],
+    "win": { "target": "nsis", "icon": "icon.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "perMachine": false, "shortcutName": "E·BOT" },
+    "mac": { "target": "dmg", "icon": "icon.png", "category": "public.app-category.productivity" },
+    "publish": { "provider": "github", "owner": "typeu910722-gife", "repo": "ebot" }
+  }
+}

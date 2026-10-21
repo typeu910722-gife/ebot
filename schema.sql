@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT UNIQUE NOT NULL,
   pw TEXT NOT NULL,              -- pbkdf2$iter$salt$hash
   created INTEGER NOT NULL,
-  runner_seen INTEGER DEFAULT 0
+  runner_seen INTEGER DEFAULT 0,
+  settings TEXT                  -- JSON: notes, notifyAll, tg{token,chat}, line{token,to}
 );
 CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY,        -- sha256 of token
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS folders (   -- 分區: bots in the same folder can as
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
+  notes TEXT,                    -- 分區資料: shared facts every bot in the folder reads
   created INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS bots (
@@ -55,6 +57,7 @@ CREATE TABLE IF NOT EXISTS messages (
   conv TEXT NOT NULL,
   by_ TEXT NOT NULL,             -- 'me' | 'sys' | bot id
   text TEXT NOT NULL,
+  files TEXT,                    -- JSON [{id,name,mime}]
   ts INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS msg_user ON messages(user_id, id);
@@ -70,12 +73,21 @@ CREATE TABLE IF NOT EXISTS jobs (
   started INTEGER,
   kind TEXT NOT NULL DEFAULT 'chat', -- chat | open (open the bot's browser for manual login)
   url TEXT,
-  depth INTEGER NOT NULL DEFAULT 0  -- bot-to-bot question hops
+  depth INTEGER NOT NULL DEFAULT 0, -- bot-to-bot question hops
+  finished INTEGER
 );
 CREATE INDEX IF NOT EXISTS job_user ON jobs(user_id, status, id);
 CREATE TABLE IF NOT EXISTS shots (   -- latest browser screenshot per bot
   bot_id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  data TEXT NOT NULL,            -- base64
+  ts INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS files (   -- chat attachments
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
   mime TEXT NOT NULL,
   data TEXT NOT NULL,            -- base64
   ts INTEGER NOT NULL

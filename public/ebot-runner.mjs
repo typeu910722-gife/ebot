@@ -3,46 +3,30 @@
 // Each bot gets its own browser window with its own profile (separate logins, cookies, tabs),
 // so several bots can work at the same time without touching each other.
 //
-// Usage:
+// CLI (cloud version):
 //   first time:  node ebot-runner.mjs <網站網址> <執行器金鑰>
 //   afterwards:  node ebot-runner.mjs
+// The desktop app imports startRunner() instead.
 // Requires: Node 18+, Claude Code (`claude` logged in with /login), Google Chrome.
 
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, extname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, extname, basename } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const VERSION = '3';
+export const VERSION = '4';
 const PW_MCP = '@playwright/mcp@0.0.83';
-const here = dirname(fileURLToPath(import.meta.url));
-const cfgPath = join(here, 'ebot-runner.json');
-const workDir = join(here, 'work');
 const WIN = process.platform === 'win32';
-mkdirSync(join(workDir, 'bots'), { recursive: true });
-if (!existsSync(join(workDir, 'CLAUDE.md')))
-  writeFileSync(join(workDir, 'CLAUDE.md'), '# 給機器人的背景資料\n\n在這裡寫下所有機器人都要知道的固定資訊（網站網址、試算表連結、房號、入住說明範本等）。\n');
-
-let cfg = {};
-if (existsSync(cfgPath)) cfg = JSON.parse(readFileSync(cfgPath, 'utf8'));
-if (process.argv[2]) {
-  cfg = { ...cfg, url: process.argv[2].replace(/\/+$/, ''), token: process.argv[3] };
-  writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
-}
-if (!cfg.url || !cfg.token) {
-  console.error('第一次請執行：node ebot-runner.mjs <網站網址> <執行器金鑰>');
-  process.exit(1);
-}
-const MAX = Math.max(1, Math.min(+cfg.max || 3, 8));   // bots working at the same time
 const POLL_MS = 5000;
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
-const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a);
 
-async function api(path, body) {
+let cfg = {}, workDir = '', MAX = 3, log = (...a) => console.log(new Date().toLocaleTimeString(), ...a);
+
+async function api(path, body, method = 'POST') {
   const r = await fetch(cfg.url + '/api/' + path, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + cfg.token },
-    body: JSON.stringify(body || {})
+    method,
+    headers: { 'content-type': 'application/json', ...(cfg.token ? { authorization: 'Bearer ' + cfg.token } : {}) },
+    body: method === 'GET' ? undefined : JSON.stringify(body || {})
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status);
@@ -55,18 +39,14 @@ function botDir(id) {
   const dir = join(workDir, 'bots', safe);
   mkdirSync(join(dir, 'shots'), { recursive: true });
   const profile = join(dir, 'profile');
-  const npx = WIN ? { command: 'cmd', args: ['/c', 'npx'] } : { command: 'npx', args: [] };
-  writeFileSync(join(dir, 'mcp.json'), JSON.stringify({
-    mcpServers: {
-      browser: {
-        command: npx.command,
-        args: [...npx.args, '-y', PW_MCP, '--browser', 'chrome', '--user-data-dir', profile, '--output-dir', join(dir, 'shots')]
-      }
-    }
-  }, null, 2));
+  const pwArgs = ['--browser', 'chrome', '--user-data-dir', profile, '--output-dir', join(dir, 'shots')];
+  const server = cfg.pwCli
+    ? { command: cfg.nodeBin || process.execPath, args: [cfg.pwCli, ...pwArgs], env: cfg.nodeEnv || {} }   // bundled (desktop app)
+    : WIN ? { command: 'cmd', args: ['/c', 'npx', '-y', PW_MCP, ...pwArgs] } : { command: 'npx', args: ['-y', PW_MCP, ...pwArgs] };
+  writeFileSync(join(dir, 'mcp.json'), JSON.stringify({ mcpServers: { browser: server } }, null, 2));
   return { dir, profile };
 }
-function findChrome() {
+export function findChrome() {
   if (cfg.chrome && existsSync(cfg.chrome)) return cfg.chrome;
   const c = WIN ? [
     join(process.env.PROGRAMFILES || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe'),
@@ -107,6 +87,8 @@ function buildPrompt(job) {
     for (const c of job.colleagues) lines.push(`- ${c.name}：${c.task}`);
     if (job.canAsk) lines.push('需要同事的資料或幫忙時，在回覆中單獨一行寫「@同事名 你的問題」，系統會請對方回答，再把你叫回來繼續。不需要就不要寫。');
   }
+  if (job.notes) lines.push('', '共用資料（所有機器人都要知道）：', job.notes);
+  if (job.folderNotes) lines.push('', `分區「${job.folder}」的資料：`, job.folderNotes);
   lines.push(
     '',
     '規則：',
@@ -115,12 +97,13 @@ function buildPrompt(job) {
     job.bot.page ? `- 你上次停在：${job.bot.page}` : '',
     '- 遇到登入頁、驗證碼、或需要輸入密碼時，停止並回報「需要使用者在電腦上登入」。',
     '- 發訊息給任何人、付款、刪除資料、更改帳號設定：除非使用者在對話中明確下令，否則只準備好內容並請使用者確認，不要執行。',
+    '- 需要使用者核准才能做的事，在回覆最後單獨一行寫「✅待確認：要做的事（一句話）」，然後停下。使用者回「核准：…」後才執行。',
     '- 只回報實際完成的事，做不到就直說。',
     '- 若這次有用瀏覽器：結束前用 browser_take_screenshot 截目前畫面（type 設 jpeg，filename 設 last.jpeg），並在回覆最後一行寫「📍 目前頁面：網址」。',
     '',
     '對話紀錄（舊到新）：'
   );
-  for (const h of job.history) lines.push(`【${h.who}】${h.text}`);
+  for (const h of job.history) lines.push(`【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可用 Read 讀取：${h.paths.join('、')}）` : ''));
   lines.push('', '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
@@ -147,6 +130,16 @@ function runClaude(prompt, dir) {
 // ---------- job handlers ----------
 async function chatJob(job) {
   const { dir } = botDir(job.bot.id);
+  for (const h of job.history) {   // attachments → files the bot can Read
+    h.paths = [];
+    for (const f of h.files || []) {
+      const p = join(dir, 'inputs', f.id.slice(-8) + '-' + basename(f.name).replace(/[^\w.\-\u4e00-\u9fff]/g, '_'));
+      try {
+        if (!existsSync(p)) { const d = await api('file/' + f.id, null, 'GET'); mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, Buffer.from(d.data, 'base64')); }
+        h.paths.push(p);
+      } catch (e) { log('附件下載失敗：' + e.message); }
+    }
+  }
   const start = Date.now() - 1000;
   log(`▶ ${job.bot.name}${job.group ? ' @' + job.group.name : ''}：${job.prompt.slice(0, 40)}`);
   const res = await runClaude(buildPrompt(job), dir);
@@ -180,12 +173,12 @@ function openJob(job) {
 }
 
 // ---------- main loop ----------
-let active = 0, failures = 0, ticking = false;
+let active = 0, failures = 0, ticking = false, stopped = false, onFatal = null;
 async function tick() {
-  if (ticking) return;
+  if (ticking || stopped) return;
   ticking = true;
   try {
-    while (active < MAX) {
+    while (active < MAX && !stopped) {
       const { job } = await api('runner/next');
       failures = 0;
       if (!job) break;
@@ -197,12 +190,38 @@ async function tick() {
   } catch (e) {
     failures++;
     log('連線問題：' + e.message);
-    if (/執行器金鑰|請先登入/.test(e.message)) { console.error('金鑰無效，請到網站「設定」重新產生。'); process.exit(1); }
+    if (/執行器金鑰|請先登入/.test(e.message)) { stopped = true; onFatal?.('金鑰無效，請到網站「設定」重新產生。'); }
   } finally { ticking = false; }
 }
-function schedule() { tick().finally(() => setTimeout(schedule, Math.min(POLL_MS * 2 ** Math.min(failures, 4), 60000))); }
+function schedule() { if (!stopped) tick().finally(() => setTimeout(schedule, Math.min(POLL_MS * 2 ** Math.min(failures, 4), 60000))); }
 
-log(`E·BOT 執行器 v${VERSION} 啟動，連線到 ${cfg.url}，最多 ${MAX} 個機器人同時工作（Ctrl+C 停止）`);
-log('準備瀏覽器工具…');
-spawnSync(WIN ? 'cmd' : 'npx', WIN ? ['/c', 'npx', '-y', PW_MCP, '--version'] : ['-y', PW_MCP, '--version'], { stdio: 'ignore', timeout: 180000 });
-schedule();
+// opts: { url, token, home, max, chrome, pwCli, nodeBin, nodeEnv, log, onFatal }
+export function startRunner(opts) {
+  cfg = { ...opts, url: opts.url.replace(/\/+$/, '') };
+  workDir = join(opts.home, 'work');
+  MAX = Math.max(1, Math.min(+opts.max || 3, 8));
+  if (opts.log) log = opts.log;
+  onFatal = opts.onFatal || null;
+  stopped = false;
+  mkdirSync(join(workDir, 'bots'), { recursive: true });
+  if (!existsSync(join(workDir, 'CLAUDE.md')))
+    writeFileSync(join(workDir, 'CLAUDE.md'), '# 給機器人的背景資料\n\n這個檔案所有機器人都會讀。也可以直接在 E·BOT 的「設定 → 共用資料」和各分區資料裡填寫。\n');
+  log(`E·BOT 執行器 v${VERSION} 啟動，最多 ${MAX} 個機器人同時工作`);
+  if (!cfg.pwCli) {
+    log('準備瀏覽器工具…');
+    spawnSync(WIN ? 'cmd' : 'npx', WIN ? ['/c', 'npx', '-y', PW_MCP, '--version'] : ['-y', PW_MCP, '--version'], { stdio: 'ignore', timeout: 180000 });
+  }
+  schedule();
+  return { stop: () => { stopped = true; }, active: () => active };
+}
+
+// ---------- CLI ----------
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const cfgPath = join(here, 'ebot-runner.json');
+  let c = existsSync(cfgPath) ? JSON.parse(readFileSync(cfgPath, 'utf8')) : {};
+  if (process.argv[2]) { c = { ...c, url: process.argv[2].replace(/\/+$/, ''), token: process.argv[3] }; writeFileSync(cfgPath, JSON.stringify(c, null, 2)); }
+  if (!c.url || !c.token) { console.error('第一次請執行：node ebot-runner.mjs <網站網址> <執行器金鑰>'); process.exit(1); }
+  console.log(`連線到 ${c.url}（Ctrl+C 停止）`);
+  startRunner({ ...c, home: here, onFatal: m => { console.error(m); process.exit(1); } });
+}

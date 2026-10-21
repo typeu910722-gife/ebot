@@ -7,7 +7,8 @@
 - 把機器人拉進群組，依序協作，或用 `@名字` 指定誰做
 - **例行任務**：每天多個固定時間自動執行，可隨時開關
 - **每個機器人有自己的瀏覽器**（獨立 Chrome 設定檔：分頁、登入、Cookie 各自分開），最多 3 個同時工作互不干擾；聊天室裡可看它最後停在哪一頁、或叫電腦打開它的瀏覽器讓你登入
-- 多帳號：每個人登入自己的帳號、連自己的電腦
+- 多帳號雲端版，或下載桌面版（不用帳號、資料只在自己電腦）
+- 核准按鈕、檔案與圖片附件、分區資料與共用資料、Telegram / LINE 通知、工作紀錄
 
 ## 架構
 
@@ -54,3 +55,23 @@
 ## 授權
 
 MIT
+
+## 桌面版（下載安裝，不用帳號）
+
+`desktop/` 是 Windows 安裝版：網頁、資料庫、執行器全部在自己電腦上，不用註冊、不用金鑰，資料不經過雲端。
+
+- 下載：GitHub Releases 的 `EBOT-Setup-x.y.z.exe`
+- 需要：[Claude Code](https://code.claude.com)（安裝後在終端機執行 `claude`、輸入 `/login`）、Google Chrome。不需要另外裝 Node。
+- 手機遙控：設定 → 手機遠端，會產生網址與 8 碼配對碼（Cloudflare 快速通道，網址每次不同）
+- 縮到右下角常駐，可設定開機自動啟動；機器人需要你處理時會跳電腦通知
+- 未簽章的安裝檔第一次執行時，Windows 會顯示「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」
+
+開發：
+```
+cd desktop
+npm install
+npm run serve      # 用 Node 直接跑（不開視窗，自動打開瀏覽器）
+npm start          # Electron 視窗
+npm run dist       # 打包 Windows 安裝檔（Linux 需安裝 wine64 + wine32）
+```
+推送 `v*` 標籤時，GitHub Actions 會在 Windows 上自動打包並附加到 Release。

@@ -1,0 +1,5 @@
+node_modules/
+dist/
+web/
+api.js
+schema.sql

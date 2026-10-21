@@ -56,7 +56,7 @@ async function loadAll(db, userId) {
   const [b, g, f, r] = await db.batch([
     db.prepare('SELECT id,name,task,folder,shot_ts,page FROM bots WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,name,task,members,folder FROM groups_ WHERE user_id=? ORDER BY created').bind(userId),
-    db.prepare('SELECT id,name FROM folders WHERE user_id=? ORDER BY created').bind(userId),
+    db.prepare('SELECT id,name,notes FROM folders WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,conv,name,prompt,times,enabled FROM routines WHERE user_id=? ORDER BY created').bind(userId)
   ]);
   return {
@@ -66,6 +66,30 @@ async function loadAll(db, userId) {
     routines: r.results.map(x => ({ ...x, times: JSON.parse(x.times), enabled: !!x.enabled }))
   };
 }
+async function getSettings(db, userId) {
+  const u = await db.prepare('SELECT settings FROM users WHERE id=?').bind(userId).first();
+  try { return JSON.parse(u?.settings || '{}'); } catch { return {}; }
+}
+const mask = t => (t ? '••••' + String(t).slice(-4) : '');
+async function sendNotify(env, st, text) {
+  const out = [];
+  if (env.onNotify) { try { env.onNotify(text); out.push('桌面'); } catch { } }
+  if (st.tg?.token && st.tg?.chat) {
+    const r = await fetch(`https://api.telegram.org/bot${st.tg.token}/sendMessage`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: st.tg.chat, text: text.slice(0, 4000) })
+    }).catch(() => null);
+    out.push(r?.ok ? 'Telegram' : 'Telegram（失敗）');
+  }
+  if (st.line?.token && st.line?.to) {
+    const r = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + st.line.token },
+      body: JSON.stringify({ to: st.line.to, messages: [{ type: 'text', text: text.slice(0, 4900) }] })
+    }).catch(() => null);
+    out.push(r?.ok ? 'LINE' : 'LINE（失敗）');
+  }
+  return out;
+}
+const needsYou = t => /✅待確認|需要使用者|^⚠/m.test(t);
 const folderOk = (folders, id) => (id && folders.some(f => f.id === id) ? id : null);
 
 // Templates offered in the app
@@ -112,15 +136,25 @@ export async function onRequest({ request: req, env, params }) {
       if (!u || !(await checkPw(String(body.pw || ''), u.pw))) return err('帳號或密碼錯誤', 401);
       return J({ token: await newSession(db, u.id, 'web') });
     }
-    if (path === 'config' && m === 'GET') return J({ signup: env.ALLOW_SIGNUP === 'true' });
+    if (path === 'config' && m === 'GET') return J({ signup: env.ALLOW_SIGNUP === 'true', local: !!env.isLocal, pair: !!env.pairCheck });
+    if (path === 'pair' && m === 'POST') {   // desktop app: phone pairs with a code instead of an account
+      if (!env.pairCheck) return err('這個版本不使用配對碼', 404);
+      if (!env.pairCheck(String(body.code || ''))) return err('配對碼錯誤或已失效', 401);
+      return J({ token: await newSession(db, 'local', 'web', 'phone') });
+    }
 
-    const me = await auth(req, db);
+    const me = env.isLocal ? { user_id: 'local', kind: 'local', name: '本機' } : await auth(req, db);
     if (!me) return err('請先登入', 401);
     const U = me.user_id;
 
+    if (path.startsWith('file/') && m === 'GET') {
+      const f = await db.prepare('SELECT name,mime,data FROM files WHERE id=? AND user_id=?').bind(path.slice(5), U).first();
+      return f ? J(f) : err('找不到檔案', 404);
+    }
+
     // ---------- runner ----------
     if (path.startsWith('runner/')) {
-      if (me.kind !== 'runner') return err('需要執行器金鑰', 403);
+      if (me.kind !== 'runner' && me.kind !== 'local') return err('需要執行器金鑰', 403);
       await db.prepare('UPDATE users SET runner_seen=? WHERE id=?').bind(now(), U).run();
 
       if (path === 'runner/next' && m === 'POST') {
@@ -157,16 +191,19 @@ export async function onRequest({ request: req, env, params }) {
         const bot = bots.find(b => b.id === job.bot_id);
         if (!bot) { await db.prepare("UPDATE jobs SET status='error' WHERE id=?").bind(job.id).run(); return J({ job: null }); }
         const group = groups.find(g => g.id === job.conv);
-        const hist = (await db.prepare('SELECT by_,text FROM messages WHERE user_id=? AND conv=? ORDER BY id DESC LIMIT 30').bind(U, job.conv).all()).results.reverse();
+        const hist = (await db.prepare('SELECT by_,text,files FROM messages WHERE user_id=? AND conv=? ORDER BY id DESC LIMIT 30').bind(U, job.conv).all()).results.reverse();
+        const st = await getSettings(db, U);
         return J({
           job: {
             id: job.id, kind: job.kind, url: job.url, prompt: job.prompt,
             canAsk: job.depth < MAX_ASK_DEPTH,
             bot: { id: bot.id, name: bot.name, task: bot.task, page: bot.page },
             folder: folders.find(f => f.id === bot.folder)?.name || null,
+            folderNotes: folders.find(f => f.id === bot.folder)?.notes || '',
+            notes: st.notes || '',
             colleagues: bots.filter(b => b.id !== bot.id && (b.folder || null) === (bot.folder || null)).map(b => ({ name: b.name, task: b.task })),
             group: group ? { name: group.name, task: group.task, members: group.members.map(name) } : null,
-            history: hist.map(h => ({ who: name(h.by_), text: h.text }))
+            history: hist.map(h => ({ who: name(h.by_), text: h.text, files: h.files ? JSON.parse(h.files) : [] }))
           }
         });
       }
@@ -175,8 +212,14 @@ export async function onRequest({ request: req, env, params }) {
         if (!job) return err('找不到執行中的任務', 404);
         const ok = body.ok !== false;
         const text = clean(body.text, 20000) || (ok ? '（完成，無回覆內容）' : '⚠ 執行失敗');
-        await db.prepare('UPDATE jobs SET status=? WHERE id=?').bind(ok ? 'done' : 'error', job.id).run();
+        await db.prepare('UPDATE jobs SET status=?, finished=? WHERE id=?').bind(ok ? 'done' : 'error', now(), job.id).run();
         await addMsg(db, U, job.conv, job.bot_id, text);
+        if (job.kind === 'chat') {
+          const st = await getSettings(db, U);
+          const who = (await db.prepare('SELECT name FROM bots WHERE id=?').bind(job.bot_id).first())?.name || '機器人';
+          if (!ok || needsYou(text)) await sendNotify(env, st, `【E·BOT】${who} 需要你處理：\n${text.slice(0, 600)}`);
+          else if (st.notifyAll && !JSON.parse(job.chain).length) await sendNotify(env, st, `【E·BOT】${who} 完成：\n${text.slice(0, 600)}`);
+        }
         if (body.page) await db.prepare('UPDATE bots SET page=? WHERE id=? AND user_id=?').bind(clean(body.page, 500), job.bot_id, U).run();
         if (!ok || job.kind !== 'chat') return J({ ok: true });
         let rest = JSON.parse(job.chain).map(s => (typeof s === 'string' ? { b: s, p: job.prompt } : s));
@@ -211,19 +254,20 @@ export async function onRequest({ request: req, env, params }) {
 
     // ---------- web app ----------
     if (path === 'logout' && m === 'POST') {
-      await db.prepare('DELETE FROM sessions WHERE token=?').bind(await sha(req.headers.get('authorization').slice(7))).run();
+      const h = req.headers.get('authorization');
+      if (h) await db.prepare('DELETE FROM sessions WHERE token=?').bind(await sha(h.slice(7))).run();
       return J({ ok: true });
     }
     if (path === 'state' && m === 'GET') {
       const after = +new URL(req.url).searchParams.get('after') || 0;
       const all = await loadAll(db, U);
       const msgs = (await db.prepare(after
-        ? 'SELECT id,conv,by_ AS by,text,ts FROM messages WHERE user_id=? AND id>? ORDER BY id LIMIT 500'
-        : 'SELECT * FROM (SELECT id,conv,by_ AS by,text,ts FROM messages WHERE user_id=? AND ?=0 ORDER BY id DESC LIMIT 500) ORDER BY id')
-        .bind(U, after).all()).results;
+        ? 'SELECT id,conv,by_ AS by,text,files,ts FROM messages WHERE user_id=? AND id>? ORDER BY id LIMIT 500'
+        : 'SELECT * FROM (SELECT id,conv,by_ AS by,text,files,ts FROM messages WHERE user_id=? AND ?=0 ORDER BY id DESC LIMIT 500) ORDER BY id')
+        .bind(U, after).all()).results.map(x => ({ ...x, files: x.files ? JSON.parse(x.files) : [] }));
       const busy = (await db.prepare("SELECT conv,bot_id,status,kind FROM jobs WHERE user_id=? AND status IN ('pending','running')").bind(U).all()).results;
       const u = await db.prepare('SELECT runner_seen FROM users WHERE id=?').bind(U).first();
-      return J({ me: me.name, runnerOnline: now() - (u.runner_seen || 0) < 60000, ...all, msgs, busy });
+      return J({ me: me.name, local: me.kind === 'local', runnerOnline: env.runnerOnline ? env.runnerOnline() : now() - (u?.runner_seen || 0) < 60000, ...all, msgs, busy });
     }
     if (path === 'template' && m === 'POST') {
       const t = TEMPLATES[body.name];
@@ -249,7 +293,7 @@ export async function onRequest({ request: req, env, params }) {
       const name = clean(body.name, 20);
       if (!name) return err('分區名稱要填');
       const id = 'f-' + uid();
-      await db.prepare('INSERT INTO folders (id,user_id,name,created) VALUES (?,?,?,?)').bind(id, U, name, now()).run();
+      await db.prepare('INSERT INTO folders (id,user_id,name,notes,created) VALUES (?,?,?,?,?)').bind(id, U, name, clean(body.notes, 20000), now()).run();
       return J({ id });
     }
     if (path.startsWith('folders/')) {
@@ -257,7 +301,7 @@ export async function onRequest({ request: req, env, params }) {
       if (m === 'PUT') {
         const name = clean(body.name, 20);
         if (!name) return err('分區名稱要填');
-        await db.prepare('UPDATE folders SET name=? WHERE id=? AND user_id=?').bind(name, id, U).run();
+        await db.prepare('UPDATE folders SET name=?, notes=? WHERE id=? AND user_id=?').bind(name, clean(body.notes, 20000), id, U).run();
         return J({ ok: true });
       }
       if (m === 'DELETE') {   // items fall back to 未分區
@@ -377,19 +421,67 @@ export async function onRequest({ request: req, env, params }) {
 
     if (path === 'messages' && m === 'POST') {
       const conv = clean(body.conv, 64), text = clean(body.text, 4000);
-      if (!text) return err('訊息是空的');
+      if (!text && !(body.files || []).length) return err('訊息是空的');
       const { bots, groups } = await loadAll(db, U);
       const bot = bots.find(b => b.id === conv), group = groups.find(g => g.id === conv);
       if (!bot && !group) return err('找不到對話', 404);
-      await addMsg(db, U, conv, 'me', text);
+      const fileIds = (Array.isArray(body.files) ? body.files : []).slice(0, 6).map(x => clean(x, 64));
+      const files = fileIds.length ? (await db.prepare(`SELECT id,name,mime FROM files WHERE user_id=? AND id IN (${fileIds.map(() => '?').join(',')})`).bind(U, ...fileIds).all()).results : [];
+      await db.prepare('INSERT INTO messages (user_id,conv,by_,text,files,ts) VALUES (?,?,?,?,?,?)').bind(U, conv, 'me', text || '（附件）', files.length ? JSON.stringify(files) : null, now()).run();
       let chain;
       if (bot) chain = [bot.id];
       else {
         const named = group.members.filter(id => { const b = bots.find(x => x.id === id); return b && text.includes('@' + b.name); });
         chain = named.length ? named : group.members;
       }
-      await addJob(db, U, conv, chain, text);
+      await addJob(db, U, conv, chain, text || '請處理我傳的附件。');
       return J({ ok: true });
+    }
+    if (path === 'files' && m === 'POST') {
+      const data = String(body.data || ''), name = clean(body.name, 120) || '檔案', mime = clean(body.mime, 100) || 'application/octet-stream';
+      if (!data || data.length > 1_400_000) return err('檔案太大（上限約 1MB）');
+      const id = 'file-' + uid();
+      await db.prepare('INSERT INTO files (id,user_id,name,mime,data,ts) VALUES (?,?,?,?,?,?)').bind(id, U, name, mime, data, now()).run();
+      return J({ id, name, mime });
+    }
+    if (path === 'settings' && m === 'GET') {
+      const st = await getSettings(db, U);
+      return J({ notes: st.notes || '', notifyAll: !!st.notifyAll, tg: { token: mask(st.tg?.token), chat: st.tg?.chat || '' }, line: { token: mask(st.line?.token), to: st.line?.to || '' } });
+    }
+    if (path === 'settings' && m === 'PUT') {
+      const st = await getSettings(db, U);
+      if (body.notes !== undefined) st.notes = clean(body.notes, 20000);
+      if (body.notifyAll !== undefined) st.notifyAll = !!body.notifyAll;
+      for (const k of ['tg', 'line']) if (body[k]) {
+        const cur = st[k] || {};
+        const tok = clean(body[k].token, 300);
+        if (tok && !tok.startsWith('••••')) cur.token = tok;
+        if (body[k].token === '') delete cur.token;
+        const dest = clean(body[k][k === 'tg' ? 'chat' : 'to'], 100);
+        cur[k === 'tg' ? 'chat' : 'to'] = dest;
+        st[k] = cur;
+      }
+      await db.prepare('UPDATE users SET settings=? WHERE id=?').bind(JSON.stringify(st), U).run();
+      return J({ ok: true });
+    }
+    if (path === 'notify/test' && m === 'POST') {
+      const sent = await sendNotify(env, await getSettings(db, U), '【E·BOT】測試通知：設定成功 ✓');
+      return sent.length ? J({ sent }) : err('還沒有設定任何通知管道');
+    }
+    if (path === 'notify/detect' && m === 'POST') {   // find the Telegram chat id from the latest message sent to the bot
+      const st = await getSettings(db, U);
+      if (!st.tg?.token) return err('先填 Telegram Bot Token 並儲存');
+      const r = await fetch(`https://api.telegram.org/bot${st.tg.token}/getUpdates`).then(x => x.json()).catch(() => null);
+      const chat = r?.result?.reverse().find(u => u.message?.chat?.id)?.message.chat.id;
+      if (!chat) return err('找不到訊息。請先用 Telegram 傳任何一句話給你的 bot，再按一次');
+      st.tg.chat = String(chat);
+      await db.prepare('UPDATE users SET settings=? WHERE id=?').bind(JSON.stringify(st), U).run();
+      return J({ chat: String(chat) });
+    }
+    if (path === 'logs' && m === 'GET') {
+      const { bots, groups } = await loadAll(db, U);
+      const rows = (await db.prepare("SELECT id,conv,bot_id,prompt,status,kind,created,started,finished FROM jobs WHERE user_id=? ORDER BY id DESC LIMIT 100").bind(U).all()).results;
+      return J({ logs: rows.map(r => ({ ...r, bot: bots.find(b => b.id === r.bot_id)?.name || '已刪除', convName: (bots.find(b => b.id === r.conv) || groups.find(g => g.id === r.conv))?.name || '', prompt: r.prompt.slice(0, 80) })) });
     }
     if (path.startsWith('shot/') && m === 'GET') {
       const s = await db.prepare('SELECT mime,data,ts FROM shots WHERE bot_id=? AND user_id=?').bind(path.slice(5), U).first();
