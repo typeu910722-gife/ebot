@@ -97,7 +97,7 @@ async function loadMain() {
 async function bundledRunnerOpts() {
   const pwCli = unpacked(join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'));
   return {
-    home: dataDir, pwCli, nodeBin: process.execPath, nodeEnv: { ELECTRON_RUN_AS_NODE: '1' },
+    home: dataDir, pwCli, nodeBin: process.execPath, nodeEnv: { ELECTRON_RUN_AS_NODE: '1' }, getExtToken: () => cfg.extToken || '',
     log: (...a) => console.log(new Date().toLocaleTimeString(), ...a),
     onFatal: m => { logError('runner', m); stopRunner(); cfg.runnerToken = ''; writeCfg(cfg); },
     onDone: (job, res) => {   // desktop notification when a bot needs you or fails
@@ -182,6 +182,8 @@ async function start() {
     onNotify: text => new Notification({ title: 'OCTA', body: text.replace(/^【OCTA】/, '').slice(0, 240), icon: icon() }).on('click', showWindow).show(),
     hooks: {
       openFolder: () => shell.openPath(dataDir),
+      getExtToken: () => cfg.extToken || '',
+      setExtToken: t => { cfg = { ...cfg, extToken: t }; writeCfg(cfg); },
       getAutostart: () => app.getLoginItemSettings({ args: LOGIN_ARGS }).openAtLogin,   // Windows needs the same args to find the entry
       setAutostart: on => app.setLoginItemSettings({ openAtLogin: on, args: LOGIN_ARGS, path: process.execPath })
     }

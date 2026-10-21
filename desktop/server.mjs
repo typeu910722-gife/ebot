@@ -71,7 +71,7 @@ async function openDb(file) {
   return d1;
 }
 // Columns added after a release go here so existing installs upgrade in place.
-const MIGRATIONS = ["ALTER TABLE bots ADD COLUMN engine TEXT NOT NULL DEFAULT 'claude'", 'ALTER TABLE bots ADD COLUMN model TEXT', 'ALTER TABLE users ADD COLUMN engines TEXT', 'ALTER TABLE jobs ADD COLUMN result TEXT', 'ALTER TABLE bots ADD COLUMN avatar TEXT'];
+const MIGRATIONS = ["ALTER TABLE bots ADD COLUMN engine TEXT NOT NULL DEFAULT 'claude'", 'ALTER TABLE bots ADD COLUMN model TEXT', 'ALTER TABLE users ADD COLUMN engines TEXT', 'ALTER TABLE jobs ADD COLUMN result TEXT', 'ALTER TABLE bots ADD COLUMN avatar TEXT', 'ALTER TABLE bots ADD COLUMN browser TEXT'];
 
 // ---------- helpers ----------
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
@@ -245,6 +245,8 @@ export async function startServer(opts = {}) {
       }
     },
     getAutostart: () => false,
+    getExtToken: () => { try { return JSON.parse(readFileSync(join(dataDir, 'desktop.json'), 'utf8')).extToken || ''; } catch { return ''; } },
+    setExtToken: t => { let c = {}; try { c = JSON.parse(readFileSync(join(dataDir, 'desktop.json'), 'utf8')); } catch { } c.extToken = t; writeFileSync(join(dataDir, 'desktop.json'), JSON.stringify(c, null, 2)); },
     setAutostart: () => { throw new Error('只有安裝版支援開機自動啟動'); },
     ...opts.hooks
   };
@@ -271,7 +273,7 @@ export async function startServer(opts = {}) {
         version: APP_VERSION,
         claude: engines.claude, engines,
         chrome: !!findChrome(),
-        autostart: !!hooks.getAutostart(),
+        autostart: !!hooks.getAutostart(), extToken: !!hooks.getExtToken(),
         remote: remote.on ? { on: true, url: remote.url, code: remote.code, qr: await qr(remote.url) } : { on: false }
       });
     }
@@ -281,6 +283,10 @@ export async function startServer(opts = {}) {
       if (p === 'install') { await hooks.installEngine(String(body.engine || '')); return json(res, { ok: true }); }
       if (p === 'open-folder') { hooks.openFolder(); return json(res, { ok: true }); }
       if (p === 'autostart') { hooks.setAutostart(!!body.on); return json(res, { ok: true }); }
+      if (p === 'ext-token') {   // token from the Playwright Extension, kept only on this computer
+        if (body.token !== undefined) hooks.setExtToken(String(body.token).trim().slice(0, 200));
+        return json(res, { set: !!hooks.getExtToken() });
+      }
     } catch (e) { return json(res, { error: e.message }, 400); }
     json(res, { error: '找不到' }, 404);
   }
@@ -298,7 +304,7 @@ export async function startServer(opts = {}) {
   let bundled = {};
   try { bundled = { pwCli: join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'), nodeBin: process.execPath }; } catch { }
   // the desktop app runs the runner itself when signed in to the cloud; local mode runs it here
-  const runner = opts.runner === false ? { stop() { } } : startRunner({ url: `http://127.0.0.1:${localPort}`, token: '', home: dataDir, ...bundled, ...opts.runnerOpts });
+  const runner = opts.runner === false ? { stop() { } } : startRunner({ url: `http://127.0.0.1:${localPort}`, token: '', home: dataDir, getExtToken: () => hooks.getExtToken(), ...bundled, ...opts.runnerOpts });
 
   return {
     url: `http://127.0.0.1:${localPort}`, dataDir, webDir: WEB, desktopApi: (p, body) => callDesktop(p, body),

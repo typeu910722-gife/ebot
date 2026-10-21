@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { dirname, join, extname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const VERSION = '8';
+export const VERSION = '9';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const POLL_MS = 5000;
@@ -34,15 +34,20 @@ async function api(path, body, method = 'POST') {
 }
 
 // ---------- per-bot workspace ----------
-function botDir(id) {
+const extToken = () => (cfg.getExtToken ? cfg.getExtToken() : cfg.extToken) || '';
+// mode 'own': the bot's own Chrome profile (separate logins). mode 'mine': the user's real Chrome through the
+// Playwright Extension, so saved logins and passwords work; each bot gets its own tab group there.
+function botDir(id, mode = 'own') {
   const safe = String(id).replace(/[^\w-]/g, '');
   const dir = join(workDir, 'bots', safe);
   mkdirSync(join(dir, 'shots'), { recursive: true });
   const profile = join(dir, 'profile');
-  const pwArgs = ['--browser', 'chrome', '--user-data-dir', profile, '--output-dir', join(dir, 'shots')];
+  const mine = mode === 'mine';
+  const pwArgs = mine ? ['--extension', '--output-dir', join(dir, 'shots')] : ['--browser', 'chrome', '--user-data-dir', profile, '--output-dir', join(dir, 'shots')];
+  const env = { ...(cfg.pwCli ? cfg.nodeEnv || {} : {}), ...(mine && extToken() ? { PLAYWRIGHT_MCP_EXTENSION_TOKEN: extToken() } : {}) };
   const server = cfg.pwCli
-    ? { command: cfg.nodeBin || process.execPath, args: [cfg.pwCli, ...pwArgs], env: cfg.nodeEnv || {} }   // bundled (desktop app)
-    : WIN ? { command: 'cmd', args: ['/c', 'npx', '-y', PW_MCP, ...pwArgs] } : { command: 'npx', args: ['-y', PW_MCP, ...pwArgs] };
+    ? { command: cfg.nodeBin || process.execPath, args: [cfg.pwCli, ...pwArgs], env }   // bundled (desktop app)
+    : WIN ? { command: 'cmd', args: ['/c', 'npx', '-y', PW_MCP, ...pwArgs], env } : { command: 'npx', args: ['-y', PW_MCP, ...pwArgs], env };
   writeFileSync(join(dir, 'mcp.json'), JSON.stringify({ mcpServers: { browser: server } }, null, 2));
   // the same browser server, in each CLI's own config format
   const put = (f, o) => { mkdirSync(dirname(join(dir, f)), { recursive: true }); writeFileSync(join(dir, f), JSON.stringify(o, null, 2)); };
@@ -100,7 +105,9 @@ function buildPrompt(job) {
     '',
     '規則：',
     `- 用${({ 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', en: '英文（English）', ja: '日文（日本語）' })[job.lang] || '繁體中文'}回覆，簡潔、先給結果。你的最後輸出會原封不動顯示成聊天訊息。`,
-    '- 需要操作網站時，用 browser 工具。這是你專屬的瀏覽器（獨立設定檔，登入狀態會保留），不會影響其他機器人。',
+    job.bot.browser === 'mine'
+      ? '- 需要操作網站時，用 browser 工具。這是使用者自己的 Chrome（有他已登入的網站和已儲存的密碼）。只在你自己的分頁群組裡操作，不要關閉或改動使用者其他分頁。遇到登入頁時，點帳號欄位，從 Chrome 跳出的已儲存帳號中選一個讓它自動填入；不要自己猜或輸入密碼。'
+      : '- 需要操作網站時，用 browser 工具。這是你專屬的瀏覽器（獨立設定檔，登入狀態會保留），不會影響其他機器人。',
     job.bot.page ? `- 你上次停在：${job.bot.page}` : '',
     '- 遇到登入頁、驗證碼、或需要輸入密碼時，停止並回報「需要使用者在電腦上登入」。',
     '- 發訊息給任何人、付款、刪除資料、更改帳號設定：除非使用者在對話中明確下令，否則只準備好內容並請使用者確認，不要執行。',
@@ -204,7 +211,7 @@ async function runEngine(engine, prompt, b, model) {
 
 // ---------- job handlers ----------
 async function chatJob(job) {
-  const b = botDir(job.bot.id), { dir } = b;
+  const b = botDir(job.bot.id, job.bot.browser), { dir } = b;
   for (const h of job.history) {   // attachments → files the bot can Read
     h.paths = [];
     for (const f of h.files || []) {

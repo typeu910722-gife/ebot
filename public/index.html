@@ -198,6 +198,13 @@ form.in .send,form.in .clip{height:46px}
 .upd b{color:var(--gold2);font-weight:500}
 .upd .btn{padding:6px 12px;font-size:13px}
 .upd .ytrack{flex:1 1 100%;width:auto}
+.bchoice{display:grid;gap:8px;letter-spacing:0}
+.bc{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line2);border-radius:12px;padding:10px 12px;cursor:pointer;background:var(--bg)}
+.bc:has(input:checked){border-color:var(--gold);box-shadow:0 0 0 1px rgba(201,169,106,.3)}
+.bc input{accent-color:var(--gold);margin-top:3px}
+.bc span{display:grid;gap:3px}
+.bc b{font-weight:500;color:var(--ink);font-size:14px}
+.bc small{color:var(--mute);font-size:12px;line-height:1.6}
 .tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .tplc{display:grid;gap:2px;text-align:left;border:1px solid var(--line2);background:var(--bg);border-radius:12px;padding:10px 12px}
 .tplc:hover{border-color:var(--line)}
@@ -632,6 +639,10 @@ function sheet(kind,edit){
   <label class="field">${g?'協作規則':'指定任務'}<textarea id="st" required maxlength="4000" placeholder="${g?'誰先做、做完交給誰':'要做什麼、去哪個網站、結果怎麼回報'}">${c?esc(c.task):''}</textarea></label>
   ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
   ${g?'':`<div class="field">頭貼<div class="emos" id="sf_av" data-u>${['',...EMOJIS].map(e=>`<button type="button" class="emo-b${(c?.avatar||'')===e?' on':''}" data-emo="${e}" aria-label="${e||'文字'}">${e||esc((($('sn')?.value)||c?.name||'字').slice(0,1))}</button>`).join('')}<input id="sf_avc" class="emo-in" maxlength="8" placeholder="其他" value="${c?.avatar&&!EMOJIS.includes(c.avatar)?esc(c.avatar):''}" aria-label="自訂 Emoji"></div></div>
+  <div class="field">瀏覽器<div class="bchoice" id="sf_b">
+    <label class="bc"><input type="radio" name="sf_b" value="own" ${c?.browser!=='mine'?'checked':''}><span><b>機器人專屬瀏覽器</b><small>獨立的分頁與登入，不會動到你的 Chrome。第一次用某網站要在「瀏覽器」幫它登入一次。</small></span></label>
+    <label class="bc"><input type="radio" name="sf_b" value="mine" ${c?.browser==='mine'?'checked':''}><span><b>使用我的 Chrome</b><small>直接用你 Chrome 已登入的網站和已儲存的密碼。需要先在設定裡連接 Chrome。</small></span></label>
+  </div></div>
   <label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>
   <label class="field">模型（選填，空白用該工具的預設）<input id="sf_m" maxlength="80" value="${esc(c?.model||'')}"></label>
   <p style="margin-top:-6px" id="sf_hint"></p>`}
@@ -653,7 +664,7 @@ function sheet(kind,edit){
     else{d.dataset.sure=1;d.textContent='再按一次確認刪除'}};
   $('sf').onsubmit=async e=>{e.preventDefault();
     const body={name:$('sn').value,task:$('st').value,folder:$('sf_f').value||null};
-    if(!g){body.avatar=sheet.av?.()||'';body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();if(body.engine==='opencode'&&!body.model){$('se').textContent='OpenCode 需要填模型，例如 deepseek/deepseek-chat';return}}
+    if(!g){body.avatar=sheet.av?.()||'';body.browser=$('veil').querySelector('input[name=sf_b]:checked')?.value||'own';body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();if(body.engine==='opencode'&&!body.model){$('se').textContent='OpenCode 需要填模型，例如 deepseek/deepseek-chat';return}}
     if(g)body.members=[...$('veil').querySelectorAll('.picks input:checked')].map(i=>i.value);
     try{const r=await api(edit?(g?'groups/':'bots/')+cur:(g?'groups':'bots'),edit?'PUT':'POST',body);
       if(!edit)cur=r.id;closeSheet();await refresh();$('app').classList.add('chat')}
@@ -666,7 +677,8 @@ $('browser').onclick=()=>{
   <p>每個機器人在你電腦上有自己的瀏覽器（獨立的分頁、登入和 Cookie），可以同時工作、互不干擾。第一次用某個網站前，先在電腦上幫它登入一次，之後會記住。</p>
   ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
     ${b.shot_ts?`<img class="shot" alt="${esc(b.name)} 最後的畫面" id="img_${id}"><div class="meta">截圖：${ago(b.shot_ts)}${b.page?' · '+esc(b.page):''}</div>`:`<div class="noshot">還沒有畫面。機器人用過瀏覽器後，這裡會顯示它最後停在哪一頁。</div>`}
-    <form data-open="${id}"><input id="u_${id}" placeholder="要開的網址（選填）" value="${esc(b.page||'')}"><button class="btn">在電腦上開啟</button></form></div>`}).join('')}
+    ${b.browser==='mine'?`<div class="meta">這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。</div>`:''}
+    <form data-open="${id}" ${b.browser==='mine'?'hidden':''}><input id="u_${id}" placeholder="要開的網址（選填）" value="${esc(b.page||'')}"><button class="btn">在電腦上開啟</button></form></div>`}).join('')}
   <div class="errmsg" id="be"></div>
   <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
   $('veil').hidden=false;$('sx').onclick=closeSheet;
@@ -751,6 +763,11 @@ async function openSettings(){
     <span>程式版本</span><b>${esc(ds?.version||'')}${UPD?` <button type="button" class="ghost" id="dUpd" style="margin-left:6px;padding:2px 10px">檢查更新</button> <span id="dUpdMsg" style="font-weight:400;color:var(--mute)"></span>`:''}</b></div>
   <div class="row2">${ds?.claude?.ok?'':'<a class="ghost" href="https://code.claude.com" target="_blank" rel="noopener">安裝 Claude Code</a>'}<button class="ghost" id="dLogin">登入 Claude（開終端機）</button><button class="ghost" id="dFolder">打開資料夾</button></div>
   <label class="toggle">開機自動啟動<button type="button" class="sw ${ds?.autostart?'on':''}" id="dAuto"></button></label>
+  <h3>使用我的 Chrome ${ds?.extToken?'<span class="pill p-ok">已連接</span>':'<span class="pill p-off">未連接</span>'}</h3>
+  <p>讓選了「使用我的 Chrome」的機器人，直接用你 Chrome 已登入的網站和已儲存的密碼。每個機器人會在自己的分頁群組裡工作，不會動到你其他分頁。</p>
+  <ol class="ol"><li>在 Chrome 安裝 <a href="https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm" target="_blank" rel="noopener">Playwright Extension</a></li>
+    <li>點 Chrome 右上角的擴充功能圖示，複製畫面上的 PLAYWRIGHT_MCP_EXTENSION_TOKEN</li>
+    <li>貼在這裡並儲存：<div class="row2" style="margin-top:6px"><input id="dExt" type="password" autocomplete="off" placeholder="${ds?.extToken?'已儲存（要更換再貼上新的）':'貼上 token'}" style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--ink);font:inherit"><button class="btn" id="dExtSave">儲存</button>${ds?.extToken?'<button class="ghost" id="dExtDel">移除</button>':''}</div></li></ol>
   ${CFG.local?`<h3>手機遠端</h3>
   <p>開啟後會產生一個網址和配對碼，手機打開網址、輸入配對碼就能使用。關掉就斷開。</p>
   <label class="toggle">手機遠端<button type="button" class="sw ${ds?.remote?.on?'on':''}" id="dRemote"></button></label>
@@ -763,7 +780,8 @@ async function openSettings(){
 curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
   <p>2. 產生金鑰後，第一次執行（之後只要 <code>node octa-runner.mjs</code>）：</p>
   <div class="row2"><button class="btn" id="gen">產生執行器金鑰</button><span style="font-size:12px;color:var(--faint)">會讓舊金鑰失效</span></div>
-  <pre class="code" id="cmd" hidden></pre>`;
+  <pre class="code" id="cmd" hidden></pre>
+  <p>想讓機器人用你 Chrome 已登入的網站和已儲存的密碼：在 Chrome 安裝 <a href="https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm" target="_blank" rel="noopener">Playwright Extension</a>，把它顯示的 token 加到執行器資料夾的 octa-runner.json：<code>"extToken": "你的 token"</code>，再把機器人的瀏覽器設成「使用我的 Chrome」。</p>`;
   $('veil').innerHTML=`<div class="sheet"><h2>設定</h2><p>${CFG.local?'本機':'帳號：'+esc(S.me)}　·　執行器：${S.runnerOnline?'<span class="p-ok">在線</span>':'離線'}</p>
   <div class="row2"><button class="ghost" id="guideBtn">設定指引</button><button class="ghost" id="aiBtn">AI 連線</button><span style="margin-left:auto">${I18N.select('sLang')}</span></div>
   ${runnerHtml}
@@ -798,6 +816,8 @@ curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
     $('dUpdMsg').textContent=I18N.t(u.state==='none'?'已是最新版':u.state==='available'?'有新版本，按左上角「更新」':u.state==='error'?'無法檢查更新':u.state==='downloading'?'下載新版本中…':u.state==='ready'?'新版本已下載好':'檢查中…');renderUpd(u)};
   if(DESK()){
     $('dLogin').onclick=()=>api('desktop/login-claude','POST').catch(e=>alertSheet('無法開啟',e.message));
+    const saveExt=async t=>{try{await api('desktop/ext-token','POST',{token:t});toast(t?'已連接 Chrome':'已移除');openSettings()}catch(e){toast(e.message)}};
+    $('dExtSave').onclick=()=>{const t=$('dExt').value.trim();if(t)saveExt(t)};if($('dExtDel'))$('dExtDel').onclick=()=>saveExt('');
     $('dFolder').onclick=()=>api('desktop/open-folder','POST').catch(()=>{});
     $('dAuto').onclick=async()=>{const on=!$('dAuto').classList.contains('on');$('dAuto').classList.toggle('on',on);await api('desktop/autostart','POST',{on}).catch(()=>{})};
     if($('dMode'))$('dMode').onclick=()=>{closeSheet();boot.show('切換中…');CFG.local?window.octaDesktop.useCloud():window.octaDesktop.useOffline()};

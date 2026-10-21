@@ -32,6 +32,8 @@
 - [x] YZ 進度條：啟動畫面（splash）、網頁載入遮罩、操作中頂部進度條，重要操作期間鎖住畫面
 ## 自動更新
 - [x] electron-updater（GitHub Releases，latest.yml）：啟動 8 秒後與每 6 小時檢查；左上角「更新」→ 下載進度 → 重新啟動並更新；設定可手動檢查
+## 使用我的 Chrome
+- [x] bots.browser='mine'：Playwright MCP --extension 連使用者真正的 Chrome（已登入網站、已儲存密碼），每個機器人自己的分頁群組；extension token 只存在本機（desktop.json / octa-runner.json extToken）；執行器 v9
 ## 待辦
 - [x] 公版清理：範本改通用（助理、研究、門市、民宿），移除個人化字樣；加入「設定指引」（無機器人時自動開啟，可試跑）；README 重寫
 - [x] 倉庫已公開；Release v1.5.0 自動發布 OCTA-Setup.exe（固定網址 releases/latest/download/OCTA-Setup.exe）
