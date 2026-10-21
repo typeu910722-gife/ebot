@@ -71,7 +71,7 @@ async function openDb(file) {
   return d1;
 }
 // Columns added after a release go here so existing installs upgrade in place.
-const MIGRATIONS = ["ALTER TABLE bots ADD COLUMN engine TEXT NOT NULL DEFAULT 'claude'"];
+const MIGRATIONS = ["ALTER TABLE bots ADD COLUMN engine TEXT NOT NULL DEFAULT 'claude'", 'ALTER TABLE bots ADD COLUMN model TEXT'];
 
 // ---------- helpers ----------
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
@@ -220,7 +220,8 @@ export async function startServer(opts = {}) {
     if (p === 'status') {
       const ver = bin => { const c = spawnSync(bin, ['--version'], { shell: WIN, encoding: 'utf8', timeout: 15000, windowsHide: true }); return { ok: c.status === 0, version: (c.stdout || '').trim().split(/\s/).find(x => /\d/.test(x)) || '' }; };
       const { findChrome } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
-      const engines = { claude: ver('claude'), codex: ver('codex'), gemini: ver('gemini') };
+      const { ENGINES } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
+      const engines = Object.fromEntries(Object.entries(ENGINES).map(([k, e]) => [k, ver(e.bin)]));
       return json(res, {
         version: APP_VERSION,
         claude: engines.claude, engines,

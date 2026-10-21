@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { dirname, join, extname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const VERSION = '5';
+export const VERSION = '6';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const POLL_MS = 5000;
@@ -44,9 +44,13 @@ function botDir(id) {
     ? { command: cfg.nodeBin || process.execPath, args: [cfg.pwCli, ...pwArgs], env: cfg.nodeEnv || {} }   // bundled (desktop app)
     : WIN ? { command: 'cmd', args: ['/c', 'npx', '-y', PW_MCP, ...pwArgs] } : { command: 'npx', args: ['-y', PW_MCP, ...pwArgs] };
   writeFileSync(join(dir, 'mcp.json'), JSON.stringify({ mcpServers: { browser: server } }, null, 2));
-  // Gemini CLI reads MCP servers from the workspace's .gemini/settings.json
-  mkdirSync(join(dir, '.gemini'), { recursive: true });
-  writeFileSync(join(dir, '.gemini', 'settings.json'), JSON.stringify({ mcpServers: { browser: { ...server, timeout: 60000, trust: true } } }, null, 2));
+  // the same browser server, in each CLI's own config format
+  const put = (f, o) => { mkdirSync(dirname(join(dir, f)), { recursive: true }); writeFileSync(join(dir, f), JSON.stringify(o, null, 2)); };
+  put('.gemini/settings.json', { mcpServers: { browser: { ...server, timeout: 60000, trust: true } } });
+  put('.qwen/settings.json', { mcpServers: { browser: { ...server, timeout: 60000, trust: true } } });
+  put('.cursor/mcp.json', { mcpServers: { browser: server } });
+  put('copilot-mcp.json', { mcpServers: { browser: { type: 'local', ...server, tools: ['*'] } } });
+  put('opencode.json', { $schema: 'https://opencode.ai/config.json', mcp: { browser: { type: 'local', command: [server.command, ...server.args], environment: server.env || {}, enabled: true } } });
   return { dir, profile, server };
 }
 export function findChrome() {
@@ -114,8 +118,14 @@ function buildPrompt(job) {
 export const ENGINES = {
   claude: { label: 'Claude Code', bin: 'claude', site: 'https://code.claude.com' },
   codex: { label: 'Codex CLI（ChatGPT）', bin: 'codex', site: 'https://developers.openai.com/codex/cli' },
-  gemini: { label: 'Gemini CLI', bin: 'gemini', site: 'https://github.com/google-gemini/gemini-cli' }
+  gemini: { label: 'Gemini CLI', bin: 'gemini', site: 'https://github.com/google-gemini/gemini-cli' },
+  copilot: { label: 'GitHub Copilot CLI', bin: 'copilot', site: 'https://github.com/github/copilot-cli' },
+  cursor: { label: 'Cursor CLI', bin: 'agent', site: 'https://cursor.com/cli' },
+  qwen: { label: 'Qwen Code', bin: 'qwen', site: 'https://github.com/QwenLM/qwen-code' },
+  opencode: { label: 'OpenCode', bin: 'opencode', site: 'https://opencode.ai' }
 };
+const FILE_INSTR = '請先完整讀取目前資料夾裡的 octa-task.md，依照裡面的指示執行。最後的輸出要直接是給使用者看的回覆。';
+const STDIN_INSTR = '請依照標準輸入中的完整指示執行，最後輸出要給使用者看的回覆。';
 function spawnCli(bin, args, dir, input) {
   return new Promise(resolve => {
     const child = spawn(bin, WIN ? args.map(q) : args, { cwd: dir, shell: WIN, windowsHide: true });
@@ -129,26 +139,32 @@ function spawnCli(bin, args, dir, input) {
   });
 }
 const toml = v => (Array.isArray(v) ? '[' + v.map(x => JSON.stringify(String(x))).join(',') + ']' : JSON.stringify(String(v)));
-async function runEngine(engine, prompt, b) {
+async function runEngine(engine, prompt, b, model) {
   const { dir, server } = b;
+  const m = (flag) => (model ? [flag, model] : []);
+  writeFileSync(join(dir, 'octa-task.md'), prompt);   // for CLIs that take the prompt as an argument (avoids Windows length limits)
   let r, text;
-  if (engine === 'codex') {
-    const last = join(dir, '.codex-last.txt');
-    try { writeFileSync(last, ''); } catch { }
-    const c = ['approval_policy="never"', `mcp_servers.browser.command=${toml(server.command)}`, `mcp_servers.browser.args=${toml(server.args)}`,
-      'mcp_servers.browser.startup_timeout_sec=60', 'mcp_servers.browser.default_tools_approval_mode="approve"',
-      ...Object.entries(server.env || {}).map(([k, v]) => `mcp_servers.browser.env.${k}=${toml(v)}`)];
-    r = await spawnCli('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'workspace-write', '-C', dir, '-o', last, ...c.flatMap(x => ['-c', x]), '-'], dir, prompt);
-    try { text = readFileSync(last, 'utf8').trim(); } catch { }
-    text = text || r.out.trim();
-  } else if (engine === 'gemini') {
-    r = await spawnCli('gemini', ['-p', '請依照標準輸入中的完整指示執行，最後輸出要給使用者看的回覆。', '--yolo'], dir, prompt);
-    text = r.out.trim();
-  } else {
-    r = await spawnCli('claude', ['-p', '--output-format', 'text', '--mcp-config', join(dir, 'mcp.json'), '--strict-mcp-config',
+  switch (engine) {
+    case 'codex': {
+      const last = join(dir, '.codex-last.txt');
+      try { writeFileSync(last, ''); } catch { }
+      const c = ['approval_policy="never"', `mcp_servers.browser.command=${toml(server.command)}`, `mcp_servers.browser.args=${toml(server.args)}`,
+        'mcp_servers.browser.startup_timeout_sec=60', 'mcp_servers.browser.default_tools_approval_mode="approve"',
+        ...Object.entries(server.env || {}).map(([k, v]) => `mcp_servers.browser.env.${k}=${toml(v)}`)];
+      r = await spawnCli('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'workspace-write', '-C', dir, '-o', last, ...m('-m'), ...c.flatMap(x => ['-c', x]), '-'], dir, prompt);
+      try { text = readFileSync(last, 'utf8').trim(); } catch { }
+      break;
+    }
+    case 'gemini': r = await spawnCli('gemini', ['-p', STDIN_INSTR, '--yolo', ...m('-m')], dir, prompt); break;
+    case 'qwen': r = await spawnCli('qwen', ['--yolo', ...m('-m'), '-p', STDIN_INSTR], dir, prompt); break;
+    case 'copilot': r = await spawnCli('copilot', ['-p', FILE_INSTR, '-s', '--allow-all-tools', '--allow-all-paths', '--no-color',
+      '--additional-mcp-config', '@' + join(dir, 'copilot-mcp.json'), ...m('--model')], dir, ''); break;
+    case 'cursor': r = await spawnCli('agent', ['-p', '--force', '--approve-mcps', '--output-format', 'text', ...m('--model'), FILE_INSTR], dir, ''); break;
+    case 'opencode': r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, ...m('-m'), FILE_INSTR], dir, ''); break;
+    default: r = await spawnCli('claude', ['-p', '--output-format', 'text', '--mcp-config', join(dir, 'mcp.json'), '--strict-mcp-config', ...m('--model'),
       '--allowedTools', 'mcp__browser,WebFetch,WebSearch,Read,Write,Edit,Glob,Grep'], dir, prompt);
-    text = r.out.trim();
   }
+  text = (text || r.out).replace(/\x1b\[[0-9;]*m/g, '').trim();
   const E = ENGINES[engine] || ENGINES.claude;
   if (r.missing) return { ok: false, text: `⚠ 這台電腦沒有安裝 ${E.label}。請先安裝並登入（${E.site}），或在任務設定把這個機器人改用其他 AI。` };
   if (r.code === 0 && text) return { ok: true, text };
@@ -170,7 +186,7 @@ async function chatJob(job) {
   }
   const start = Date.now() - 1000;
   log(`▶ ${job.bot.name}［${job.bot.engine || 'claude'}］${job.group ? ' @' + job.group.name : ''}：${job.prompt.slice(0, 40)}`);
-  const res = await runEngine(job.bot.engine || 'claude', buildPrompt(job), b);
+  const res = await runEngine(job.bot.engine || 'claude', buildPrompt(job), b, job.bot.model);
   const shot = newestImage(dir, start);
   if (shot && shot.size < 1_100_000) {
     const ext = extname(shot.p).slice(1).toLowerCase();

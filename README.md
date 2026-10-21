@@ -7,6 +7,10 @@
 | Claude | [Claude Code](https://code.claude.com) | `claude` → `/login`（Pro / Max） |
 | ChatGPT | [Codex CLI](https://developers.openai.com/codex/cli) | `codex` → Sign in with ChatGPT |
 | Gemini | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `gemini` → Google 帳號 |
+| GitHub Copilot（GPT／Claude／Gemini） | [Copilot CLI](https://github.com/github/copilot-cli) | `copilot` → `/login` |
+| Cursor | [Cursor CLI](https://cursor.com/cli) | `agent login` |
+| 通義千問 | [Qwen Code](https://github.com/QwenLM/qwen-code) | `qwen` 依畫面登入 |
+| DeepSeek、Grok、Kimi、Mistral、本機 Ollama 等 | [OpenCode](https://opencode.ai) | `opencode auth login`，機器人填模型如 `deepseek/deepseek-chat` |
 
 ## 快速開始（桌面版，推薦）
 
@@ -19,7 +23,7 @@
 
 ## 能做什麼
 
-- **機器人**：每個機器人有自己的指定任務，並可選 Claude、ChatGPT 或 Gemini
+- **機器人**：每個機器人有自己的指定任務，並可選 Claude、ChatGPT、Gemini、Copilot、Cursor、Qwen 或 OpenCode 支援的模型
 - **群組**：把機器人拉進群組依序協作，或用 `@名字` 指定誰做
 - **分區**：區隔不同門市或專案；同分區的機器人可以互相詢問
 - **例行任務**：每天固定時間自動執行，可隨時開關

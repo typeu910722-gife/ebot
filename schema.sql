@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS bots (
   name TEXT NOT NULL,
   task TEXT NOT NULL,
   folder TEXT,
-  engine TEXT NOT NULL DEFAULT 'claude', -- claude | codex | gemini
+  engine TEXT NOT NULL DEFAULT 'claude', -- claude | codex | gemini | copilot | cursor | qwen | opencode
+  model TEXT,                    -- optional model name for the engine
   created INTEGER NOT NULL,
   shot_ts INTEGER,
   page TEXT                      -- last page the bot reported
