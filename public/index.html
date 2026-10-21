@@ -164,6 +164,8 @@ form.in .send,form.in .clip{height:46px}
 /* ---------- sheet ---------- */
 .veil{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:20;padding:16px}
 .sheet{width:min(480px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:14px;max-height:90vh;overflow:auto}
+.sheet>*,.sheet .field{min-width:0}
+.sheet select{width:100%;max-width:100%;text-overflow:ellipsis}
 .sheet h2{margin:0;font-family:var(--tc);font-size:18px}
 .sheet h3{margin:6px 0 0;font-family:var(--tc);font-size:14px;color:var(--gold)}
 .sheet p{margin:0;font-size:13px;color:var(--mute);line-height:1.7}
@@ -185,6 +187,12 @@ form.in .send,form.in .clip{height:46px}
 .aib p{margin:0}
 .ol{margin:0;padding-left:20px;display:grid;gap:10px}
 .ol pre.code{margin-top:4px}
+.emos{display:flex;flex-wrap:wrap;gap:6px;letter-spacing:0}
+.emo-b{width:38px;height:38px;border-radius:10px;border:1px solid var(--line2);background:var(--bg);font-size:20px;line-height:1;display:grid;place-items:center;color:var(--gold2);font-family:var(--tc);transition:transform .12s,border-color .12s}
+.emo-b:hover{transform:scale(1.08)}
+.emo-b.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,169,106,.35)}
+.emo-in{width:76px;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:0 10px;color:var(--ink);font:inherit;font-size:16px;height:38px}
+.emo{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:1.25em;line-height:1}
 .tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .tplc{display:grid;gap:2px;text-align:left;border:1px solid var(--line2);background:var(--bg);border-radius:12px;padding:10px 12px}
 .tplc:hover{border-color:var(--line)}
@@ -408,6 +416,7 @@ const bot=id=>S.bots.find(b=>b.id===id);
 const conv=id=>bot(id)||S.groups.find(g=>g.id===id);
 const isG=id=>id&&id.startsWith('g-');
 const init=n=>esc((n||'?').slice(0,1));
+const avOf=id=>{const b=bot(id);return b?.avatar?`<span class="emo">${esc(b.avatar)}</span>`:init(b?b.name:nameOf(id))};
 const nameOf=by=>by==='me'?'你':by==='sys'?'系統':(bot(by)?.name||'已刪除');
 const convMsgs=id=>S.msgs.filter(m=>m.conv===id);
 let SEEN={};try{SEEN=JSON.parse(localStorage.getItem('octa_seen')||'{}')}catch(e){}
@@ -438,7 +447,7 @@ function render(scroll){
   else if(!S.bots.length)h+=`<div class="empty">還沒有機器人。按「＋ 機器人」，或到「設定」套用範本。</div>`;
   const q=($('q')?.value||'').trim().toLowerCase(),hit=x=>!q||x.name.toLowerCase().includes(q)||(x.task||'').toLowerCase().includes(q);
   const gItem=g=>`<div class="iw"><button class="item ${cur===g.id?'on':''}" data-id="${g.id}"><span class="av grp">${g.members.length}${busyIn(g.id).length?'<i class="dot"></i>':''}</span><span class="t" data-u><b>${esc(g.name)}</b><small>${esc(preview(g.id))}</small></span>${cur!==g.id&&unread(g.id)?`<i class="ub">${unread(g.id)}</i>`:''}</button><button class="more" data-more="${g.id}" aria-label="更多">⋯</button></div>`;
-  const bItem=b=>`<div class="iw"><button class="item ${cur===b.id?'on':''}" data-id="${b.id}"><span class="av" data-u>${init(b.name)}${S.busy.some(x=>x.bot_id===b.id&&x.status==='running')?'<i class="dot"></i>':''}</span><span class="t" data-u><b>${esc(b.name)}</b><small>${esc(preview(b.id))}</small></span>${cur!==b.id&&unread(b.id)?`<i class="ub">${unread(b.id)}</i>`:''}</button><button class="more" data-more="${b.id}" aria-label="更多">⋯</button></div>`;
+  const bItem=b=>`<div class="iw"><button class="item ${cur===b.id?'on':''}" data-id="${b.id}"><span class="av" data-u>${avOf(b.id)}${S.busy.some(x=>x.bot_id===b.id&&x.status==='running')?'<i class="dot"></i>':''}</span><span class="t" data-u><b>${esc(b.name)}</b><small>${esc(preview(b.id))}</small></span>${cur!==b.id&&unread(b.id)?`<i class="ub">${unread(b.id)}</i>`:''}</button><button class="more" data-more="${b.id}" aria-label="更多">⋯</button></div>`;
   const sect=(f,title)=>{const gs=S.groups.filter(g=>(g.folder||null)===f&&hit(g)),bs=S.bots.filter(b=>(b.folder||null)===f&&hit(b));
     if((!f||q)&&!gs.length&&!bs.length)return '';
     return `<div class="sec"><span${f?' data-u':''}>${esc(title)}</span>${f?`<button class="more" data-folder="${f}" aria-label="分區選項">⋯</button>`:''}</div>`+
@@ -453,7 +462,7 @@ function render(scroll){
   if(!c)setHTML($('blank'),!S.loaded?'':S.bots.length?'左邊選一個機器人或群組開始對話':`<div class="guidecard"><div>還沒有機器人。跟著設定指引，幾分鐘就能讓第一個機器人開始工作。</div><button class="btn" onclick="openGuide()">開始設定</button></div>`);
   if(!c){$('mention').innerHTML='';return}
   const g=isG(cur);
-  $('pav').className='av'+(g?' grp':'');$('pav').textContent=g?c.members.length:c.name[0];$('pav').toggleAttribute('data-u',!g)
+  $('pav').className='av'+(g?' grp':'');if(g)$('pav').textContent=c.members.length;else $('pav').innerHTML=avOf(c.id);$('pav').toggleAttribute('data-u',!g)
   $('pname').textContent=c.name;
   const fn=S.folders.find(f=>f.id===c.folder)?.name,rn=S.routines.filter(r=>r.conv===cur&&r.enabled).length;
   $('psub').innerHTML=(fn?`<span data-u>${esc(fn)}</span> · `:'')+(g?`<span data-u>${esc(c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'))}</span>`:esc((ENG[c.engine]||ENG.claude).n)+(c.model?` <span data-u>${esc(c.model)}</span>`:''))+(rn?` · <span>${esc(I18N.t('例行任務'))} ${rn}</span>`:'');
@@ -464,7 +473,7 @@ function render(scroll){
   let mh=convMsgs(cur).map(m=>{
     if(m.by==='sys')return `<div class="sys">${esc(m.text)}<span class="ts">${hm(m.ts)}</span></div>`;
     if(m.by==='me')return `<div class="m me${m.tmp?' tmp':''}"><div class="bx"><div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div><div class="meta">${m.tmp?'傳送中…':hm(m.ts)}</div></div></div>`;
-    return `<div class="m"><span class="av sm" data-u>${init(nameOf(m.by))}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div>${apprHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
+    return `<div class="m"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div>${apprHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
   const bz=busyIn(cur);
   if(bz.length){const run=bz.find(b=>b.status==='running');
     mh+=`<div class="work"><span class="fade">${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器開著，關掉視窗後才會繼續':esc(nameOf(run.bot_id))+' 處理中…'):S.runnerOnline?'排隊中…':'等待電腦上線…'}</span><button id="stop">停止</button></div>`}
@@ -558,6 +567,7 @@ const ENG={
   opencode:{n:'其他模型',full:'其他：DeepSeek／Grok／Kimi／Mistral／本機模型（OpenCode）',tag:'進階',who:'有 DeepSeek、xAI 等的 API 金鑰，或想用電腦本機模型（Ollama）',cost:'依各家 API 計費；本機模型免費',site:'https://opencode.ai',
     npm:'opencode-ai',login:'opencode auth login',hint:'選服務（DeepSeek、xAI、Ollama…）並貼上金鑰；機器人的「模型」要填，例如 deepseek/deepseek-chat',m:'必填，例如 deepseek/deepseek-chat、xai/grok-4、ollama/qwen3'}};
 const engState=k=>S.engines?(S.engines[k]?'ok':'no'):'unknown';
+const EMOJIS=['🤖','🐙','🦊','🐱','🐶','🐼','🦉','🐝','🧠','💬','📋','🧾','📊','📝','🔎','📦','🛎️','🧹','🏨','🛒','📅','💡','⚡','🌟'];
 const TPL=['用瀏覽器打開網站後台','整理成清單或表格','寫入 Google 試算表','擬好訊息給我確認再發','做完回報重點'];
 const TEMPLATES=[{k:'assistant',n:'一般助理',d:'一個機器人，什麼都可以問'},{k:'research',n:'研究小組',d:'查資料 → 整理摘要'},
   {k:'shop',n:'門市小幫手',d:'訂單、客服回覆、日報'},{k:'lodging',n:'民宿入住流程',d:'訂房、打掃清單、入住訊息'}];
@@ -571,10 +581,11 @@ function sheet(kind,edit){
   if(g&&!S.bots.length){alertSheet('先建立機器人','群組需要至少一個機器人成員。');return}
   $('veil').innerHTML=`<form class="sheet" id="sf"><h2>${edit?'任務設定':g?'新群組':'新機器人'}</h2>
   <label class="field">名稱<input id="sn" required maxlength="20" value="${c?esc(c.name):''}" placeholder="${g?'例如：退房檢查':'例如：評論員'}"></label>
-  ${g?`<div class="field">成員（依執行順序）<div class="picks">${S.bots.map(b=>`<label class="pick"><input type="checkbox" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm" data-u>${init(b.name)}</span><span data-u>${esc(b.name)}</span></label>`).join('')}</div></div>`:''}
+  ${g?`<div class="field">成員（依執行順序）<div class="picks">${S.bots.map(b=>`<label class="pick"><input type="checkbox" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm" data-u>${avOf(b.id)}</span><span data-u>${esc(b.name)}</span></label>`).join('')}</div></div>`:''}
   <label class="field">${g?'協作規則':'指定任務'}<textarea id="st" required maxlength="4000" placeholder="${g?'誰先做、做完交給誰':'要做什麼、去哪個網站、結果怎麼回報'}">${c?esc(c.task):''}</textarea></label>
   ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
-  ${g?'':`<label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>
+  ${g?'':`<div class="field">頭貼<div class="emos" id="sf_av" data-u>${['',...EMOJIS].map(e=>`<button type="button" class="emo-b${(c?.avatar||'')===e?' on':''}" data-emo="${e}" aria-label="${e||'文字'}">${e||esc((($('sn')?.value)||c?.name||'字').slice(0,1))}</button>`).join('')}<input id="sf_avc" class="emo-in" maxlength="8" placeholder="其他" value="${c?.avatar&&!EMOJIS.includes(c.avatar)?esc(c.avatar):''}" aria-label="自訂 Emoji"></div></div>
+  <label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>
   <label class="field">模型（選填，空白用該工具的預設）<input id="sf_m" maxlength="80" value="${esc(c?.model||'')}"></label>
   <p style="margin-top:-6px" id="sf_hint"></p>`}
   <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option data-u value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
@@ -583,14 +594,19 @@ function sheet(kind,edit){
   <div class="acts">${edit?'<button type="button" class="del" id="sd">刪除</button>':''}<button type="button" class="no" id="sx">取消</button><button class="btn">${edit?'儲存':'建立'}</button></div></form>`;
   $('veil').hidden=false;$('sn').focus();
   $('sx').onclick=closeSheet;
-  if(!g){const upd=()=>{const e=ENG[$('sf_e').value];$('sf_m').placeholder=e.m;const k=$('sf_e').value;$('sf_hint').innerHTML=engState(k)==='ok'?'<span class="p-ok">這台電腦已連接這個 AI。</span>':`這台電腦還沒連接這個 AI。<a href="#" id="sf_conn">看怎麼連接</a>`;if($('sf_conn'))$('sf_conn').onclick=ev=>{ev.preventDefault();openAI(k)}};$('sf_e').onchange=upd;upd()}
+  if(!g){let av=c?.avatar||'';
+    const box=$('sf_av');box.onclick=e=>{const b=e.target.closest('[data-emo]');if(!b)return;av=b.dataset.emo;$('sf_avc').value='';box.querySelectorAll('.emo-b').forEach(x=>x.classList.toggle('on',x===b))};
+    $('sf_avc').oninput=()=>{av=$('sf_avc').value.trim();box.querySelectorAll('.emo-b').forEach(x=>x.classList.toggle('on',false))};
+    $('sn').addEventListener('input',()=>{const f=box.querySelector('[data-emo=""]');if(f)f.textContent=($('sn').value||'字').slice(0,1)});
+    sheet.av=()=>av;
+    const upd=()=>{const e=ENG[$('sf_e').value];$('sf_m').placeholder=e.m;const k=$('sf_e').value;$('sf_hint').innerHTML=engState(k)==='ok'?'<span class="p-ok">這台電腦已連接這個 AI。</span>':`這台電腦還沒連接這個 AI。<a href="#" id="sf_conn">看怎麼連接</a>`;if($('sf_conn'))$('sf_conn').onclick=ev=>{ev.preventDefault();openAI(k)}};$('sf_e').onchange=upd;upd()}
   if(edit)renderRoutines();
   $('veil').querySelectorAll('.tpl button').forEach(b=>b.onclick=()=>{const t=$('st');t.value=(t.value?t.value+'；':'')+b.textContent});
   if(edit)$('sd').onclick=()=>{const d=$('sd');if(d.dataset.sure){api((g?'groups/':'bots/')+cur,'DELETE').then(()=>{closeSheet();cur=null;lastId=0;refresh();$('app').classList.remove('chat')})}
     else{d.dataset.sure=1;d.textContent='再按一次確認刪除'}};
   $('sf').onsubmit=async e=>{e.preventDefault();
     const body={name:$('sn').value,task:$('st').value,folder:$('sf_f').value||null};
-    if(!g){body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();if(body.engine==='opencode'&&!body.model){$('se').textContent='OpenCode 需要填模型，例如 deepseek/deepseek-chat';return}}
+    if(!g){body.avatar=sheet.av?.()||'';body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();if(body.engine==='opencode'&&!body.model){$('se').textContent='OpenCode 需要填模型，例如 deepseek/deepseek-chat';return}}
     if(g)body.members=[...$('veil').querySelectorAll('.picks input:checked')].map(i=>i.value);
     try{const r=await api(edit?(g?'groups/':'bots/')+cur:(g?'groups':'bots'),edit?'PUT':'POST',body);
       if(!edit)cur=r.id;closeSheet();await refresh();$('app').classList.add('chat')}
@@ -601,7 +617,7 @@ $('browser').onclick=()=>{
   const c=conv(cur),ids=isG(cur)?c.members.filter(bot):[cur];
   $('veil').innerHTML=`<div class="sheet"><h2>機器人的瀏覽器</h2>
   <p>每個機器人在你電腦上有自己的瀏覽器（獨立的分頁、登入和 Cookie），可以同時工作、互不干擾。第一次用某個網站前，先在電腦上幫它登入一次，之後會記住。</p>
-  ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm" data-u>${init(b.name)}</span><b data-u>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
+  ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
     ${b.shot_ts?`<img class="shot" alt="${esc(b.name)} 最後的畫面" id="img_${id}"><div class="meta">截圖：${ago(b.shot_ts)}${b.page?' · '+esc(b.page):''}</div>`:`<div class="noshot">還沒有畫面。機器人用過瀏覽器後，這裡會顯示它最後停在哪一頁。</div>`}
     <form data-open="${id}"><input id="u_${id}" placeholder="要開的網址（選填）" value="${esc(b.page||'')}"><button class="btn">在電腦上開啟</button></form></div>`}).join('')}
   <div class="errmsg" id="be"></div>

@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS bots (
   folder TEXT,
   engine TEXT NOT NULL DEFAULT 'claude', -- claude | codex | gemini | copilot | cursor | qwen | opencode
   model TEXT,                    -- optional model name for the engine
+  avatar TEXT,                   -- optional emoji shown instead of the first letter
   created INTEGER NOT NULL,
   shot_ts INTEGER,
   page TEXT                      -- last page the bot reported
