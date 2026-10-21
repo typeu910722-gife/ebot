@@ -71,7 +71,7 @@ async function openDb(file) {
   return d1;
 }
 // Columns added after a release go here so existing installs upgrade in place.
-const MIGRATIONS = ["ALTER TABLE bots ADD COLUMN engine TEXT NOT NULL DEFAULT 'claude'", 'ALTER TABLE bots ADD COLUMN model TEXT'];
+const MIGRATIONS = ["ALTER TABLE bots ADD COLUMN engine TEXT NOT NULL DEFAULT 'claude'", 'ALTER TABLE bots ADD COLUMN model TEXT', 'ALTER TABLE users ADD COLUMN engines TEXT', 'ALTER TABLE jobs ADD COLUMN result TEXT'];
 
 // ---------- helpers ----------
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
@@ -210,6 +210,31 @@ export async function startServer(opts = {}) {
       else spawn('x-terminal-emulator', ['-e', 'claude'], { detached: true, stdio: 'ignore' }).unref();
     },
     openFolder: () => openExternal(dataDir),
+    installEngine: async (key) => {   // opens a terminal window that installs the tool, then starts its sign-in
+      const { ENGINES } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
+      const e = ENGINES[key];
+      if (!e) throw new Error('沒有這個 AI');
+      const dir = join(dataDir, 'bin'); mkdirSync(dir, { recursive: true });
+      const install = e.npm ? `npm install -g ${e.npm}` : e.install[WIN ? 'win' : 'mac'];
+      if (WIN) {
+        const f = join(dir, `install-${key}.cmd`);
+        writeFileSync(f, ['@echo off', 'chcp 65001 >nul', `title 安裝 ${e.label}`,
+          e.npm ? 'where npm >nul 2>nul || (echo 需要先安裝 Node.js：https://nodejs.org ，裝好後重新按一次「安裝並登入」 & start https://nodejs.org & pause & exit /b)' : '',
+          `echo 正在安裝 ${e.label}…`, install,
+          e.paths ? `set "PATH=${e.paths.win};%PATH%"` : '',
+          'echo.', `echo 安裝完成。接著登入：${e.loginHint}`, 'echo.', e.login,
+          'echo.', 'echo 完成後可以關掉這個視窗，回到 OCTA 按「測試」。', 'pause'].filter(Boolean).join('\r\n'));
+        spawn('cmd', ['/c', 'start', '', f], { detached: true, stdio: 'ignore', windowsHide: false }).unref();
+      } else {
+        const f = join(dir, `install-${key}.command`);
+        writeFileSync(f, ['#!/bin/bash', e.npm ? 'command -v npm >/dev/null || { echo "需要先安裝 Node.js：https://nodejs.org"; read -p "按 Enter 關閉"; exit; }' : '',
+          `echo "正在安裝 ${e.label}…"`, install, e.paths ? `export PATH="${e.paths.mac}:$PATH"` : '',
+          `echo; echo "安裝完成。接著登入：${e.loginHint}"; echo`, e.login, 'echo; read -p "完成後按 Enter 關閉，回到 OCTA 按「測試」"'].filter(Boolean).join('\n'));
+        chmodSync(f, 0o755);
+        if (process.platform === 'darwin') spawn('open', ['-a', 'Terminal', f], { detached: true, stdio: 'ignore' }).unref();
+        else spawn('x-terminal-emulator', ['-e', f], { detached: true, stdio: 'ignore' }).unref();
+      }
+    },
     getAutostart: () => false,
     setAutostart: () => { throw new Error('只有安裝版支援開機自動啟動'); },
     ...opts.hooks
@@ -233,6 +258,7 @@ export async function startServer(opts = {}) {
     try {
       if (p === 'remote') return json(res, await setRemote(!!body.on));
       if (p === 'login-claude') { hooks.loginClaude(); return json(res, { ok: true }); }
+      if (p === 'install') { await hooks.installEngine(String(body.engine || '')); return json(res, { ok: true }); }
       if (p === 'open-folder') { hooks.openFolder(); return json(res, { ok: true }); }
       if (p === 'autostart') { hooks.setAutostart(!!body.on); return json(res, { ok: true }); }
     } catch (e) { return json(res, { error: e.message }, 400); }

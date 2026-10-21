@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { dirname, join, extname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const VERSION = '6.1';
+export const VERSION = '7';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const POLL_MS = 5000;
@@ -115,14 +115,18 @@ function buildPrompt(job) {
   return lines.filter(l => l !== '').join('\n');
 }
 
+// install: { win, mac } shell commands, or npm: package name (needs Node.js); login: command that starts sign-in
 export const ENGINES = {
-  claude: { label: 'Claude Code', bin: 'claude', site: 'https://code.claude.com' },
-  codex: { label: 'Codex CLI（ChatGPT）', bin: 'codex', site: 'https://developers.openai.com/codex/cli' },
-  gemini: { label: 'Gemini CLI', bin: 'gemini', site: 'https://github.com/google-gemini/gemini-cli' },
-  copilot: { label: 'GitHub Copilot CLI', bin: 'copilot', site: 'https://github.com/github/copilot-cli' },
-  cursor: { label: 'Cursor CLI', bin: 'agent', site: 'https://cursor.com/cli' },
-  qwen: { label: 'Qwen Code', bin: 'qwen', site: 'https://github.com/QwenLM/qwen-code' },
-  opencode: { label: 'OpenCode', bin: 'opencode', site: 'https://opencode.ai' }
+  claude: { label: 'Claude Code', bin: 'claude', site: 'https://code.claude.com', login: 'claude', loginHint: '視窗出現後輸入 /login，選 Claude 訂閱帳號',
+    install: { win: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://claude.ai/install.ps1 | iex"', mac: 'curl -fsSL https://claude.ai/install.sh | bash' },
+    paths: { win: '%USERPROFILE%\\.local\\bin', mac: '$HOME/.local/bin' } },
+  codex: { label: 'Codex CLI（ChatGPT）', bin: 'codex', site: 'https://developers.openai.com/codex/cli', npm: '@openai/codex', login: 'codex login', loginHint: '瀏覽器會打開，用 ChatGPT 帳號登入' },
+  gemini: { label: 'Gemini CLI', bin: 'gemini', site: 'https://github.com/google-gemini/gemini-cli', npm: '@google/gemini-cli', login: 'gemini', loginHint: '選「Login with Google」，登入後輸入 /quit 離開' },
+  copilot: { label: 'GitHub Copilot CLI', bin: 'copilot', site: 'https://github.com/github/copilot-cli', npm: '@github/copilot', login: 'copilot', loginHint: '視窗出現後輸入 /login，用 GitHub 帳號登入' },
+  cursor: { label: 'Cursor CLI', bin: 'agent', site: 'https://cursor.com/cli', login: 'agent login', loginHint: '瀏覽器會打開，用 Cursor 帳號登入',
+    install: { win: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm \'https://cursor.com/install?win32=true\' | iex"', mac: 'curl https://cursor.com/install -fsS | bash' } },
+  qwen: { label: 'Qwen Code', bin: 'qwen', site: 'https://github.com/QwenLM/qwen-code', npm: '@qwen-code/qwen-code', login: 'qwen', loginHint: '依畫面選擇登入方式，完成後輸入 /quit 離開' },
+  opencode: { label: 'OpenCode', bin: 'opencode', site: 'https://opencode.ai', npm: 'opencode-ai', login: 'opencode auth login', loginHint: '選你要用的服務（DeepSeek、xAI、Ollama…）並貼上金鑰' }
 };
 const FILE_INSTR = '請先完整讀取目前資料夾裡的 octa-task.md，依照裡面的指示執行。最後的輸出要直接是給使用者看的回覆。';
 const STDIN_INSTR = '請依照標準輸入中的完整指示執行，最後輸出要給使用者看的回覆。';
@@ -134,11 +138,19 @@ function decode(chunks) {
   return utf;
 }
 const installed = {};
-function has(bin) {   // a missing command can't be told apart from a failing one after the fact, so check first
-  if (bin in installed && installed[bin]) return true;
+function has(bin, fresh) {   // a missing command can't be told apart from a failing one after the fact, so check first
+  const c = installed[bin];
+  if (!fresh && c && (c.ok || Date.now() - c.t < 60000)) return c.ok;
   const r = spawnSync(WIN ? 'where' : 'which', [bin], { windowsHide: true });
-  return (installed[bin] = r.status === 0);
+  installed[bin] = { ok: r.status === 0, t: Date.now() };
+  return r.status === 0;
 }
+let lastReport = 0;
+const engineReport = () => {   // tell the app which AI tools this computer has, about once a minute
+  if (Date.now() - lastReport < 60000) return undefined;
+  lastReport = Date.now();
+  return Object.fromEntries(Object.entries(ENGINES).map(([k, e]) => [k, has(e.bin, true)]));
+};
 function spawnCli(bin, args, dir, input) {
   return new Promise(resolve => {
     if (!has(bin)) return resolve({ code: -1, out: '', err: '', missing: true });
@@ -214,6 +226,14 @@ async function chatJob(job) {
   log(`${res.ok ? '✓' : '✗'} ${job.bot.name}`);
 }
 
+async function testJob(job) {
+  const b = botDir('_test-' + job.engine);
+  log(`🔌 測試 ${ENGINES[job.engine]?.label || job.engine}`);
+  const res = await runEngine(job.engine, job.prompt, b, '');
+  lastReport = 0;   // refresh the installed list right after a test
+  await api('runner/done', { id: job.id, ok: res.ok, text: res.text });
+}
+
 function openJob(job) {
   return new Promise(resolve => {
     const { profile } = botDir(job.bot.id);
@@ -239,11 +259,11 @@ async function tick() {
   ticking = true;
   try {
     while (active < MAX && !stopped) {
-      const { job } = await api('runner/next');
+      const { job } = await api('runner/next', { engines: engineReport() });
       failures = 0;
       if (!job) break;
       active++;
-      (job.kind === 'open' ? openJob(job) : chatJob(job))
+      (job.kind === 'open' ? openJob(job) : job.kind === 'test' ? testJob(job) : chatJob(job))
         .catch(e => { log('任務錯誤：' + e.message); return api('runner/done', { id: job.id, ok: false, text: '⚠ ' + e.message }).catch(() => { }); })
         .finally(() => { active--; setTimeout(tick, 300); });
     }

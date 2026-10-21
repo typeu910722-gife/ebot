@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS users (
   pw TEXT NOT NULL,              -- pbkdf2$iter$salt$hash
   created INTEGER NOT NULL,
   runner_seen INTEGER DEFAULT 0,
-  settings TEXT                  -- JSON: notes, notifyAll, tg{token,chat}, line{token,to}
+  settings TEXT,                 -- JSON: notes, notifyAll, tg{token,chat}, line{token,to}
+  engines TEXT                   -- JSON: which AI CLIs the runner found installed
 );
 CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY,        -- sha256 of token
@@ -73,10 +74,11 @@ CREATE TABLE IF NOT EXISTS jobs (
   status TEXT NOT NULL DEFAULT 'pending', -- pending | running | done | error
   created INTEGER NOT NULL,
   started INTEGER,
-  kind TEXT NOT NULL DEFAULT 'chat', -- chat | open (open the bot's browser for manual login)
+  kind TEXT NOT NULL DEFAULT 'chat', -- chat | open (open the bot's browser for manual login) | test
   url TEXT,
   depth INTEGER NOT NULL DEFAULT 0, -- bot-to-bot question hops
-  finished INTEGER
+  finished INTEGER,
+  result TEXT                    -- for kind='test' (AI connection test)
 );
 CREATE INDEX IF NOT EXISTS job_user ON jobs(user_id, status, id);
 CREATE TABLE IF NOT EXISTS shots (   -- latest browser screenshot per bot

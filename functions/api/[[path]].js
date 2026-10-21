@@ -173,6 +173,8 @@ export async function onRequest({ request: req, env, params }) {
     if (path.startsWith('runner/')) {
       if (me.kind !== 'runner' && me.kind !== 'local') return err('需要執行器金鑰', 403);
       await db.prepare('UPDATE users SET runner_seen=? WHERE id=?').bind(now(), U).run();
+      if (body.engines && typeof body.engines === 'object')
+        await db.prepare('UPDATE users SET engines=? WHERE id=?').bind(JSON.stringify(Object.fromEntries(ENGINES.map(k => [k, !!body.engines[k]]))), U).run();
 
       if (path === 'runner/next' && m === 'POST') {
         const { date, hm } = localNow(env);
@@ -203,6 +205,7 @@ export async function onRequest({ request: req, env, params }) {
         if (!job) return J({ job: null });
         const claimed = await db.prepare("UPDATE jobs SET status='running', started=? WHERE id=? AND status='pending'").bind(now(), job.id).run();
         if (!claimed.meta.changes) return J({ job: null });
+        if (job.kind === 'test') return J({ job: { id: job.id, kind: 'test', engine: engineOk(job.url), prompt: job.prompt } });
         const { bots, groups, folders } = all;
         const name = id => id === 'me' ? '使用者' : id === 'sys' ? '系統' : (bots.find(b => b.id === id)?.name || '已刪除的機器人');
         const bot = bots.find(b => b.id === job.bot_id);
@@ -228,6 +231,10 @@ export async function onRequest({ request: req, env, params }) {
         const job = await db.prepare("SELECT * FROM jobs WHERE id=? AND user_id=? AND status='running'").bind(+body.id, U).first();
         if (!job) return err('找不到執行中的任務', 404);
         const ok = body.ok !== false;
+        if (job.kind === 'test') {
+          await db.prepare('UPDATE jobs SET status=?, finished=?, result=? WHERE id=?').bind(ok ? 'done' : 'error', now(), clean(body.text, 3000), job.id).run();
+          return J({ ok: true });
+        }
         const text = clean(body.text, 20000) || (ok ? '（完成，無回覆內容）' : '⚠ 執行失敗');
         await db.prepare('UPDATE jobs SET status=?, finished=? WHERE id=?').bind(ok ? 'done' : 'error', now(), job.id).run();
         await addMsg(db, U, job.conv, job.bot_id, text);
@@ -282,9 +289,9 @@ export async function onRequest({ request: req, env, params }) {
         ? 'SELECT id,conv,by_ AS by,text,files,ts FROM messages WHERE user_id=? AND id>? ORDER BY id LIMIT 500'
         : 'SELECT * FROM (SELECT id,conv,by_ AS by,text,files,ts FROM messages WHERE user_id=? AND ?=0 ORDER BY id DESC LIMIT 500) ORDER BY id')
         .bind(U, after).all()).results.map(x => ({ ...x, files: x.files ? JSON.parse(x.files) : [] }));
-      const busy = (await db.prepare("SELECT conv,bot_id,status,kind FROM jobs WHERE user_id=? AND status IN ('pending','running')").bind(U).all()).results;
-      const u = await db.prepare('SELECT runner_seen FROM users WHERE id=?').bind(U).first();
-      return J({ me: me.name, local: me.kind === 'local', runnerOnline: env.runnerOnline ? env.runnerOnline() : now() - (u?.runner_seen || 0) < 60000, ...all, msgs, busy });
+      const busy = (await db.prepare("SELECT conv,bot_id,status,kind FROM jobs WHERE user_id=? AND kind<>'test' AND status IN ('pending','running')").bind(U).all()).results;
+      const u = await db.prepare('SELECT runner_seen, engines FROM users WHERE id=?').bind(U).first();
+      return J({ me: me.name, local: me.kind === 'local', engines: u?.engines ? JSON.parse(u.engines) : null, runnerOnline: env.runnerOnline ? env.runnerOnline() : now() - (u?.runner_seen || 0) < 60000, ...all, msgs, busy });
     }
     if (path === 'template' && m === 'POST') {
       const t = TEMPLATES[body.name];
@@ -454,6 +461,16 @@ export async function onRequest({ request: req, env, params }) {
       await addJob(db, U, conv, chain, text || '請處理我傳的附件。');
       return J({ ok: true });
     }
+    if (path === 'engine-test' && m === 'POST') {
+      const engine = engineOk(body.engine);
+      const r = await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url) VALUES (?,'__test',?,'[]',?,?,'test',?)")
+        .bind(U, 'test:' + engine, '這是 OCTA 的連線測試，請只回覆兩個字：OK', now(), engine).run();
+      return J({ id: r.meta.last_row_id });
+    }
+    if (path.startsWith('job/') && m === 'GET') {
+      const j = await db.prepare('SELECT status,result FROM jobs WHERE id=? AND user_id=?').bind(+path.slice(4), U).first();
+      return j ? J(j) : err('找不到', 404);
+    }
     if (path === 'files' && m === 'POST') {
       const data = String(body.data || ''), name = clean(body.name, 120) || '檔案', mime = clean(body.mime, 100) || 'application/octet-stream';
       if (!data || data.length > 1_400_000) return err('檔案太大（上限約 1MB）');
@@ -497,8 +514,8 @@ export async function onRequest({ request: req, env, params }) {
     }
     if (path === 'logs' && m === 'GET') {
       const { bots, groups } = await loadAll(db, U);
-      const rows = (await db.prepare("SELECT id,conv,bot_id,prompt,status,kind,created,started,finished FROM jobs WHERE user_id=? ORDER BY id DESC LIMIT 100").bind(U).all()).results;
-      return J({ logs: rows.map(r => ({ ...r, bot: bots.find(b => b.id === r.bot_id)?.name || '已刪除', convName: (bots.find(b => b.id === r.conv) || groups.find(g => g.id === r.conv))?.name || '', prompt: r.prompt.slice(0, 80) })) });
+      const rows = (await db.prepare("SELECT id,conv,bot_id,prompt,status,kind,url,created,started,finished FROM jobs WHERE user_id=? ORDER BY id DESC LIMIT 100").bind(U).all()).results;
+      return J({ logs: rows.map(r => ({ ...r, bot: r.kind === 'test' ? 'AI 連線測試：' + r.url : bots.find(b => b.id === r.bot_id)?.name || '已刪除', convName: (bots.find(b => b.id === r.conv) || groups.find(g => g.id === r.conv))?.name || '', prompt: r.prompt.slice(0, 80) })) });
     }
     if (path.startsWith('shot/') && m === 'GET') {
       const s = await db.prepare('SELECT mime,data,ts FROM shots WHERE bot_id=? AND user_id=?').bind(path.slice(5), U).first();

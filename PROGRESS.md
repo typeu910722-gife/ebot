@@ -16,6 +16,10 @@
 - [x] 任務設定可選 AI 引擎；設定指引顯示 Codex / Gemini 安裝狀態
 - [x] 執行器 v6：再加 copilot、cursor(agent)、qwen、opencode；bots.model 選填；長提示寫入 octa-task.md 給吃參數的 CLI
 - [ ] 各家真實帳號實測（沙盒只驗證到參數 / 設定檔解析：codex、opencode、copilot）
+## AI 連線（易用性）
+- [x] 執行器 v7 回報已安裝的 AI（users.engines）；連線測試工作（jobs.kind='test'，jobs.result）
+- [x] 「AI 連線」頁：每個 AI 的適合對象、費用、安裝／登入步驟、複製按鈕、測試；桌面版一鍵安裝並登入（開終端機跑腳本）
+- [x] 設定指引改為：連上電腦 → 連接 AI → Chrome → 建機器人 → 試跑；機器人 AI 選單顯示已連接狀態
 ## 待辦
 - [x] 公版清理：範本改通用（助理、研究、門市、民宿），移除個人化字樣；加入「設定指引」（無機器人時自動開啟，可試跑）；README 重寫
 - [ ] 倉庫改公開（需 Yz 在 GitHub 設定）

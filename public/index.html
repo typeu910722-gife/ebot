@@ -142,6 +142,16 @@ form.in textarea{flex:1;min-width:0;background:var(--panel);border:1px solid var
 .acts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
 .acts .no{background:none;border:1px solid var(--line2);border-radius:10px;padding:9px 16px;color:var(--mute)}
 .acts .del{margin-right:auto;background:none;border:1px solid rgba(224,138,109,.4);border-radius:10px;padding:9px 14px;color:var(--prio)}
+.ais{display:grid;gap:8px}
+.aic{border:1px solid var(--line2);border-radius:12px;background:var(--bg)}
+.aic[open]{border-color:var(--line)}
+.aic summary{display:flex;gap:8px;align-items:center;padding:12px 14px;cursor:pointer;list-style:none}
+.aic summary::-webkit-details-marker{display:none}
+.aic summary b{font-weight:500;font-size:15px;flex:1;font-family:var(--tc)}
+.aib{padding:0 14px 14px;display:grid;gap:10px;font-size:13px;color:var(--mute);line-height:1.7;min-width:0}
+.aib p{margin:0}
+.ol{margin:0;padding-left:20px;display:grid;gap:10px}
+.ol pre.code{margin-top:4px}
 .tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .tplc{display:grid;gap:2px;text-align:left;border:1px solid var(--line2);background:var(--bg);border-radius:12px;padding:10px 12px}
 .tplc:hover{border-color:var(--line)}
@@ -269,7 +279,7 @@ function logout(silent){ if(!silent&&TOKEN)api('logout','POST').catch(()=>{});
 /* ---------- data ---------- */
 async function refresh(){
   try{const d=await api('state'+(lastId?'?after='+lastId:''));
-    Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline});
+    Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines});
     if(lastId)S.msgs.push(...d.msgs);else S.msgs=d.msgs;
     if(d.msgs.length)lastId=d.msgs[d.msgs.length-1].id;
     if(cur&&!conv(cur))cur=null;
@@ -321,7 +331,7 @@ function render(scroll){
   $('pav').className='av'+(g?' grp':'');$('pav').textContent=g?c.members.length+'人':c.name[0];
   $('pname').textContent=c.name;
   const fn=S.folders.find(f=>f.id===c.folder)?.name,rn=S.routines.filter(r=>r.conv===cur&&r.enabled).length;
-  $('psub').textContent=(fn?fn+' · ':'')+(g?c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'):(ENG[c.engine]||ENG.claude).s+(c.model?' '+c.model:''))+(rn?` · ${rn} 個例行任務`:'');
+  $('psub').textContent=(fn?fn+' · ':'')+(g?c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'):(ENG[c.engine]||ENG.claude).n+(c.model?' '+c.model:''))+(rn?` · ${rn} 個例行任務`:'');
   $('task').innerHTML='<em>'+(g?'協作規則':'指定任務')+'</em>'+esc(c.task);
   $('mention').innerHTML=g?c.members.map(id=>bot(id)?`<button data-at="${esc(bot(id).name)}">@${esc(bot(id).name)}</button>`:'').join(''):'';
   const box=$('msgs'),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;
@@ -379,13 +389,21 @@ $('f').onsubmit=async e=>{e.preventDefault();const v=$('msg').value.trim();
 
 /* ---------- sheets ---------- */
 const ENG={
-  claude:{n:'Claude（Claude Code）',s:'Claude',site:'https://code.claude.com',login:'claude → /login（Pro / Max）',m:'例如 sonnet、opus'},
-  codex:{n:'ChatGPT（Codex CLI）',s:'ChatGPT',site:'https://developers.openai.com/codex/cli',login:'codex → Sign in with ChatGPT',m:'例如 gpt-5.5'},
-  gemini:{n:'Gemini（Gemini CLI）',s:'Gemini',site:'https://github.com/google-gemini/gemini-cli',login:'gemini → Google 帳號（有免費額度）',m:'例如 gemini-3-pro'},
-  copilot:{n:'GitHub Copilot（GPT／Claude／Gemini）',s:'Copilot',site:'https://github.com/github/copilot-cli',login:'copilot → /login（Copilot 訂閱）',m:'例如 gpt-5.5、claude-sonnet-4.6'},
-  cursor:{n:'Cursor（Cursor CLI）',s:'Cursor',site:'https://cursor.com/cli',login:'agent login（Cursor 訂閱）',m:'例如 gpt-5、sonnet-4'},
-  qwen:{n:'通義千問（Qwen Code）',s:'Qwen',site:'https://github.com/QwenLM/qwen-code',login:'qwen → 依畫面登入',m:'例如 qwen3-coder-plus'},
-  opencode:{n:'其他：DeepSeek／Grok／Kimi／Mistral／本機模型（OpenCode）',s:'OpenCode',site:'https://opencode.ai',login:'opencode auth login → 選供應商',m:'必填，例如 deepseek/deepseek-chat、xai/grok-4、moonshotai/kimi-k2、ollama/qwen3'}};
+  claude:{n:'Claude',full:'Claude（Claude Code）',tag:'推薦',who:'有 Claude Pro／Max 訂閱',cost:'用你的 Claude 訂閱，不另外收費',site:'https://code.claude.com',
+    win:'irm https://claude.ai/install.ps1 | iex',mac:'curl -fsSL https://claude.ai/install.sh | bash',login:'claude',hint:'出現畫面後輸入 /login，選 Claude 訂閱帳號',m:'例如 sonnet、opus'},
+  codex:{n:'ChatGPT',full:'ChatGPT（Codex CLI）',who:'有 ChatGPT Plus／Pro 等方案',cost:'用你的 ChatGPT 訂閱',site:'https://developers.openai.com/codex/cli',
+    npm:'@openai/codex',login:'codex login',hint:'瀏覽器會打開，用 ChatGPT 帳號登入',m:'例如 gpt-5.5'},
+  gemini:{n:'Gemini',full:'Gemini（Gemini CLI）',tag:'免費額度',who:'有 Google 帳號就能用',cost:'個人 Google 帳號有每日免費額度',site:'https://github.com/google-gemini/gemini-cli',
+    npm:'@google/gemini-cli',login:'gemini',hint:'選 Login with Google，登入後輸入 /quit 離開',m:'例如 gemini-3-pro'},
+  copilot:{n:'GitHub Copilot',full:'GitHub Copilot（GPT／Claude／Gemini）',who:'有 GitHub Copilot 訂閱',cost:'一個訂閱可選多家模型',site:'https://github.com/github/copilot-cli',
+    npm:'@github/copilot',login:'copilot',hint:'出現畫面後輸入 /login，用 GitHub 帳號登入',m:'例如 gpt-5.5、claude-sonnet-4.6'},
+  cursor:{n:'Cursor',full:'Cursor（Cursor CLI）',who:'有 Cursor 訂閱',cost:'用你的 Cursor 訂閱',site:'https://cursor.com/cli',
+    win:"irm 'https://cursor.com/install?win32=true' | iex",mac:'curl https://cursor.com/install -fsS | bash',login:'agent login',hint:'瀏覽器會打開，用 Cursor 帳號登入',m:'例如 gpt-5、sonnet-4'},
+  qwen:{n:'通義千問',full:'通義千問（Qwen Code）',who:'有阿里雲／Qwen 帳號',cost:'依 Qwen 官方方案',site:'https://github.com/QwenLM/qwen-code',
+    npm:'@qwen-code/qwen-code',login:'qwen',hint:'依畫面選擇登入方式，完成後輸入 /quit 離開',m:'例如 qwen3-coder-plus'},
+  opencode:{n:'其他模型',full:'其他：DeepSeek／Grok／Kimi／Mistral／本機模型（OpenCode）',tag:'進階',who:'有 DeepSeek、xAI 等的 API 金鑰，或想用電腦本機模型（Ollama）',cost:'依各家 API 計費；本機模型免費',site:'https://opencode.ai',
+    npm:'opencode-ai',login:'opencode auth login',hint:'選服務（DeepSeek、xAI、Ollama…）並貼上金鑰；機器人的「模型」要填，例如 deepseek/deepseek-chat',m:'必填，例如 deepseek/deepseek-chat、xai/grok-4、ollama/qwen3'}};
+const engState=k=>S.engines?(S.engines[k]?'ok':'no'):'unknown';
 const TPL=['用瀏覽器打開網站後台','整理成清單或表格','寫入 Google 試算表','擬好訊息給我確認再發','做完回報重點'];
 const TEMPLATES=[{k:'assistant',n:'一般助理',d:'一個機器人，什麼都可以問'},{k:'research',n:'研究小組',d:'查資料 → 整理摘要'},
   {k:'shop',n:'門市小幫手',d:'訂單、客服回覆、日報'},{k:'lodging',n:'民宿入住流程',d:'訂房、打掃清單、入住訊息'}];
@@ -402,7 +420,7 @@ function sheet(kind,edit){
   ${g?`<div class="field">成員（依執行順序）<div class="picks">${S.bots.map(b=>`<label class="pick"><input type="checkbox" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm">${init(b.name)}</span>${esc(b.name)}</label>`).join('')}</div></div>`:''}
   <label class="field">${g?'協作規則':'指定任務'}<textarea id="st" required maxlength="4000" placeholder="${g?'誰先做、做完交給誰':'要做什麼、去哪個網站、結果怎麼回報'}">${c?esc(c.task):''}</textarea></label>
   ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
-  ${g?'':`<label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.n}</option>`).join('')}</select></label>
+  ${g?'':`<label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>
   <label class="field">模型（選填，空白用該工具的預設）<input id="sf_m" maxlength="80" value="${esc(c?.model||'')}"></label>
   <p style="margin-top:-6px" id="sf_hint"></p>`}
   <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
@@ -411,7 +429,7 @@ function sheet(kind,edit){
   <div class="acts">${edit?'<button type="button" class="del" id="sd">刪除</button>':''}<button type="button" class="no" id="sx">取消</button><button class="btn">${edit?'儲存':'建立'}</button></div></form>`;
   $('veil').hidden=false;$('sn').focus();
   $('sx').onclick=closeSheet;
-  if(!g){const upd=()=>{const e=ENG[$('sf_e').value];$('sf_m').placeholder=e.m;$('sf_hint').innerHTML=`執行的電腦要先安裝並登入：<a href="${e.site}" target="_blank" rel="noopener">安裝說明</a>，${esc(e.login)}`};$('sf_e').onchange=upd;upd()}
+  if(!g){const upd=()=>{const e=ENG[$('sf_e').value];$('sf_m').placeholder=e.m;const k=$('sf_e').value;$('sf_hint').innerHTML=engState(k)==='ok'?'<span class="p-ok">這台電腦已連接這個 AI。</span>':`這台電腦還沒連接這個 AI。<a href="#" id="sf_conn">看怎麼連接</a>`;if($('sf_conn'))$('sf_conn').onclick=ev=>{ev.preventDefault();openAI(k)}};$('sf_e').onchange=upd;upd()}
   if(edit)renderRoutines();
   $('veil').querySelectorAll('.tpl button').forEach(b=>b.onclick=()=>{const t=$('st');t.value=(t.value?t.value+'；':'')+b.textContent});
   if(edit)$('sd').onclick=()=>{const d=$('sd');if(d.dataset.sure){api((g?'groups/':'bots/')+cur,'DELETE').then(()=>{closeSheet();cur=null;lastId=0;refresh();$('app').classList.remove('chat')})}
@@ -529,7 +547,7 @@ curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
   <div class="row2"><button class="btn" id="gen">產生執行器金鑰</button><span style="font-size:12px;color:var(--faint)">會讓舊金鑰失效</span></div>
   <pre class="code" id="cmd" hidden></pre>`;
   $('veil').innerHTML=`<div class="sheet"><h2>設定</h2><p>${CFG.local?'本機':'帳號：'+esc(S.me)}　·　執行器：${S.runnerOnline?'<span class="p-ok">在線</span>':'離線'}</p>
-  <div class="row2"><button class="ghost" id="guideBtn">設定指引</button></div>
+  <div class="row2"><button class="ghost" id="guideBtn">設定指引</button><button class="ghost" id="aiBtn">AI 連線</button></div>
   ${runnerHtml}
   <h3>共用資料</h3>
   <label class="field">所有機器人都會讀的固定資訊<textarea id="gNotes" maxlength="20000" placeholder="例如：公司名稱、常用網站、聯絡方式、做事原則">${esc(st.notes)}</textarea></label>
@@ -556,7 +574,7 @@ curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
   $('sSave').onclick=async()=>{try{await saveS();say('已儲存 ✓')}catch(e){say(e.message)}};
   $('nTest').onclick=async()=>{try{await saveS();const r=await api('notify/test','POST');say('已送出：'+r.sent.join('、'))}catch(e){say(e.message)}};
   $('tgDet').onclick=async()=>{try{await saveS();const r=await api('notify/detect','POST');$('tgChat').value=r.chat;say('找到 Chat ID ✓')}catch(e){say(e.message)}};
-  $('logsBtn').onclick=openLogs;$('guideBtn').onclick=openGuide;
+  $('logsBtn').onclick=openLogs;$('guideBtn').onclick=openGuide;$('aiBtn').onclick=()=>openAI();
   if(CFG.local){
     $('dLogin').onclick=()=>api('desktop/login-claude','POST').catch(e=>alertSheet('無法開啟',e.message));
     $('dFolder').onclick=()=>api('desktop/open-folder','POST').catch(()=>{});
@@ -579,6 +597,41 @@ async function openLogs(){
   <div class="acts"><button class="no" id="lb2">返回設定</button><button class="btn" id="sx">關閉</button></div></div>`;
   $('veil').hidden=false;$('sx').onclick=closeSheet;$('lb2').onclick=()=>openSettings()}
 
+/* ---------- AI connections ---------- */
+const aiTests={};
+function aiInstallCmd(e,os){return e.npm?`npm install -g ${e.npm}`:e[os]}
+function copyBtn(text){return `<button type="button" class="ghost" data-copy="${esc(text)}">複製</button>`}
+function openAI(focus){
+  const online=S.runnerOnline||CFG.local;
+  const card=k=>{const e=ENG[k],stt=engState(k),t=aiTests[k];
+    const badge=stt==='ok'?'<span class="pill p-ok">已連接</span>':stt==='no'?'<span class="pill p-off">還沒連接</span>':'<span class="pill p-off">電腦離線，無法檢查</span>';
+    const steps=CFG.local?`<div class="row2"><button class="btn" data-install="${k}">${stt==='ok'?'重新登入':'一鍵安裝並登入'}</button><button class="ghost" data-test="${k}" ${online?'':'disabled'}>測試</button></div>
+      <p>${stt==='ok'?'已安裝。如果測試失敗，按「重新登入」。':'會打開一個黑色視窗自動安裝，接著：'+esc(e.hint)+'。'}${e.npm?' 這個工具需要先裝 <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a>。':''}</p>`
+     :`<ol class="ol"><li>安裝（PowerShell）：<pre class="code">${esc(aiInstallCmd(e,'win'))}</pre>${e.npm?'':`<small>Mac：<code>${esc(aiInstallCmd(e,'mac'))}</code></small>`}</li>
+      <li>登入：輸入 <code>${esc(e.login)}</code>，${esc(e.hint)}</li>
+      <li>回到這裡按「測試」<div class="row2" style="margin-top:6px"><button class="ghost" data-test="${k}" ${online?'':'disabled'}>測試</button>${online?'':'<small>電腦連上 OCTA 後才能測試</small>'}</div></li></ol>`;
+    const res=t?(t==='run'?'<p class="fade">測試中，第一次可能要一分鐘…</p>':t.ok?'<p class="p-ok">成功！這個 AI 可以用了。</p>':`<p class="errmsg">${esc(t.text)}</p>`):'';
+    return `<details class="aic" data-k="${k}" ${focus===k||(!focus&&stt!=='ok'&&k==='claude')?'open':''}><summary><b>${e.n}</b>${e.tag?`<span class="pill p-pr" style="color:var(--gold2)">${e.tag}</span>`:''}${badge}</summary>
+      <div class="aib"><p>適合：${esc(e.who)}。${esc(e.cost)}。</p>${steps}${res}<p><a href="${e.site}" target="_blank" rel="noopener">官方說明</a></p></div></details>`};
+  $('veil').innerHTML=`<div class="sheet"><h2>AI 連線</h2>
+  <p>機器人用你電腦上登入的 AI 工作，用的是你自己的帳號或訂閱。連一個就能開始，之後在每個機器人的「任務設定 → AI 引擎」選要用哪個。</p>
+  <div class="ais">${Object.keys(ENG).map(card).join('')}</div>
+  <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;
+  $('veil').querySelectorAll('pre.code').forEach(p=>{p.insertAdjacentHTML('afterend',`<div class="row2" style="margin-top:4px">${copyBtn(p.textContent)}</div>`)});
+  $('veil').querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.copy).then(()=>b.textContent='已複製 ✓').catch(()=>{})});
+  $('veil').querySelectorAll('[data-install]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('desktop/install','POST',{engine:b.dataset.install});b.textContent='已打開安裝視窗'}catch(e){b.disabled=false;alertSheet('無法開啟',e.message)}});
+  $('veil').querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>testAI(b.dataset.test));
+}
+async function testAI(k){
+  aiTests[k]='run';openAI(k);
+  try{const {id}=await api('engine-test','POST',{engine:k});const t0=Date.now();
+    while(Date.now()-t0<180000){await new Promise(r=>setTimeout(r,3000));const j=await api('job/'+id);
+      if(j.status==='done'||j.status==='error'){aiTests[k]={ok:j.status==='done',text:j.result||''};break}}
+    if(aiTests[k]==='run')aiTests[k]={ok:false,text:'三分鐘內沒有結果，請看電腦上的執行器視窗。'};
+  }catch(e){aiTests[k]={ok:false,text:e.message}}
+  await refresh();if(!$('veil').hidden&&$('veil').querySelector('.ais'))openAI(k)}
+
 /* ---------- setup guide ---------- */
 let testState='';
 async function openGuide(){
@@ -586,19 +639,17 @@ async function openGuide(){
   const site=location.origin,hasBot=S.bots.length>0;
   const st=(ok,bad)=>ok?'ok':bad?'bad':'';
   const steps=[];
+  const anyAI=Object.values(S.engines||{}).some(Boolean);
+  const aiStep={cls:st(anyAI,S.engines&&!anyAI),t:'連接 AI（至少一個）',b:anyAI?`<p>已連接：${Object.keys(ENG).filter(k=>S.engines[k]).map(k=>ENG[k].n).join('、')}。</p><div class="row2"><button class="ghost" data-ai>管理 AI 連線</button></div>`:
+    `<p>機器人要靠 AI 才能思考。選一個你已經有帳號的 AI 連上就好，最推薦 Claude；沒有付費訂閱可以先用 Gemini 的免費額度。</p><div class="row2"><button class="btn" data-ai>選擇並連接 AI</button></div>`};
   if(CFG.local){
-    steps.push({cls:st(ds?.claude?.ok,!ds?.claude?.ok),t:'安裝 Claude Code',b:ds?.claude?.ok?`<p>已安裝（${esc(ds.claude.version)}）。</p>`:
-      `<p>OCTA 用你電腦上的 Claude Code 工作，需要 Claude Pro 或 Max 方案。照官網說明安裝，裝好後按「重新檢查」。</p><div class="row2"><a class="btn" href="https://code.claude.com" target="_blank" rel="noopener">打開 Claude Code 官網</a><button class="ghost" data-recheck>重新檢查</button></div>`});
-    steps.push({cls:'',t:'登入 Claude',b:`<p>按下面的按鈕會開一個黑色視窗，在裡面輸入 <code>/login</code>，選「Claude 訂閱帳號」並在瀏覽器完成登入，然後關掉那個視窗。只要做一次。</p><div class="row2"><button class="ghost" id="gLogin">開啟登入視窗</button></div>`});
+    steps.push(aiStep);
     steps.push({cls:st(ds?.chrome,ds&&!ds.chrome),t:'安裝 Google Chrome',b:ds?.chrome?'<p>已安裝。每個機器人會用自己獨立的 Chrome 視窗工作。</p>':'<p>機器人用 Chrome 操作網站。請安裝後按「重新檢查」。</p><div class="row2"><a class="btn" href="https://www.google.com/chrome/" target="_blank" rel="noopener">下載 Chrome</a><button class="ghost" data-recheck>重新檢查</button></div>'});
   }else{
-    steps.push({cls:'',t:'在電腦安裝 Claude Code 並登入',b:`<p>機器人在你自己的電腦上用 Claude Code 工作（需要 Claude Pro 或 Max 方案）。另外需要 Node 18 以上和 Google Chrome。</p><p>裝好後在終端機輸入 <code>claude</code>，再輸入 <code>/login</code> 登入。</p><div class="row2"><a class="ghost" href="https://code.claude.com" target="_blank" rel="noopener">Claude Code 官網</a><a class="ghost" href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a></div>`});
-    steps.push({cls:st(S.runnerOnline),t:'連接執行器',b:S.runnerOnline?'<p>電腦已連線。</p>':`<p>在 PowerShell（Mac 用終端機）執行：</p><pre class="code">mkdir octa; cd octa
-curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre><p>再按下面產生金鑰，複製出現的指令執行。視窗開著，機器人就會工作。</p><div class="row2"><button class="btn" id="gGen">產生金鑰與指令</button></div><pre class="code" id="gCmd" hidden></pre>`});
+    steps.push({cls:st(S.runnerOnline),t:'讓你的電腦連上 OCTA',b:S.runnerOnline?'<p>電腦已連線。視窗開著、電腦不休眠，機器人就會工作。</p>':`<p>機器人在你自己的電腦上工作。先安裝 <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a>（選 LTS 版）和 Google Chrome，再打開 PowerShell（Mac 用「終端機」）貼上：</p><pre class="code">mkdir octa; cd octa
+curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre><p>然後按下面的按鈕，把出現的那一行也貼上執行。</p><div class="row2"><button class="btn" id="gGen">產生連線指令</button></div><pre class="code" id="gCmd" hidden></pre>`});
+    steps.push(S.runnerOnline?aiStep:{cls:'',t:'連接 AI（至少一個）',b:'<p>電腦連上後，這裡會顯示你電腦上已經裝好的 AI，並教你怎麼加裝。</p><div class="row2"><button class="ghost" data-ai>先看有哪些 AI 可以用</button></div>'});
   }
-  const used=[...new Set(S.bots.map(b=>b.engine||'claude'))].filter(e=>e!=='claude');
-  steps.push({cls:'',t:'（選用）加入其他 AI',b:`<p>機器人預設用 Claude。在「任務設定 → AI 引擎」可以改用其他 AI，前提是執行的電腦裝好並登入對應工具：</p>
-    <div class="kv">${Object.keys(ENG).filter(k=>k!=='claude').map(k=>`<span>${ENG[k].s}</span><b>${CFG.local?(ds?.engines?.[k]?.ok?'<span class="p-ok">已安裝</span> ':'<span style="color:var(--faint)">未安裝</span> '):''}<a href="${ENG[k].site}" target="_blank" rel="noopener">安裝說明</a>　${ENG[k].login}${used.includes(k)&&CFG.local&&!ds?.engines?.[k]?.ok?'　<span class="p-pr">有機器人在用</span>':''}</b>`).join('')}</div>`});
   steps.push({cls:st(hasBot),t:'建立機器人',b:hasBot?`<p>已有 ${S.bots.length} 個機器人。可以再加範本，或用左邊「＋ 機器人」自己建。</p>${tplHtml()}`:`<p>選一個範本開始，之後都能改名、改任務。也可以關掉指引，用左邊「＋ 機器人」自己建立。</p>${tplHtml()}`});
   steps.push({cls:testState==='ok'?'ok':testState&&testState!=='run'?'bad':'',t:'試跑一次',b:`<p>傳一句話給第一個機器人，確認整條流程能動。第一次可能要等一分鐘。</p><div class="row2"><button class="btn" id="gTest" ${hasBot?'':'disabled'}>${testState==='run'?'等待回覆中…':'開始測試'}</button></div><div id="gRes">${testState==='ok'?'<p class="p-ok">成功，機器人回覆了。之後在「任務設定」可以加例行任務，讓它每天自動做事。</p>':testState&&testState!=='run'?`<p class="errmsg">${esc(testState)}</p>`:''}</div>`});
   $('veil').innerHTML=`<div class="sheet"><h2>設定指引</h2><p>照順序完成，打勾代表已經就緒。</p>
@@ -607,7 +658,7 @@ curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre><p>再按下面產生�
   $('veil').hidden=false;
   $('sx').onclick=()=>{closeSheet();try{localStorage.setItem('ebot_guided','1')}catch(e){}};
   $('veil').querySelectorAll('[data-recheck]').forEach(b=>b.onclick=openGuide);
-  if($('gLogin'))$('gLogin').onclick=()=>api('desktop/login-claude','POST').catch(e=>alertSheet('無法開啟',e.message));
+  $('veil').querySelectorAll('[data-ai]').forEach(b=>b.onclick=()=>openAI());
   if($('gGen'))$('gGen').onclick=async()=>{const d=await api('runner-token','POST');$('gCmd').hidden=false;$('gCmd').textContent=`node octa-runner.mjs ${site} ${d.token}`};
   bindTpl($('veil'),openGuide);
   $('gTest').onclick=runTest;
