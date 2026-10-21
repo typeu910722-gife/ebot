@@ -16,7 +16,8 @@ function setUpd(u) { upd = { ...upd, ...u }; win?.webContents.send('octa:update'
 autoUpdater.autoDownload = false;                 // ask first: the user presses 更新
 autoUpdater.autoInstallOnAppQuit = true;
 autoUpdater.on('checking-for-update', () => setUpd({ state: 'checking', error: '' }));
-autoUpdater.on('update-available', i => setUpd({ state: 'available', version: i.version }));
+const plainNotes = n => (Array.isArray(n) ? n.map(x => x.note || '').join('\n') : String(n || '')).replace(/<\/(p|li|h\d)>/g, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\n{3,}/g, '\n\n').trim().slice(0, 3000);
+autoUpdater.on('update-available', i => setUpd({ state: 'available', version: i.version, notes: plainNotes(i.releaseNotes), date: i.releaseDate || '' }));
 autoUpdater.on('update-not-available', () => setUpd({ state: 'none' }));
 autoUpdater.on('download-progress', p => setUpd({ state: 'downloading', percent: Math.round(p.percent || 0) }));
 autoUpdater.on('update-downloaded', i => setUpd({ state: 'ready', version: i.version, percent: 100 }));
@@ -98,13 +99,10 @@ async function bundledRunnerOpts() {
   const pwCli = unpacked(join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'));
   return {
     home: dataDir, pwCli, nodeBin: process.execPath, nodeEnv: { ELECTRON_RUN_AS_NODE: '1' }, getExtToken: () => cfg.extToken || '',
+    getStore: () => server.getStore(), appVersion: app.getVersion(),
     log: (...a) => console.log(new Date().toLocaleTimeString(), ...a),
-    onFatal: m => { logError('runner', m); stopRunner(); cfg.runnerToken = ''; writeCfg(cfg); },
-    onDone: (job, res) => {   // desktop notification when a bot needs you or fails
-      if (res.ok && !/✅待確認|需要使用者/.test(res.text)) return;
-      const n = new Notification({ title: `OCTA · ${job.bot.name}`, body: res.text.replace(/\s+/g, ' ').slice(0, 200), icon: icon() });
-      n.on('click', showWindow); n.show();
-    }
+    onFatal: m => { logError('runner', m); stopRunner(); cfg.runnerToken = ''; writeCfg(cfg); }
+    // notifications are shown by the page itself (same as on phones and other computers)
   };
 }
 function stopRunner() { runner?.stop(); runner = null; runnerFor = ''; }
@@ -120,23 +118,37 @@ async function startRunnerFor(url, token) {
 const trusted = e => { const u = e.senderFrame?.url || ''; return u.startsWith(CLOUD + '/') || u === CLOUD || (server && u.startsWith(server.url)) || u.startsWith('file:'); };
 const handle = (ch, fn) => ipcMain.handle(ch, (e, ...a) => { if (!trusted(e)) throw new Error('not allowed'); return fn(e, ...a); });
 handle('octa:version', () => app.getVersion());
+handle('octa:show', () => { showWindow(); return true; });
 handle('octa:desk', (_e, p, body) => server.desktopApi(String(p), body));
+const call = async (path, token, method = 'GET', body) => {
+  const r = await fetch(CLOUD + '/api/' + path, { method, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: body ? JSON.stringify(body) : undefined });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(d.error || 'HTTP ' + r.status); e.status = r.status; throw e; }
+  return d;
+};
 handle('octa:connect', async (_e, webToken) => {   // the page signed in: run this account's bots on this computer
   if (!webToken || cfg.mode === 'local') return { ok: false };
-  if (!cfg.runnerToken || cfg.runnerAccount !== webToken.slice(-12)) {
-    const r = await fetch(CLOUD + '/api/runner-token', {
-      method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + webToken },
-      body: JSON.stringify({ label: 'desktop:' + os.hostname() })
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
-    cfg = { ...cfg, runnerToken: d.token, runnerAccount: webToken.slice(-12) };
-    writeCfg(cfg);
+  const who = await call('me', webToken);
+  // keep this computer's key when the same account signs in again (it stays the same computer in the list)
+  let reuse = false;
+  if (cfg.runnerToken) {
+    try { reuse = (await call('runner/hello', cfg.runnerToken, 'POST', { app: app.getVersion() })).user === who.id; }
+    catch (e) { if (e.status !== 401 && e.status !== 403 && cfg.runnerUser === who.id) reuse = true; }   // offline: trust the saved key
   }
+  if (!reuse) {
+    const d = await call('runner-token', webToken, 'POST', { label: 'desktop:' + os.hostname(), device: 'OCTA 電腦版 · ' + os.hostname() });
+    cfg = { ...cfg, runnerToken: d.token, runnerUser: who.id };
+    writeCfg(cfg);
+  } else if (cfg.runnerUser !== who.id) { cfg = { ...cfg, runnerUser: who.id }; writeCfg(cfg); }
   await startRunnerFor(CLOUD, cfg.runnerToken);
   return { ok: true };
 });
-handle('octa:disconnect', () => { stopRunner(); cfg = { ...cfg, runnerToken: '', runnerAccount: '' }; writeCfg(cfg); return { ok: true }; });
+// signing out: keep=true leaves this computer working for the account (the window just shows the sign-in page)
+handle('octa:disconnect', (_e, opts) => {
+  if (opts?.keep && cfg.runnerToken) return { ok: true, working: true };
+  stopRunner(); cfg = { ...cfg, runnerToken: '', runnerUser: '' }; writeCfg(cfg); return { ok: true };
+});
+handle('octa:working', () => ({ working: !!runner && runnerFor.startsWith(CLOUD), standby: !!runner?.standby?.() }));
 handle('octa:offline', async () => {
   cfg = { ...cfg, mode: 'local' }; writeCfg(cfg);
   stopRunner(); await startRunnerFor(server.url, '');
@@ -179,9 +191,11 @@ async function start() {
   server = await startServer({
     dataDir,
     runner: false,   // started below for whichever mode is in use
-    onNotify: text => new Notification({ title: 'OCTA', body: text.replace(/^【OCTA】/, '').slice(0, 240), icon: icon() }).on('click', showWindow).show(),
     hooks: {
       openFolder: () => shell.openPath(dataDir),
+      pickFolder: async () => { const r = await dialog.showOpenDialog(win, { title: '選擇 OCTA 檔案資料夾', properties: ['openDirectory', 'createDirectory'] }); return r.canceled ? null : r.filePaths[0]; },
+      getStore: () => cfg.store || join(dataDir, 'files'),
+      setStore: p => { cfg = { ...cfg, store: p }; writeCfg(cfg); },
       getExtToken: () => cfg.extToken || '',
       setExtToken: t => { cfg = { ...cfg, extToken: t }; writeCfg(cfg); },
       getAutostart: () => app.getLoginItemSettings({ args: LOGIN_ARGS }).openAtLogin,   // Windows needs the same args to find the entry
@@ -197,7 +211,7 @@ async function start() {
   tray.setToolTip('OCTA｜奧克塔');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '開啟 OCTA', click: showWindow },
-    { label: '打開資料夾', click: () => shell.openPath(dataDir) },
+    { label: '打開檔案資料夾', click: () => { const p = cfg.store || join(dataDir, 'files'); mkdirSync(p, { recursive: true }); shell.openPath(p); } },
     { type: 'separator' },
     { label: '結束（機器人會停止工作）', click: async () => { quitting = true; stopRunner(); await server.close(); app.quit(); } }
   ]));

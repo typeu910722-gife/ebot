@@ -30,6 +30,9 @@ jobs:
         id: v
         shell: bash
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Release notes from changelog
+        shell: bash
+        run: node -e "const v=require('./package.json').version,c=require('../public/changelog.json').find(x=>x.v===v);require('fs').writeFileSync('notes.md',(c?c.notes.map(n=>'- '+n).join('\n')+'\n\n':'')+'Windows 安裝檔：下載 OCTA-Setup.exe 後執行。第一次執行若出現「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」。\n')"
       - uses: actions/upload-artifact@v4
         with:
           name: OCTA-Setup-windows
@@ -40,9 +43,7 @@ jobs:
           tag_name: v${{ steps.v.outputs.version }}
           name: OCTA ${{ steps.v.outputs.version }}
           make_latest: true
-          body: |
-            Windows 安裝檔：下載 OCTA-Setup.exe 後執行。
-            第一次執行若出現「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」。
+          body_path: desktop/notes.md
           files: |
             desktop/dist/OCTA-Setup.exe
             desktop/dist/OCTA-Setup.exe.blockmap

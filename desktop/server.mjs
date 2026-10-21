@@ -5,7 +5,7 @@
 // Can run inside Electron (main.mjs) or on its own: `node server.mjs`.
 
 import http from 'node:http';
-import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, createWriteStream, chmodSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, chmodSync, cpSync, rmSync, readdirSync } from 'node:fs';
 import { join, dirname, extname, normalize } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn, spawnSync, execFile } from 'node:child_process';
@@ -71,7 +71,13 @@ async function openDb(file) {
   return d1;
 }
 // Columns added after a release go here so existing installs upgrade in place.
-const MIGRATIONS = ["ALTER TABLE bots ADD COLUMN engine TEXT NOT NULL DEFAULT 'claude'", 'ALTER TABLE bots ADD COLUMN model TEXT', 'ALTER TABLE users ADD COLUMN engines TEXT', 'ALTER TABLE jobs ADD COLUMN result TEXT', 'ALTER TABLE bots ADD COLUMN avatar TEXT', 'ALTER TABLE bots ADD COLUMN browser TEXT'];
+const MIGRATIONS = ["ALTER TABLE bots ADD COLUMN engine TEXT NOT NULL DEFAULT 'claude'", 'ALTER TABLE bots ADD COLUMN model TEXT', 'ALTER TABLE users ADD COLUMN engines TEXT', 'ALTER TABLE jobs ADD COLUMN result TEXT', 'ALTER TABLE bots ADD COLUMN avatar TEXT', 'ALTER TABLE bots ADD COLUMN browser TEXT',
+  // 2.0: host computer, live updates, files on the computer, devices
+  'ALTER TABLE users ADD COLUMN host TEXT', 'ALTER TABLE users ADD COLUMN rev INTEGER NOT NULL DEFAULT 0', 'ALTER TABLE users ADD COLUMN reset TEXT',
+  'ALTER TABLE sessions ADD COLUMN seen INTEGER', 'ALTER TABLE sessions ADD COLUMN ua TEXT', 'ALTER TABLE sessions ADD COLUMN ip TEXT', 'ALTER TABLE sessions ADD COLUMN place TEXT', 'ALTER TABLE sessions ADD COLUMN info TEXT',
+  'ALTER TABLE bots ADD COLUMN shot_file TEXT',
+  'ALTER TABLE files ADD COLUMN conv TEXT', 'ALTER TABLE files ADD COLUMN loc TEXT', 'ALTER TABLE files ADD COLUMN path TEXT', 'ALTER TABLE files ADD COLUMN size INTEGER', 'ALTER TABLE files ADD COLUMN want INTEGER',
+  'CREATE INDEX IF NOT EXISTS file_user ON files(user_id, loc)'];
 
 // ---------- helpers ----------
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
@@ -107,6 +113,28 @@ function listen(server, port, tries = 0) {
 function openExternal(target) {
   if (WIN) spawn('cmd', ['/c', 'start', '', target], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
   else spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [target], { detached: true, stdio: 'ignore' }).unref();
+}
+
+// ---------- file folder ----------
+// Google Drive for desktop shows up as a drive (G:\我的雲端硬碟) or under CloudStorage on a Mac
+function googleDrive() {
+  const names = ['我的雲端硬碟', 'My Drive', '我的云端硬盘', 'マイドライブ'];
+  if (WIN) {
+    for (const L of 'GHIJKLMNOPQRSTUVWXYZDEF') for (const n of names) { const p = `${L}:\\${n}`; if (existsSync(p)) return p; }
+    for (const n of names) { const p = join(os.homedir(), 'Google Drive', n); if (existsSync(p)) return p; }
+    const old = join(os.homedir(), 'Google Drive'); if (existsSync(old)) return old;
+  } else {
+    const cs = join(os.homedir(), 'Library', 'CloudStorage');
+    try { for (const d of readdirSync(cs).filter(x => x.startsWith('GoogleDrive'))) for (const n of names) { const p = join(cs, d, n); if (existsSync(p)) return p; } } catch { }
+  }
+  return null;
+}
+function moveDir(from, to) {   // move existing files into the new folder (merge, keep anything already there)
+  for (const f of readdirSync(from)) {
+    const a = join(from, f), b = join(to, f);
+    if (existsSync(b)) continue;
+    try { renameSync(a, b); } catch { cpSync(a, b, { recursive: true }); rmSync(a, { recursive: true, force: true }); }
+  }
 }
 
 // ---------- remote access (Cloudflare quick tunnel) ----------
@@ -148,7 +176,7 @@ export async function startServer(opts = {}) {
   const tzOffset = -new Date().getTimezoneOffset();
   let runnerSeen = 0;
   const remote = { on: false, url: '', code: '', proc: null, fails: 0 };
-  const base = { DB: db, TZ_OFFSET_MIN: String(tzOffset), ALLOW_SIGNUP: 'false', onNotify: opts.onNotify };
+  const base = { DB: db, TZ_OFFSET_MIN: String(tzOffset), ALLOW_SIGNUP: 'false' };
   const callApi = async (req, res, env, origin) => {
     const request = await toRequest(req, origin);
     const path = new URL(request.url).pathname.replace(/^\/api\/?/, '').split('/').filter(Boolean);
@@ -167,7 +195,7 @@ export async function startServer(opts = {}) {
       if (!req.url.startsWith('/api/')) return serveStatic(req, res);
       if (req.method !== 'GET' && !(req.headers['content-type'] || '').includes('application/json')) { res.writeHead(415); return res.end(); }   // forces a CORS preflight for other sites
       if (req.url.startsWith('/api/desktop/')) return desktopApi(req, res);
-      await callApi(req, res, { ...base, isLocal: true, runnerOnline: () => Date.now() - runnerSeen < 30000 }, `http://${host}`);
+      await callApi(req, res, { ...base, isLocal: true, runnerOnline: () => Date.now() - runnerSeen < 60000 }, `http://${host}`);
     } catch (e) { json(res, { error: e.message }, 500); }
   });
   // reuse last port so the window keeps its saved preferences (language, drafts)
@@ -184,7 +212,7 @@ export async function startServer(opts = {}) {
       if (!req.url.startsWith('/api/')) return serveStatic(req, res);
       if (req.url.startsWith('/api/desktop/') || req.url.startsWith('/api/runner')) { res.writeHead(403); return res.end(); }
       await callApi(req, res, {
-        ...base, runnerOnline: () => Date.now() - runnerSeen < 30000,
+        ...base, runnerOnline: () => Date.now() - runnerSeen < 60000,
         pairCheck: code => {
           if (remote.code && code.trim().toUpperCase() === remote.code) { remote.fails = 0; return true; }
           if (++remote.fails >= 10) { remote.code = newCode(); remote.fails = 0; }   // too many guesses: rotate
@@ -225,11 +253,12 @@ export async function startServer(opts = {}) {
       if (!e) throw new Error('沒有這個 AI');
       const dir = join(dataDir, 'bin'); mkdirSync(dir, { recursive: true });
       const install = e.npm ? `npm install -g ${e.npm}` : e.install[WIN ? 'win' : 'mac'];
+      const pre = e.pre ? e.pre[WIN ? 'win' : 'mac'] : '';
       if (WIN) {
         const f = join(dir, `install-${key}.cmd`);
         writeFileSync(f, ['@echo off', 'chcp 65001 >nul', `title 安裝 ${e.label}`,
           e.npm ? 'where npm >nul 2>nul || (echo 需要先安裝 Node.js：https://nodejs.org ，裝好後重新按一次「安裝並登入」 & start https://nodejs.org & pause & exit /b)' : '',
-          `echo 正在安裝 ${e.label}…`, install,
+          `echo 正在安裝 ${e.label}…`, pre, install,
           e.paths ? `set "PATH=${e.paths.win};%PATH%"` : '',
           'echo.', `echo 安裝完成。接著登入：${e.loginHint}`, 'echo.', e.login,
           'echo.', 'echo 完成後可以關掉這個視窗，回到 OCTA 按「測試」。', 'pause'].filter(Boolean).join('\r\n'));
@@ -237,7 +266,7 @@ export async function startServer(opts = {}) {
       } else {
         const f = join(dir, `install-${key}.command`);
         writeFileSync(f, ['#!/bin/bash', e.npm ? 'command -v npm >/dev/null || { echo "需要先安裝 Node.js：https://nodejs.org"; read -p "按 Enter 關閉"; exit; }' : '',
-          `echo "正在安裝 ${e.label}…"`, install, e.paths ? `export PATH="${e.paths.mac}:$PATH"` : '',
+          `echo "正在安裝 ${e.label}…"`, pre, install, e.paths ? `export PATH="${e.paths.mac}:$PATH"` : '',
           `echo; echo "安裝完成。接著登入：${e.loginHint}"; echo`, e.login, 'echo; read -p "完成後按 Enter 關閉，回到 OCTA 按「測試」"'].filter(Boolean).join('\n'));
         chmodSync(f, 0o755);
         if (process.platform === 'darwin') spawn('open', ['-a', 'Terminal', f], { detached: true, stdio: 'ignore' }).unref();
@@ -248,6 +277,9 @@ export async function startServer(opts = {}) {
     getExtToken: () => { try { return JSON.parse(readFileSync(join(dataDir, 'desktop.json'), 'utf8')).extToken || ''; } catch { return ''; } },
     setExtToken: t => { let c = {}; try { c = JSON.parse(readFileSync(join(dataDir, 'desktop.json'), 'utf8')); } catch { } c.extToken = t; writeFileSync(join(dataDir, 'desktop.json'), JSON.stringify(c, null, 2)); },
     setAutostart: () => { throw new Error('只有安裝版支援開機自動啟動'); },
+    getStore: () => { try { return JSON.parse(readFileSync(join(dataDir, 'desktop.json'), 'utf8')).store || join(dataDir, 'files'); } catch { return join(dataDir, 'files'); } },
+    setStore: p => { let c = {}; try { c = JSON.parse(readFileSync(join(dataDir, 'desktop.json'), 'utf8')); } catch { } c.store = p; writeFileSync(join(dataDir, 'desktop.json'), JSON.stringify(c, null, 2)); },
+    pickFolder: async () => null,
     ...opts.hooks
   };
   // which AI tools are installed; checked in parallel without blocking, cached for a minute
@@ -258,7 +290,7 @@ export async function startServer(opts = {}) {
     const { ENGINES } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
     const ver = bin => new Promise(ok => execFile(bin, ['--version'], { shell: WIN, timeout: 15000, windowsHide: true, encoding: 'utf8' },
       (err, out) => ok({ ok: !err, version: (out || '').trim().split(/\s/).find(x => /\d/.test(x)) || '' })));
-    engJob = Promise.all(Object.entries(ENGINES).map(async ([k, e]) => [k, await ver(e.bin)]))
+    engJob = Promise.all(Object.entries(ENGINES).map(async ([k, e]) => { const v = await ver(e.bin); if (v.ok && e.also) v.ok = (await ver(e.also)).ok; return [k, v]; }))
       .then(r => { engCache = Object.fromEntries(r); engAt = Date.now(); return engCache; }).finally(() => (engJob = null));
     return engJob;
   }
@@ -273,7 +305,7 @@ export async function startServer(opts = {}) {
         version: APP_VERSION,
         claude: engines.claude, engines,
         chrome: !!findChrome(),
-        autostart: !!hooks.getAutostart(), extToken: !!hooks.getExtToken(),
+        autostart: !!hooks.getAutostart(), extToken: !!hooks.getExtToken(), store: hooks.getStore(),
         remote: remote.on ? { on: true, url: remote.url, code: remote.code, qr: await qr(remote.url) } : { on: false }
       });
     }
@@ -283,6 +315,22 @@ export async function startServer(opts = {}) {
       if (p === 'install') { await hooks.installEngine(String(body.engine || '')); return json(res, { ok: true }); }
       if (p === 'open-folder') { hooks.openFolder(); return json(res, { ok: true }); }
       if (p === 'autostart') { hooks.setAutostart(!!body.on); return json(res, { ok: true }); }
+      if (p === 'store') {   // where attachments, screenshots and outputs are kept
+        const cur = hooks.getStore(), def = join(dataDir, 'files'), gd = googleDrive();
+        if (body.set) {
+          let to = body.set === 'default' ? def : body.set === 'google' ? (gd ? join(gd, 'OCTA') : null) : body.set === 'pick' ? await hooks.pickFolder() : null;
+          if (!to) return json(res, { error: body.set === 'google' ? '找不到 Google 雲端硬碟。請先安裝「Google 雲端硬碟電腦版」並登入。' : '沒有選擇資料夾' }, 400);
+          if (body.set === 'pick' && !/OCTA$/i.test(to)) to = join(to, 'OCTA');
+          if (to !== cur) {
+            mkdirSync(to, { recursive: true });
+            if (body.move && existsSync(cur)) moveDir(cur, to);
+            hooks.setStore(to);
+          }
+        }
+        const now = hooks.getStore();
+        return json(res, { path: now, isDefault: now === def, google: gd ? join(gd, 'OCTA') : '', onGoogle: !!gd && now.startsWith(gd) });
+      }
+      if (p === 'open-store') { mkdirSync(hooks.getStore(), { recursive: true }); openExternal(hooks.getStore()); return json(res, { ok: true }); }
       if (p === 'ext-token') {   // token from the Playwright Extension, kept only on this computer
         if (body.token !== undefined) hooks.setExtToken(String(body.token).trim().slice(0, 200));
         return json(res, { set: !!hooks.getExtToken() });
@@ -304,10 +352,10 @@ export async function startServer(opts = {}) {
   let bundled = {};
   try { bundled = { pwCli: join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'), nodeBin: process.execPath }; } catch { }
   // the desktop app runs the runner itself when signed in to the cloud; local mode runs it here
-  const runner = opts.runner === false ? { stop() { } } : startRunner({ url: `http://127.0.0.1:${localPort}`, token: '', home: dataDir, getExtToken: () => hooks.getExtToken(), ...bundled, ...opts.runnerOpts });
+  const runner = opts.runner === false ? { stop() { } } : startRunner({ url: `http://127.0.0.1:${localPort}`, token: '', home: dataDir, getExtToken: () => hooks.getExtToken(), getStore: () => hooks.getStore(), ...bundled, ...opts.runnerOpts });
 
   return {
-    url: `http://127.0.0.1:${localPort}`, dataDir, webDir: WEB, desktopApi: (p, body) => callDesktop(p, body),
+    url: `http://127.0.0.1:${localPort}`, dataDir, webDir: WEB, desktopApi: (p, body) => callDesktop(p, body), getStore: () => hooks.getStore(),
     async close() { runner.stop(); remote.proc?.kill(); db.save(); local.close(); remoteSrv.close(); }
   };
 }

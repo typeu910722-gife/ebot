@@ -6,15 +6,24 @@ CREATE TABLE IF NOT EXISTS users (
   created INTEGER NOT NULL,
   runner_seen INTEGER DEFAULT 0,
   settings TEXT,                 -- JSON: notes, notifyAll, tg{token,chat}, line{token,to}
-  engines TEXT                   -- JSON: which AI CLIs the runner found installed
+  engines TEXT,                  -- JSON: which AI CLIs the host computer found installed
+  host TEXT,                     -- label of the runner session that does the work (主機)
+  rev INTEGER NOT NULL DEFAULT 0,-- bumped on every change; clients long-poll it (/api/wait)
+  reset TEXT                     -- JSON {h: sha256(code), exp} password reset code
 );
 CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY,        -- sha256 of token
   user_id TEXT NOT NULL,
   kind TEXT NOT NULL,            -- 'web' | 'runner'
   label TEXT,
-  created INTEGER NOT NULL
+  created INTEGER NOT NULL,
+  seen INTEGER,                  -- last activity (written at most every few minutes)
+  ua TEXT,                       -- device description for the device list
+  ip TEXT,
+  place TEXT,                    -- city / country from Cloudflare
+  info TEXT                      -- runner: JSON {engines, version, store}
 );
+CREATE INDEX IF NOT EXISTS ses_user ON sessions(user_id, kind);
 CREATE TABLE IF NOT EXISTS folders (   -- 分區: bots in the same folder can ask each other
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -34,7 +43,8 @@ CREATE TABLE IF NOT EXISTS bots (
   browser TEXT,                  -- null: own Chrome profile; 'mine': the user's Chrome via the Playwright Extension
   created INTEGER NOT NULL,
   shot_ts INTEGER,
-  page TEXT                      -- last page the bot reported
+  page TEXT,                     -- last page the bot reported
+  shot_file TEXT                 -- files.id of the last screenshot (kept on the host computer)
 );
 CREATE TABLE IF NOT EXISTS groups_ (
   id TEXT PRIMARY KEY,
@@ -66,6 +76,7 @@ CREATE TABLE IF NOT EXISTS messages (
   ts INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS msg_user ON messages(user_id, id);
+CREATE INDEX IF NOT EXISTS msg_conv ON messages(user_id, conv, id);
 CREATE TABLE IF NOT EXISTS jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id TEXT NOT NULL,
@@ -90,11 +101,28 @@ CREATE TABLE IF NOT EXISTS shots (   -- latest browser screenshot per bot
   data TEXT NOT NULL,            -- base64
   ts INTEGER NOT NULL
 );
-CREATE TABLE IF NOT EXISTS files (   -- chat attachments
+CREATE TABLE IF NOT EXISTS files (   -- attachments, screenshots, bot outputs
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   mime TEXT NOT NULL,
+  data TEXT NOT NULL,            -- legacy base64 ('' for new files: content is in chunks or on the host computer)
+  ts INTEGER NOT NULL,
+  conv TEXT,                     -- conversation it belongs to
+  loc TEXT,                      -- 'cloud' (waiting for the host computer) | 'pc' (saved on the host computer)
+  path TEXT,                     -- path inside the computer's OCTA file folder
+  size INTEGER,
+  want INTEGER                   -- someone asked to see it: the host computer uploads a temporary copy
+);
+CREATE TABLE IF NOT EXISTS chunks (  -- file content in pieces of up to ~1 MB (temporary)
+  file_id TEXT NOT NULL,
+  n INTEGER NOT NULL,
   data TEXT NOT NULL,            -- base64
-  ts INTEGER NOT NULL
+  ts INTEGER NOT NULL,
+  PRIMARY KEY (file_id, n)
+);
+CREATE TABLE IF NOT EXISTS logins (  -- failed sign-in / reset attempts, for rate limiting
+  k TEXT PRIMARY KEY,
+  fails INTEGER NOT NULL,
+  until INTEGER NOT NULL
 );

@@ -1,0 +1,72 @@
+[
+ {
+  "v": "2.0.0",
+  "date": "2026-10-22",
+  "notes": [
+   "一台主機電腦執行所有機器人，手機、平板和其他電腦用網頁版指揮；設定裡可以看所有電腦並切換主機",
+   "即時更新：送出指示、機器人回覆都會馬上出現，不用等重新整理",
+   "例行任務可選雲端排程（預設）或電腦排程；主機離線時會排隊並通知你",
+   "附件、截圖和機器人做出的檔案改存在主機電腦的資料夾，每個機器人一個資料夾、可以互相調用；也能改存到 Google 雲端硬碟",
+   "機器人放進「輸出」資料夾的檔案會自動附在回覆裡；附件上限提高到 10MB",
+   "對話改成各自載入，可以往上載入更早的訊息",
+   "帳號與裝置：查看登入中的裝置、輸入密碼移除；修改密碼；忘記密碼可用重設碼",
+   "登入失敗太多次會暫時鎖住，防止被猜密碼",
+   "桌面版登出時可選擇讓電腦繼續工作；重新登入沿用原本的電腦，不再重新產生金鑰",
+   "每個裝置都能跳出通知（手機、網頁、桌面版）",
+   "AI 連線頁加上各家擅長的事和剩餘流量（Claude、ChatGPT 顯示方案剩餘比例）",
+   "「其他模型」改為 Ollama 本機模型，免費、不接付費 API",
+   "設定頁改成選單，新增「最新版本」頁與更新內容"
+  ],
+  "notes_en": [
+   "One host computer runs every bot; phones, tablets and other computers give instructions through the web version. Settings lists all computers and lets you switch the host",
+   "Live updates: your instructions and bot replies show up instantly",
+   "Routines can use the cloud schedule (default) or the computer schedule; if the host is offline they wait and you're notified",
+   "Attachments, screenshots and files bots make are kept in a folder on the host computer, one per bot, usable by other bots; can also be saved to Google Drive",
+   "Files a bot puts in its Output folder are attached to its reply automatically; attachments up to 10 MB",
+   "Each chat loads on its own, with older messages loaded on demand",
+   "Account & devices: see signed-in devices and remove them with your password; change password; reset codes for a forgotten password",
+   "Too many failed sign-ins lock the account for a while to stop password guessing",
+   "Signing out of the desktop app can leave the computer working; signing back in keeps the same computer and key",
+   "Notifications on every device (phone, web, desktop)",
+   "The AI connections page shows what each AI is good at and how much quota is left (plan percentage for Claude and ChatGPT)",
+   "“Other models” is now Ollama local models only: free, no paid APIs",
+   "Settings is now a menu, with a Latest version page and what's new"
+  ],
+  "notes_ja": [
+   "1 台のホストパソコンがすべてのボットを実行し、スマホ・タブレット・他のパソコンは Web 版から指示。設定ですべてのパソコンを確認し、ホストを切り替え可能",
+   "リアルタイム更新：指示もボットの返信もすぐに表示",
+   "定期タスクはクラウド実行（既定）かパソコン実行を選択。ホスト未接続なら順番待ちにして通知",
+   "添付・スクリーンショット・ボットが作ったファイルはホストパソコンのフォルダに保存（ボットごと、相互利用可）。Google ドライブにも保存可能",
+   "ボットが「出力」フォルダに置いたファイルは返信に自動で添付。添付は 10MB まで",
+   "チャットごとに読み込み、以前のメッセージは必要なときに読み込み",
+   "アカウントと端末：ログイン中の端末を確認しパスワードで削除、パスワード変更、忘れたときのリセットコード",
+   "ログイン失敗が多すぎると一時的にロックしてパスワード推測を防止",
+   "デスクトップ版でログアウトしてもパソコンの作業を継続可能。再ログイン時は同じパソコンとキーを継続使用",
+   "すべての端末で通知（スマホ・Web・デスクトップ）",
+   "AI 接続ページに各 AI の得意分野と残り使用量を表示（Claude と ChatGPT はプランの残り割合）",
+   "「その他のモデル」は Ollama ローカルモデルのみに。無料で有料 API なし",
+   "設定をメニュー形式にし、「最新バージョン」ページと更新内容を追加"
+  ]
+ },
+ {
+  "v": "1.9.1",
+  "date": "2026-10-21",
+  "notes": [
+   "按右上角「瀏覽器」可以在電腦上叫出機器人上次的畫面"
+  ]
+ },
+ {
+  "v": "1.9.0",
+  "date": "2026-10-21",
+  "notes": [
+   "機器人可以使用你自己的 Chrome（已登入的網站和已儲存的密碼）"
+  ]
+ },
+ {
+  "v": "1.8.0",
+  "date": "2026-10-21",
+  "notes": [
+   "桌面版自動檢查新版本，有新版時顯示更新按鈕"
+  ]
+ }
+]

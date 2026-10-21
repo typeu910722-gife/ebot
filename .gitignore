@@ -3,3 +3,5 @@ node_modules/
 public/ebot-runner.json
 public/octa-runner.json
 public/work/
+i18n/__pycache__/
+desktop/shots/

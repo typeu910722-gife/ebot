@@ -10,7 +10,7 @@
 | GitHub Copilot（GPT／Claude／Gemini） | [Copilot CLI](https://github.com/github/copilot-cli) | `copilot` → `/login` |
 | Cursor | [Cursor CLI](https://cursor.com/cli) | `agent login` |
 | 通義千問 | [Qwen Code](https://github.com/QwenLM/qwen-code) | `qwen` 依畫面登入 |
-| DeepSeek、Grok、Kimi、Mistral、本機 Ollama 等 | [OpenCode](https://opencode.ai) | `opencode auth login`，機器人填模型如 `deepseek/deepseek-chat` |
+| 本機開源模型（免費，不接付費 API） | [Ollama](https://ollama.com) ＋ [OpenCode](https://opencode.ai) | `ollama pull qwen3`，機器人模型填 `qwen3` |
 
 ## 快速開始（桌面版，推薦）
 
@@ -19,20 +19,23 @@
 3. 下載 [OCTA-Setup.exe](https://github.com/typeu910722-gife/octa/releases/latest/download/OCTA-Setup.exe) 並安裝（或到 [octa.yzprojecttw.com](https://octa.yzprojecttw.com) 首頁按下載）
 4. 打開 OCTA，照「設定指引」完成，選一個範本試跑
 
-打開後登入 OCTA 帳號，電腦版和網頁版（octa.yzprojecttw.com）的機器人、對話會同步，手機也能隨時指揮；這台電腦會自動負責執行。不想註冊也可以選「離線模式」，資料只存在這台電腦。第一次執行時 Windows 若顯示「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」（安裝檔未簽章）。
+打開後登入 OCTA 帳號，這台電腦就是**主機**，負責執行所有機器人；手機、平板和其他電腦打開網頁版（octa.yzprojecttw.com）登入同一個帳號就能即時指揮、收通知。多台電腦都裝了 OCTA 時只有主機接工作，可在「設定 → 電腦與主機」切換。不想註冊也可以選「離線模式」，資料只存在這台電腦。第一次執行時 Windows 若顯示「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」（安裝檔未簽章）。
 
 ## 能做什麼
 
-- **機器人**：每個機器人有自己的指定任務，並可選 Claude、ChatGPT、Gemini、Copilot、Cursor、Qwen 或 OpenCode 支援的模型
+- **機器人**：每個機器人有自己的指定任務，並可選 Claude、ChatGPT、Gemini、Copilot、Cursor、Qwen 或 Ollama 本機模型
 - **群組**：把機器人拉進群組依序協作，或用 `@名字` 指定誰做
 - **分區**：區隔不同門市或專案；同分區的機器人可以互相詢問
-- **例行任務**：每天固定時間自動執行，可隨時開關
+- **例行任務**：每天固定時間自動執行，可隨時開關；可選雲端排程（主機離線時排隊並通知）或電腦排程
 - **瀏覽器**：每個機器人可用自己的獨立 Chrome（分頁、登入分開），或「使用我的 Chrome」直接用你已登入的網站與已儲存的密碼（透過 [Playwright Extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm)，每個機器人有自己的分頁群組）；最多 3 個同時工作
 - **核准按鈕**：發訊息、付款這類動作，機器人會先等你按「核准」
-- **附件**：傳圖片、PDF、文字檔給機器人
+- **檔案存在主機電腦**：附件、截圖、機器人放進「輸出」的檔案都存在主機的 OCTA 資料夾（每個機器人／群組一個資料夾，可互相讀取），也能改存到 Google 雲端硬碟；手機要看時即時從主機讀取
+- **即時更新**：長輪詢，指示和回覆馬上出現；每個裝置都能跳通知
+- **帳號安全**：裝置清單（輸入密碼移除）、修改密碼、重設碼、登入失敗鎖定
+- **AI 剩餘流量**：AI 連線頁顯示 Claude、ChatGPT 方案剩餘比例，其他顯示 OCTA 今日使用次數
 - **分區資料／共用資料**：寫一次，機器人都會讀
 - **通知**：需要你處理時，跳電腦通知，也可以送到 Telegram 或 LINE
-- **手機遙控**：設定 → 手機遠端，用網址加 8 碼配對碼連進來
+- **離線模式手機遙控**：離線模式下，設定 → 電腦與主機 → 手機遠端，用網址加 8 碼配對碼連進來
 - **工作紀錄**：每次執行的結果與花費時間
 - **多語介面**：繁體中文、English、简体中文、日本語（機器人也會用你選的語言回覆）
 
@@ -43,7 +46,7 @@
 ```
 手機 / 電腦瀏覽器 ─► Cloudflare Pages（網頁 + API）─► D1 資料庫
                               ▲
-                              │ 每 5 秒領任務、回寫結果
+                              │ 長輪詢領任務（有變動立刻回應）、回寫結果
                     使用者電腦上的 octa-runner.mjs
                               │
                     claude -p ＋ 每個機器人的專屬 Chrome
@@ -57,7 +60,8 @@
    ```
 3. 把 `wrangler.toml` 的 `database_name`、`database_id` 換成你的
 4. Cloudflare → Workers 和 Pages → 建立 → Pages → 連接 Git，選你的 fork，其他保持預設
-5. `wrangler.toml` 可調整 `TZ_OFFSET_MIN`（例行任務時區）、`ALLOW_SIGNUP`（是否開放註冊）、`DOWNLOAD_URL`（首頁下載按鈕）
+5. 例行任務的雲端排程靠 `.github/workflows/cron.yml` 每 5 分鐘呼叫 `/api/cron`；網址不是 octa.yzprojecttw.com 的話，在 GitHub 倉庫設定變數 `OCTA_URL`
+6. `wrangler.toml` 可調整 `TZ_OFFSET_MIN`（例行任務時區）、`ALLOW_SIGNUP`（是否開放註冊）、`DOWNLOAD_URL`（首頁下載按鈕）
 
 使用者登入後，照網站上的「設定指引」下載執行器並連線（需要 Node 18+）。
 

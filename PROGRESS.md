@@ -34,6 +34,19 @@
 - [x] electron-updater（GitHub Releases，latest.yml）：啟動 8 秒後與每 6 小時檢查；左上角「更新」→ 下載進度 → 重新啟動並更新；設定可手動檢查
 ## 使用我的 Chrome
 - [x] bots.browser='mine'：Playwright MCP --extension 連使用者真正的 Chrome（已登入網站、已儲存密碼），每個機器人自己的分頁群組；extension token 只存在本機（desktop.json / octa-runner.json extToken）；執行器 v9
+## v2.0（2026-10-22）
+- [x] 主機制：每帳號一台主機電腦執行（users.host，第一台連上的自動當主機），其他電腦待命；設定 → 電腦與主機可切換、移除
+- [x] 即時推送：users.rev 變動計數＋/api/wait 長輪詢（25 秒）；執行器 runner/next 也長輪詢（有工作 <1 秒接到）
+- [x] 資料庫寫入只在有變動時：主機心跳每 4 分鐘寫一次（sessions.seen）
+- [x] 例行任務雲端／電腦排程（settings.sched，預設雲端）；/api/cron 由 GitHub Actions 每 5 分鐘呼叫，順便清理舊資料
+- [x] 檔案存在主機電腦：上傳先暫存 chunks，主機收下後刪雲端；檢視時 want → 主機上傳暫存片段；截圖、輸出也存電腦；Google 雲端硬碟 / 自選資料夾（desktop/store）
+- [x] 訊息依對話分頁載入（/api/messages），state 只給清單預覽與未讀
+- [x] 裝置清單、密碼移除、改密碼、重設碼（已登入裝置產生或傳到 Telegram/LINE）、登入限流（logins 表）、90 天未用自動登出
+- [x] 桌面版登出可保留工作；重新登入沿用執行器金鑰（runner/hello 比對帳號）
+- [x] 每個裝置的瀏覽器通知；設定改選單；最新版本頁（public/changelog.json）；更新橫幅「看更新內容」
+- [x] AI 連線：各家擅長、剩餘流量（Claude OAuth usage、Codex app-server rateLimits；其他顯示今日次數）；Ollama 取代付費 API
+- [x] 測試：API 腳本 31 項、執行器假 CLI 端對端、網頁 UI、Electron 雲端模式（登入、登出保留、重新登入沿用）、離線模式舊資料庫遷移
+- [ ] Windows 實機、Ollama / Codex 剩餘流量實機驗證
 ## 待辦
 - [x] 公版清理：範本改通用（助理、研究、門市、民宿），移除個人化字樣；加入「設定指引」（無機器人時自動開啟，可試跑）；README 重寫
 - [x] 倉庫已公開；Release v1.5.0 自動發布 OCTA-Setup.exe（固定網址 releases/latest/download/OCTA-Setup.exe）

@@ -10,8 +10,8 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=1"></script>
-<script src="/i18n-core.js?v=1"></script>
+<script src="/i18n-dict.js?v=2"></script>
+<script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon.png?v=octopus">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500&display=swap">
 <style>
@@ -306,6 +306,42 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
 @keyframes ymove{0%{left:-40%}100%{left:100%}}
 body.yloading .ytop{opacity:1}
 body.yblock::before{content:"";position:fixed;inset:0;z-index:89;background:rgba(18,17,14,.35);cursor:progress}
+/* settings pages */
+.shd{display:flex;align-items:center;gap:6px}
+.back2{border:0;background:none;color:var(--gold);font-size:26px;line-height:1;padding:0 6px 2px 0}
+.smenu{display:grid;border:1px solid var(--line2);border-radius:12px;overflow:hidden}
+.smenu button{display:flex;align-items:center;gap:12px;border:0;border-top:1px solid var(--line2);background:var(--bg);text-align:left;padding:11px 14px}
+.smenu button:first-child{border-top:0}
+.smenu button:hover{background:var(--panel2)}
+.si{width:24px;text-align:center;font-size:17px;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.st{flex:1;min-width:0;display:grid;gap:1px}
+.st b{font-weight:500;font-size:14px}
+.st small{color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sa{color:var(--faint);font-size:18px}
+.devs{display:grid;gap:6px}
+.dev{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid var(--line2);border-radius:10px;padding:9px 12px;background:var(--bg);font-size:14px;letter-spacing:0;color:var(--ink)}
+.dev>span:first-of-type{flex:1;min-width:0;display:grid;gap:3px}
+label.dev{justify-content:flex-start}
+.dev input{accent-color:var(--gold)}
+.dev small{color:var(--mute);font-size:12px}
+.dev .pill{justify-self:start;width:max-content}
+.dev .ghost{padding:4px 10px}
+.ait{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.aigood{flex-basis:100%;color:var(--mute);font-size:12px;line-height:1.6}
+.aiq{flex-basis:100%;display:grid;gap:4px;font-size:12px}
+.qt{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--done)}
+.qt.off{color:var(--faint)}
+.qw{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.qw b{font-weight:500;color:var(--gold2)}
+.qbar{width:70px;height:5px}
+.qbar .yfill::after{display:none}
+.aiq small,.qw small{color:var(--faint);font-size:11px}
+.chg{display:grid;gap:12px;font-size:13px;color:var(--mute)}
+.chg b{color:var(--gold2);font-weight:500}
+.chg ul{margin:4px 0 0;padding-left:18px;line-height:1.7}
+pre.notes{margin:0;white-space:pre-wrap;font:inherit;font-size:13px;color:var(--mute);background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;max-height:220px;overflow:auto}
+.older{align-self:center}
+.lf2{display:grid;gap:14px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -342,14 +378,14 @@ body.yblock::before{content:"";position:fixed;inset:0;z-index:89;background:rgba
       <div><b>操作你登入的網站</b><span>每個機器人有自己的瀏覽器，登入一次就記住，互不干擾。</span></div>
       <div><b>重要的事先問你</b><span>發訊息、付款這類動作會先等你按「核准」。</span></div>
       <div><b>每天自動執行</b><span>設定時間就會自己做，卡住或需要你時通知電腦、Telegram 或 LINE。</span></div>
-      <div><b>手機也能用</b><span>電腦開著，手機打開 OCTA 網頁登入同一個帳號就能指揮。</span></div>
-      <div><b>電腦版、網頁版同步</b><span>登入同一個帳號，機器人和對話在每台裝置都一樣；也可以選離線模式，資料只留在電腦。</span></div>
+      <div><b>一台主機，到處指揮</b><span>一台電腦裝 OCTA 當主機，手機、平板、其他電腦打開網頁版登入同一個帳號，就能即時指揮、收到通知。</span></div>
+      <div><b>檔案留在你的電腦</b><span>附件、截圖、機器人做出的報表都存在主機電腦的資料夾（也可以選 Google 雲端硬碟），每個機器人分開放、可以互相調用。</span></div>
     </div>
   </section>
   <section class="hsec">
     <h2>支援的 AI</h2>
-    <p class="hai">Claude · ChatGPT · Gemini · GitHub Copilot · Cursor · 通義千問 · DeepSeek · Grok · Kimi · Mistral · 本機模型（Ollama）</p>
-    <p class="hmuted">用你自己的帳號登入，費用依各家方案；Gemini 個人帳號有免費額度。</p>
+    <p class="hai">Claude · ChatGPT · Gemini · GitHub Copilot · Cursor · 通義千問 · Ollama 本機模型</p>
+    <p class="hmuted">用你自己的帳號登入，費用依各家方案；Gemini 個人帳號有免費額度，Ollama 本機模型完全免費。</p>
   </section>
   <section class="hsec">
     <h2>常見問題</h2>
@@ -370,10 +406,22 @@ body.yblock::before{content:"";position:fixed;inset:0;z-index:89;background:rgba
     <label class="field">密碼<input id="lp" type="password" autocomplete="current-password" required minlength="8"></label>
     <div class="errmsg" id="le"></div>
     <button class="btn" id="lb">登入</button>
+    <button type="button" class="link" id="lForgot">忘記密碼？</button>
     <button type="button" class="link" id="ls">還沒有帳號？註冊</button>
     <button type="button" class="link" id="lHome">← 回首頁</button>
     <button type="button" class="link" id="lOff" hidden>不登入，先用離線模式（資料只在這台電腦，不同步）</button>
     <div id="lLang" style="justify-self:center"></div>
+  </form>
+  <form id="rf" class="lf2" hidden style="width:min(360px,100%)">
+    <img src="/icon.png?v=octopus" alt="" class="logo-lg"><h1>重設密碼</h1>
+    <p>需要重設碼（15 分鐘內有效），兩種取得方式：<br>1. 在已登入的裝置（例如主機電腦）打開「設定 → 帳號與裝置 → 產生重設碼」。<br>2. 帳號有設定 Telegram 或 LINE 通知的話，按下面按鈕把重設碼傳過去。</p>
+    <label class="field">帳號<input id="rn" autocomplete="username" required></label>
+    <button type="button" class="ghost" id="rSend">把重設碼傳到我的 Telegram／LINE</button>
+    <label class="field">重設碼<input id="rc" autocomplete="one-time-code" required style="letter-spacing:.2em;text-transform:uppercase"></label>
+    <label class="field">新密碼<input id="rp" type="password" autocomplete="new-password" required minlength="8"></label>
+    <div class="errmsg" id="re"></div>
+    <button class="btn">重設並登入</button>
+    <button type="button" class="link" id="rBack">← 回登入</button>
   </form>
 </div>
 
@@ -408,7 +456,9 @@ const boot={set(p,t){const f=$('bootFill');if(!f)return;f.style.width=p+'%';$('b
   hide(){const b=$('boot');if(b.hidden)return;b.classList.add('done');setTimeout(()=>{if(b.classList.contains('done'))b.hidden=true},320)}};
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let TOKEN=null; try{TOKEN=localStorage.getItem('ebot_token')}catch(e){}
-let S={bots:[],groups:[],folders:[],routines:[],msgs:[],busy:[],runnerOnline:false,me:''}, lastId=0, cur=null, poller=null;
+let S={bots:[],groups:[],folders:[],routines:[],last:[],ur:[],busy:[],runnerOnline:false,me:'',rev:-1}, cur=null, liveOn=false;
+/* messages are loaded per conversation: MSG[conv] = {list, more, loaded} */
+let MSG={};
 try{cur=localStorage.getItem('ebot_cur')}catch(e){}
 
 const DESK=()=>CFG.local||!!window.octaDesktop;
@@ -417,7 +467,7 @@ const ybar={n:0,t:null,on(block){this.n++;clearTimeout(this.t);this.t=setTimeout
   off(){if(--this.n<=0){this.n=0;clearTimeout(this.t);document.body.classList.remove('yloading','yblock')}}};
 const HEAVY=/^(template|signup|login|pair|runner-token|engine-test|desktop\/install|desktop\/remote|desktop\/autostart)/;
 async function api(path,method='GET',body){
-  const quiet=path.startsWith('state')||path.startsWith('job/')||path.startsWith('file/')||path==='messages';
+  const quiet=/^(state|wait|job\/|file\/|messages|shot\/|ai-usage|devices$|me$)/.test(path);
   if(!quiet)ybar.on(HEAVY.test(path));
   try{return await api_(path,method,body)}finally{if(!quiet)ybar.off()}
 }
@@ -425,19 +475,27 @@ async function api_(path,method,body){
   if(path.startsWith('desktop/')&&window.octaDesktop&&!CFG.local)return window.octaDesktop.call(path.slice(8),method==='GET'?undefined:(body||{}));
   const r=await fetch('/api/'+path,{method,headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:body?JSON.stringify(body):undefined});
   const d=await r.json().catch(()=>({error:'網路錯誤'}));
-  if(r.status===401&&path!=='login'&&path!=='pair'){logout(true);throw new Error(d.error)}
+  if(r.status===401&&!/^(login|pair|reset)/.test(path)){if(TOKEN)logout(true,true);throw new Error(d.error)}
   if(!r.ok)throw new Error(d.error||'發生錯誤');
   return d;
 }
 /* ---------- login ---------- */
 let signup=false;
-function showLogin(){ $('app').hidden=true;$('home').hidden=true;$('login').hidden=false;$('ls').hidden=!CFG.signup;$('lHome').hidden=CFG.pair||!!window.octaDesktop;
+function showLogin(){ $('app').hidden=true;$('home').hidden=true;$('login').hidden=false;$('ls').hidden=!CFG.signup;$('lForgot').hidden=!!CFG.pair;$('rf').hidden=true;$('lf').hidden=false;$('lHome').hidden=CFG.pair||!!window.octaDesktop;
   $('lOff').hidden=!window.octaDesktop;if(window.octaDesktop&&!CFG.pair)$('lf').querySelector('p').textContent='登入 OCTA 帳號，電腦版和網頁版的機器人、對話都會同步。';boot.hide() }
 function showHome(){ $('app').hidden=true;$('login').hidden=true;$('home').hidden=false;boot.hide();
   const dl=CFG.download;$('hDl').hidden=!dl;$('hDlNote').hidden=!dl;if(dl)$('hDl').href=dl;
   if(/Android|iPhone|iPad/i.test(navigator.userAgent)&&dl){$('hDl').textContent='到電腦下載 Windows 版';$('hDl').removeAttribute('href');$('hDl').onclick=e=>{e.preventDefault();navigator.clipboard?.writeText(location.origin).catch(()=>{});$('hDlNote').textContent='請用電腦打開 '+location.host+' 下載（網址已複製）'}}
   if(CFG.repo){$('hRepo').hidden=false;$('hRepo').href=CFG.repo}}
 $('hLogin').onclick=$('hWeb').onclick=showLogin;$('lHome').onclick=showHome;
+$('lForgot').onclick=()=>{$('lf').hidden=true;$('rf').hidden=false;$('rn').value=$('ln').value;$('re').textContent=''};
+$('rBack').onclick=()=>{$('rf').hidden=true;$('lf').hidden=false};
+$('rSend').onclick=async()=>{const n=$('rn').value.trim();if(!n){$('re').textContent=I18N.t('請先填帳號');return}
+  try{await api('reset/send','POST',{name:n});$('re').textContent=I18N.t('如果這個帳號有設定 Telegram 或 LINE 通知，重設碼已經傳過去了。')}catch(e){$('re').textContent=e.message}};
+$('rf').onsubmit=async e=>{e.preventDefault();$('re').textContent='';
+  try{const d=await api('reset','POST',{name:$('rn').value,code:$('rc').value,pw:$('rp').value});TOKEN=d.token;try{localStorage.setItem('ebot_token',TOKEN)}catch(x){}
+    $('rp').value=$('rc').value='';$('rf').hidden=true;$('lf').hidden=false;boot.show('登入中…');start();setTimeout(()=>toast(I18N.t('密碼已重設')),800)}
+  catch(err){$('re').textContent=err.message}};
 $('lOff').onclick=()=>{boot.show('切換到離線模式…');window.octaDesktop.useOffline()};
 $('ls').onclick=()=>{signup=!signup;$('lt').textContent=$('lb').textContent=signup?'註冊':'登入';
   $('ls').textContent=signup?'已有帳號？登入':'還沒有帳號？註冊';$('lp').autocomplete=signup?'new-password':'current-password';$('le').textContent=''};
@@ -446,46 +504,94 @@ $('lf').onsubmit=async e=>{e.preventDefault();$('le').textContent='';$('lb').dis
     TOKEN=d.token;try{localStorage.setItem('ebot_token',TOKEN)}catch(e){}
     $('lp').value='';boot.show('登入中…');start()}
   catch(err){$('le').textContent=err.message}finally{$('lb').disabled=false}};
-function logout(silent){ if(!silent&&TOKEN)api('logout','POST').catch(()=>{});
-  window.octaDesktop?.disconnect().catch(()=>{});
+/* signing out on the desktop app: ask whether this computer should keep working */
+function logoutAsk(){
+  if(!window.octaDesktop||CFG.local)return logout();
+  $('veil').innerHTML=`<div class="sheet"><h2>登出</h2><p>登出後，這台電腦還要繼續當主機、幫機器人工作嗎？</p>
+  <div class="bchoice"><label class="bc"><input type="radio" name="lk" value="keep" checked><span><b>登出，但這台電腦繼續工作</b><small>機器人照常執行；你可以用手機或其他裝置登入指揮。</small></span></label>
+  <label class="bc"><input type="radio" name="lk" value="stop"><span><b>完全登出</b><small>這台電腦停止幫這個帳號工作，下次登入會自動恢復。</small></span></label></div>
+  <div class="acts"><button class="no" id="sx">取消</button><button class="btn" id="lgo">登出</button></div></div>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;
+  $('lgo').onclick=()=>{const keep=$('veil').querySelector('input[name=lk]:checked').value==='keep';closeSheet();logout(false,keep)}}
+function logout(silent,keep){ if(!silent&&TOKEN)api('logout','POST').catch(()=>{});
+  window.octaDesktop?.disconnect({keep:!!keep}).catch(()=>{});
   TOKEN=null;try{localStorage.removeItem('ebot_token')}catch(e){}
-  clearTimeout(poller);S={bots:[],groups:[],folders:[],routines:[],msgs:[],busy:[]};lastId=0;(CFG.pair||window.octaDesktop)?showLogin():showHome() }
+  liveOn=false;S={bots:[],groups:[],folders:[],routines:[],last:[],ur:[],busy:[],rev:-1};MSG={};(CFG.pair||window.octaDesktop)?showLogin():showHome();
+  if(keep&&!silent)setTimeout(()=>toast(I18N.t('已登出，這台電腦會繼續工作')),300)}
 
 /* ---------- data ---------- */
+// one light request for the lists; messages are fetched per conversation
 async function refresh(){
-  try{const d=await api('state'+(lastId?'?after='+lastId:''));if(!S.loaded)boot.set(85,'整理畫面…');
-    Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines});
-    S.msgs=S.msgs.filter(m=>!m.tmp);
-    if(lastId)S.msgs.push(...d.msgs);else S.msgs=d.msgs;
-    if(d.msgs.length)lastId=d.msgs[d.msgs.length-1].id;
+  try{const d=await api('state');if(!S.loaded)boot.set(85,'整理畫面…');
+    const prevTop=S.loaded?topBotId():null;
+    Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
+      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched});
     if(cur&&!conv(cur))cur=null;
+    if(cur)await loadMsgs(cur,'new');
+    if(prevTop!==null)notifyNew(prevTop);
     S.loaded=true;
     render(false);
   }catch(e){}
-  clearTimeout(poller);poller=setTimeout(refresh,document.hidden?20000:(S.busy.length||Date.now()-lastSend<20000)?1500:4000);
 }
-let lastSend=0;
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TOKEN)refresh()});
+// live updates: the server answers as soon as anything changes (long-poll)
+async function live(){
+  if(liveOn)return;liveOn=true;let fails=0;
+  while(liveOn&&TOKEN||liveOn&&CFG.local){
+    try{const d=await api('wait?rev='+S.rev);fails=0;if(!liveOn)break;if(d.rev!==S.rev)await refresh()}
+    catch(e){fails++;await new Promise(r=>setTimeout(r,Math.min(30000,1000*2**fails)))}
+  }
+  liveOn=false}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(TOKEN||CFG.local)&&S.loaded){refresh();if(!liveOn)live()}});
+async function loadMsgs(id,mode){   // mode: 'first' | 'new' | 'older'
+  const c=MSG[id]||(MSG[id]={list:[],more:false,loaded:false});
+  const real=c.list.filter(m=>!m.tmp);
+  if(mode==='new'&&!c.loaded)mode='first';
+  let q='messages?conv='+encodeURIComponent(id);
+  if(mode==='new')q+='&after='+(real.length?real[real.length-1].id:0);
+  if(mode==='older')q+='&before='+(real.length?real[0].id:0);
+  const d=await api(q);
+  if(mode==='first'){c.list=[...d.msgs,...c.list.filter(m=>m.tmp)];c.more=d.more;c.loaded=true}
+  else if(mode==='older'){c.list=[...d.msgs,...c.list];c.more=d.more}
+  else if(d.msgs.length)c.list=[...real,...d.msgs];   // the server copy of what I sent replaces the "sending…" one
+  return c}
 const bot=id=>S.bots.find(b=>b.id===id);
 const conv=id=>bot(id)||S.groups.find(g=>g.id===id);
 const isG=id=>id&&id.startsWith('g-');
 const init=n=>esc((n||'?').slice(0,1));
 const avOf=id=>{const b=bot(id);return b?.avatar?`<span class="emo">${esc(b.avatar)}</span>`:init(b?b.name:nameOf(id))};
 const nameOf=by=>by==='me'?'你':by==='sys'?'系統':(bot(by)?.name||'已刪除');
-const convMsgs=id=>S.msgs.filter(m=>m.conv===id);
+const convMsgs=id=>MSG[id]?.list||[];
 let SEEN={};try{SEEN=JSON.parse(localStorage.getItem('octa_seen')||'{}')}catch(e){}
-const unread=id=>convMsgs(id).filter(m=>!m.tmp&&m.by!=='me'&&m.by!=='sys'&&m.id>(SEEN[id]||0)).length;
-function markSeen(id){const ms=convMsgs(id).filter(m=>!m.tmp);if(!ms.length)return;const top=ms[ms.length-1].id;if((SEEN[id]||0)>=top)return;SEEN[id]=top;try{localStorage.setItem('octa_seen',JSON.stringify(SEEN))}catch(e){}}
+const unread=id=>S.ur.filter(([c,i])=>c===id&&i>(SEEN[id]||0)).length;
+const topBotId=()=>S.ur.length?S.ur[0][1]:0;
+function markSeen(id){const ids=[...convMsgs(id).filter(m=>!m.tmp).map(m=>m.id),...S.ur.filter(([c])=>c===id).map(([,i])=>i)];if(!ids.length)return;
+  const top=Math.max(...ids);if((SEEN[id]||0)>=top)return;SEEN[id]=top;try{localStorage.setItem('octa_seen',JSON.stringify(SEEN))}catch(e){}}
 const setHTML=(el,h)=>{if(el._h!==h){el._h=h;el.innerHTML=h;return true}return false};
 const hm=ts=>ts?new Date(ts).toLocaleTimeString(I18N.lang,{hour:'2-digit',minute:'2-digit'}):'';
 const busyIn=id=>S.busy.filter(b=>b.conv===id);
-function preview(id){const m=convMsgs(id).filter(x=>x.by!=='sys').slice(-1)[0];if(!m)return conv(id).task;
-  return (m.by==='me'?'你：':isG(id)?nameOf(m.by)+'：':'')+m.text}
+const lastOf=id=>S.last.find(x=>x.conv===id);
+function preview(id){const ms=convMsgs(id).filter(x=>x.by!=='sys'&&!x.tmp),l=lastOf(id),m=ms.length&&(!l||ms[ms.length-1].id>=l.id)?ms[ms.length-1]:l;
+  if(!m)return conv(id).task;
+  return (m.by==='me'?I18N.t('你：'):isG(id)?nameOf(m.by)+'：':'')+m.text}
+/* notifications on this device: new bot replies you're not looking at */
+const NOTI_KEY='octa_notify';
+const notiOn=()=>{try{const v=localStorage.getItem(NOTI_KEY);return v===null?!!window.octaDesktop:v==='1'}catch(e){return false}};
+function notifyNew(prevTop){
+  const fresh=S.ur.filter(([,i])=>i>prevTop);if(!fresh.length)return;
+  const convs=[...new Set(fresh.map(([c])=>c))];
+  for(const c of convs){const l=lastOf(c),cv=conv(c);if(!l||!cv||l.by==='me'||l.by==='sys')continue;
+    const looking=c===cur&&!document.hidden;if(looking)continue;
+    const who=isG(c)?nameOf(l.by)+' · '+cv.name:cv.name;
+    if(!document.hidden)toast(who+'：'+l.text.slice(0,40));
+    if(notiOn()&&'Notification' in window&&Notification.permission==='granted'&&(document.hidden||c!==cur)){
+      try{const n=new Notification('OCTA · '+who,{body:l.text.replace(/\s+/g,' ').slice(0,180),icon:'/icon.png?v=octopus',tag:'octa-'+c});
+        n.onclick=()=>{window.focus();window.octaDesktop?.show?.();openConv(c);n.close()}}catch(e){}}}}
 const fileCache={};
-async function fileData(id){return fileCache[id]||(fileCache[id]=api('file/'+id))}
+async function fileData(id){const p=fileCache[id]||(fileCache[id]=api('file/'+id));p.catch(()=>delete fileCache[id]);return p}
 function filesHtml(fs){if(!fs||!fs.length)return '';return `<div class="files">${fs.map(f=>/^image\//.test(f.mime)?`<img class="thumb" data-file="${esc(f.id)}" alt="${esc(f.name)}">`:`<button type="button" class="fchip" data-open-file="${esc(f.id)}">📎 ${esc(f.name)}</button>`).join('')}</div>`}
-function loadThumbs(root){root.querySelectorAll('img[data-file]:not([src])').forEach(im=>fileData(im.dataset.file).then(d=>im.src=`data:${d.mime};base64,${d.data}`).catch(()=>{}))}
-async function openFile(id){try{const d=await fileData(id);const b=await (await fetch(`data:${d.mime};base64,${d.data}`)).blob();window.open(URL.createObjectURL(b),'_blank')}catch(e){}}
+function loadThumbs(root){root.querySelectorAll('img[data-file]:not([src]):not([data-err])').forEach(im=>fileData(im.dataset.file).then(d=>im.src=`data:${d.mime};base64,${d.data}`).catch(e=>{im.dataset.err=1;im.replaceWith(Object.assign(document.createElement('button'),{type:'button',className:'fchip',textContent:'🖼 '+(im.alt||'')+' · '+I18N.t('點一下重新載入'),onclick(){openFile(im.dataset.file)}}))}))}
+async function openFile(id){toast(I18N.t('讀取檔案中…'));try{const d=await fileData(id);const b=await (await fetch(`data:${d.mime};base64,${d.data}`)).blob();
+  const u=URL.createObjectURL(b);if(/^(image|text)\/|pdf$/.test(d.mime))window.open(u,'_blank');else{const a=document.createElement('a');a.href=u;a.download=d.name;a.click()}}catch(e){toast(e.message)}}
 const APPR=/^✅\s*待確認[:：]\s*(.+)$/m;
 function apprHtml(m){const a=m.text.match(APPR);if(!a)return '';
   const later=convMsgs(m.conv).some(x=>x.id>m.id&&(x.by==='me'||x.by===m.by));
@@ -495,7 +601,8 @@ function fmt(t){return esc(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" targ
 
 /* ---------- render ---------- */
 function render(scroll){
-  $('online').className='pill '+(S.runnerOnline?'p-ok':'p-off');$('online').textContent=S.runnerOnline?'電腦在線':'電腦離線';
+  $('online').className='pill '+(S.runnerOnline?'p-ok':'p-off');$('online').textContent=CFG.local?(S.runnerOnline?'電腦在線':'電腦離線'):S.runnerOnline?'主機在線':'主機離線';
+  $('online').title=I18N.t(S.runnerOnline?'機器人在主機電腦上工作中':'主機電腦沒開或沒連上，訊息會先排隊');
   let h='';
   if(!S.loaded)h+=`<div class="empty fade">載入中…</div>`;
   else if(!S.bots.length)h+=`<div class="empty">還沒有機器人。按「＋ 機器人」，或到「設定」套用範本。</div>`;
@@ -524,7 +631,9 @@ function render(scroll){
   $('mention').innerHTML=g?c.members.map(id=>bot(id)?`<button data-at="${esc(bot(id).name)}" data-u>@${esc(bot(id).name)}</button>`:'').join(''):'';
   const box=$('msgs'),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<120;
   const switched=box._conv!==cur;box._conv=cur;
-  let mh=convMsgs(cur).map(m=>{
+  const mc=MSG[cur];
+  let mh=!mc?.loaded?'<div class="sys fade">載入中…</div>':mc.more?'<button type="button" class="ghost older" id="older">載入更早的訊息</button>':'';
+  mh+=convMsgs(cur).map(m=>{
     if(m.by==='sys')return `<div class="sys">${esc(m.text)}<span class="ts">${hm(m.ts)}</span></div>`;
     if(m.by==='me')return `<div class="m me${m.tmp?' tmp':''}"><div class="bx"><div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div><div class="meta">${m.tmp?'傳送中…':hm(m.ts)}</div></div></div>`;
     return `<div class="m"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div>${apprHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
@@ -535,7 +644,7 @@ function render(scroll){
   if(switched||scroll){box.scrollTop=box.scrollHeight;$('jump').hidden=true}
   else if(changed){if(atBottom)box.scrollTo({top:box.scrollHeight,behavior:'smooth'});else $('jump').hidden=false}
   if(atBottom||switched||scroll){markSeen(cur)}
-  $('note').textContent=S.runnerOnline?(g?'由你電腦上的 AI 執行':`由你電腦上的 ${(ENG[c.engine]||ENG.claude).n} 執行`):'電腦離線：訊息會先排隊，電腦連上後才會處理';
+  $('note').textContent=S.runnerOnline?(g?'由你主機電腦上的 AI 執行':`由你主機電腦上的 ${(ENG[c.engine]||ENG.claude).n} 執行`):'主機電腦離線：訊息會先排隊，主機連上後才會處理';
 }
 
 /* ---------- events ---------- */
@@ -545,6 +654,7 @@ $('list').onclick=e=>{
   const it=e.target.closest('.item');if(!it)return;openConv(it.dataset.id)};
 function openConv(id){saveDraft();cur=id;try{localStorage.setItem('ebot_cur',cur)}catch(e){}
   pending=[];renderAtt();loadDraft();render(true);$('app').classList.add('chat');
+  loadMsgs(id,MSG[id]?.loaded?'new':'first').then(()=>{if(cur===id)render(true)}).catch(()=>{});
   if(matchMedia('(min-width:761px)').matches)$('msg').focus()}
 const draftKey=()=>'octa_draft_'+cur;
 function saveDraft(){if(!cur)return;try{const v=$('msg').value;v?localStorage.setItem(draftKey(),v):localStorage.removeItem(draftKey())}catch(e){}}
@@ -564,11 +674,13 @@ function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.
 $('back').onclick=()=>{saveDraft();$('app').classList.remove('chat')};
 $('mention').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=$('msg');i.value=(i.value+' @'+b.dataset.at+' ').trimStart();i.focus()};
 $('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).then(()=>{toast('已停止');refresh()});
-  const cp=e.target.closest('[data-copy-msg]');if(cp){const m=S.msgs.find(x=>String(x.id)===cp.dataset.copyMsg);if(m)navigator.clipboard?.writeText(m.text).then(()=>toast('已複製')).catch(()=>{});return}
+  if(e.target.id==='older'){const box=$('msgs'),h0=box.scrollHeight,id=cur;e.target.disabled=true;
+    loadMsgs(id,'older').then(()=>{if(cur!==id)return;render(false);box.scrollTop=box.scrollHeight-h0}).catch(()=>{e.target.disabled=false});return}
+  const cp=e.target.closest('[data-copy-msg]');if(cp){const m=convMsgs(cur).find(x=>String(x.id)===cp.dataset.copyMsg);if(m)navigator.clipboard?.writeText(m.text).then(()=>toast('已複製')).catch(()=>{});return}
   const im=e.target.closest('img[data-file]');if(im)openFile(im.dataset.file);
   const fc=e.target.closest('[data-open-file]');if(fc)openFile(fc.dataset.openFile);
   const ap=e.target.closest('[data-approve]'),rv=e.target.closest('[data-revise]');
-  if(ap||rv){const m=S.msgs.find(x=>x.id==(ap||rv).dataset[ap?'approve':'revise']);if(!m)return;
+  if(ap||rv){const m=convMsgs(cur).find(x=>x.id==(ap||rv).dataset[ap?'approve':'revise']);if(!m)return;
     const at=isG(cur)?'@'+nameOf(m.by)+' ':'';
     if(ap){ap.disabled=true;sendMsg(at+'核准：'+m.text.match(APPR)[1])}
     else{$('msg').value=at;$('msg').focus()}}};
@@ -585,15 +697,16 @@ $('fileIn').onchange=()=>{addFiles([...$('fileIn').files]);$('fileIn').value=''}
 async function addFiles(list){for(const file of list.slice(0,Math.max(0,6-pending.length))){
     const item={name:file.name,up:true};pending.push(item);renderAtt();
     try{const isImg=/^image\//.test(file.type)&&file.type!=='image/gif';const blob=isImg?await shrink(file):file;
-      if(blob.size>1_000_000)throw new Error(file.name+' 太大（上限 1MB）');
-      const r=await api('files','POST',{name:isImg?file.name.replace(/\.\w+$/,'')+'.jpg':file.name,mime:isImg?'image/jpeg':(file.type||'application/octet-stream'),data:await b64(blob)});
+      if(blob.size>10_000_000)throw new Error(file.name+' '+I18N.t('太大（上限 10MB）'));
+      const r=await api('files','POST',{conv:cur,name:isImg?file.name.replace(/\.\w+$/,'')+'.jpg':file.name,mime:isImg?'image/jpeg':(file.type||'application/octet-stream'),data:await b64(blob)});
       Object.assign(item,r,{up:false})}
     catch(err){pending.splice(pending.indexOf(item),1);$('note').textContent=err.message}
     renderAtt()}}
 async function sendMsg(v,files=[]){const c=cur,fs=pending.filter(f=>files.includes(f.id)).map(f=>({id:f.id,name:f.name,mime:f.mime}));
-  S.msgs.push({id:'tmp'+Date.now(),tmp:true,conv:c,by:'me',text:v||'（附件）',files:fs,ts:Date.now()});lastSend=Date.now();render(true);
+  const mc=MSG[c]||(MSG[c]={list:[],more:false,loaded:false});
+  mc.list.push({id:'tmp'+Date.now(),tmp:true,conv:c,by:'me',text:v||'（附件）',files:fs,ts:Date.now()});render(true);
   try{await api('messages','POST',{conv:c,text:v,files});refresh();return true}
-  catch(err){S.msgs=S.msgs.filter(m=>!m.tmp);render(false);toast(err.message);return false}}
+  catch(err){mc.list=mc.list.filter(m=>!m.tmp);render(false);toast(err.message);return false}}
 $('f').onsubmit=async e=>{e.preventDefault();const v=$('msg').value.trim();
   if(pending.some(f=>f.up))return;const files=pending.map(f=>f.id);if(!v&&!files.length)return;
   const keep=pending;$('msg').value='';grow();try{localStorage.removeItem(draftKey())}catch(e){}
@@ -606,20 +719,20 @@ $('pane').addEventListener('drop',e=>{$('pane').classList.remove('drop');if(!cur
 
 /* ---------- sheets ---------- */
 const ENG={
-  claude:{n:'Claude',full:'Claude（Claude Code）',tag:'推薦',who:'有 Claude Pro／Max 訂閱',cost:'用你的 Claude 訂閱，不另外收費',site:'https://code.claude.com',
+  claude:{n:'Claude',full:'Claude（Claude Code）',tag:'推薦',good:'大型專案開發、跨檔案修改、複雜程式除錯',who:'有 Claude Pro／Max 訂閱',cost:'用你的 Claude 訂閱，不另外收費',site:'https://code.claude.com',quota:'plan',
     win:'irm https://claude.ai/install.ps1 | iex',mac:'curl -fsSL https://claude.ai/install.sh | bash',login:'claude',hint:'出現畫面後輸入 /login，選 Claude 訂閱帳號',m:'例如 sonnet、opus'},
-  codex:{n:'ChatGPT',full:'ChatGPT（Codex CLI）',who:'有 ChatGPT Plus／Pro 等方案',cost:'用你的 ChatGPT 訂閱',site:'https://developers.openai.com/codex/cli',
+  codex:{n:'ChatGPT',full:'ChatGPT（Codex CLI）',good:'企劃規劃、邏輯推理、資料分析、創意與圖片生成',who:'有 ChatGPT Plus／Pro 等方案',cost:'用你的 ChatGPT 訂閱',site:'https://developers.openai.com/codex/cli',quota:'plan',
     npm:'@openai/codex',login:'codex login',hint:'瀏覽器會打開，用 ChatGPT 帳號登入',m:'例如 gpt-5.5'},
-  gemini:{n:'Gemini',full:'Gemini（Gemini CLI）',tag:'免費額度',who:'有 Google 帳號就能用',cost:'個人 Google 帳號有每日免費額度',site:'https://github.com/google-gemini/gemini-cli',
+  gemini:{n:'Gemini',full:'Gemini（Gemini CLI）',tag:'免費額度',good:'Google 服務整合、長文件分析、多模態理解、資料研究',who:'有 Google 帳號就能用',cost:'個人 Google 帳號有每日免費額度',site:'https://github.com/google-gemini/gemini-cli',quota:'count',limit:'個人帳號每天約 1000 次',
     npm:'@google/gemini-cli',login:'gemini',hint:'選 Login with Google，登入後輸入 /quit 離開',m:'例如 gemini-3-pro'},
-  copilot:{n:'GitHub Copilot',full:'GitHub Copilot（GPT／Claude／Gemini）',who:'有 GitHub Copilot 訂閱',cost:'一個訂閱可選多家模型',site:'https://github.com/github/copilot-cli',
+  copilot:{n:'GitHub Copilot',full:'GitHub Copilot（GPT／Claude／Gemini）',good:'程式碼補全、日常編碼、程式碼審查、測試輔助',who:'有 GitHub Copilot 訂閱',cost:'一個訂閱可選多家模型',site:'https://github.com/github/copilot-cli',quota:'count',
     npm:'@github/copilot',login:'copilot',hint:'出現畫面後輸入 /login，用 GitHub 帳號登入',m:'例如 gpt-5.5、claude-sonnet-4.6'},
-  cursor:{n:'Cursor',full:'Cursor（Cursor CLI）',who:'有 Cursor 訂閱',cost:'用你的 Cursor 訂閱',site:'https://cursor.com/cli',
+  cursor:{n:'Cursor',full:'Cursor（Cursor CLI）',good:'多檔案修改、程式重構、專案除錯、AI Agent 開發',who:'有 Cursor 訂閱',cost:'用你的 Cursor 訂閱',site:'https://cursor.com/cli',quota:'count',
     win:"irm 'https://cursor.com/install?win32=true' | iex",mac:'curl https://cursor.com/install -fsS | bash',login:'agent login',hint:'瀏覽器會打開，用 Cursor 帳號登入',m:'例如 gpt-5、sonnet-4'},
-  qwen:{n:'通義千問',full:'通義千問（Qwen Code）',who:'有阿里雲／Qwen 帳號',cost:'依 Qwen 官方方案',site:'https://github.com/QwenLM/qwen-code',
+  qwen:{n:'通義千問',full:'通義千問（Qwen Code）',good:'中文理解與生成、長篇文件分析、程式碼生成、數學推理、多模態分析（圖片、音訊、影片）、AI Agent 工具調用、自動化工作流程，以及開放模型部署',who:'有阿里雲／Qwen 帳號',cost:'依 Qwen 官方方案',site:'https://github.com/QwenLM/qwen-code',quota:'count',
     npm:'@qwen-code/qwen-code',login:'qwen',hint:'依畫面選擇登入方式，完成後輸入 /quit 離開',m:'例如 qwen3-coder-plus'},
-  opencode:{n:'其他模型',full:'其他：DeepSeek／Grok／Kimi／Mistral／本機模型（OpenCode）',tag:'進階',who:'有 DeepSeek、xAI 等的 API 金鑰，或想用電腦本機模型（Ollama）',cost:'依各家 API 計費；本機模型免費',site:'https://opencode.ai',
-    npm:'opencode-ai',login:'opencode auth login',hint:'選服務（DeepSeek、xAI、Ollama…）並貼上金鑰；機器人的「模型」要填，例如 deepseek/deepseek-chat',m:'必填，例如 deepseek/deepseek-chat、xai/grok-4、ollama/qwen3'}};
+  opencode:{n:'Ollama',full:'Ollama 本機模型（免費）',tag:'免費',good:'本機部署開源模型、私有化 AI、中文處理、程式開發',who:'想用免費的開源模型，資料不離開電腦',cost:'免費，在你的電腦上執行（需要較好的顯示卡或 16GB 以上記憶體）',site:'https://ollama.com',quota:'local',
+    npm:'opencode-ai',pre:'winget install -e --id Ollama.Ollama',login:'ollama pull qwen3',hint:'會先安裝 Ollama，再下載 qwen3 模型（約 5 GB）',m:'例如 qwen3、gemma3、llama3.1（空白就用電腦上第一個模型）'}};
 const engState=k=>S.engines?(S.engines[k]?'ok':'no'):'unknown';
 const EMOJIS=['🤖','🐙','🦊','🐱','🐶','🐼','🦉','🐝','🧠','💬','📋','🧾','📊','📝','🔎','📦','🛎️','🧹','🏨','🛒','📅','💡','⚡','🌟'];
 const TPL=['用瀏覽器打開網站後台','整理成清單或表格','寫入 Google 試算表','擬好訊息給我確認再發','做完回報重點'];
@@ -660,11 +773,11 @@ function sheet(kind,edit){
     const upd=()=>{const e=ENG[$('sf_e').value];$('sf_m').placeholder=e.m;const k=$('sf_e').value;$('sf_hint').innerHTML=engState(k)==='ok'?'<span class="p-ok">這台電腦已連接這個 AI。</span>':`這台電腦還沒連接這個 AI。<a href="#" id="sf_conn">看怎麼連接</a>`;if($('sf_conn'))$('sf_conn').onclick=ev=>{ev.preventDefault();openAI(k)}};$('sf_e').onchange=upd;upd()}
   if(edit)renderRoutines();
   $('veil').querySelectorAll('.tpl button').forEach(b=>b.onclick=()=>{const t=$('st');t.value=(t.value?t.value+'；':'')+b.textContent});
-  if(edit)$('sd').onclick=()=>{const d=$('sd');if(d.dataset.sure){api((g?'groups/':'bots/')+cur,'DELETE').then(()=>{closeSheet();cur=null;lastId=0;refresh();$('app').classList.remove('chat')})}
+  if(edit)$('sd').onclick=()=>{const d=$('sd');if(d.dataset.sure){api((g?'groups/':'bots/')+cur,'DELETE').then(()=>{closeSheet();delete MSG[cur];cur=null;refresh();$('app').classList.remove('chat')})}
     else{d.dataset.sure=1;d.textContent='再按一次確認刪除'}};
   $('sf').onsubmit=async e=>{e.preventDefault();
     const body={name:$('sn').value,task:$('st').value,folder:$('sf_f').value||null};
-    if(!g){body.avatar=sheet.av?.()||'';body.browser=$('veil').querySelector('input[name=sf_b]:checked')?.value||'own';body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();if(body.engine==='opencode'&&!body.model){$('se').textContent='OpenCode 需要填模型，例如 deepseek/deepseek-chat';return}}
+    if(!g){body.avatar=sheet.av?.()||'';body.browser=$('veil').querySelector('input[name=sf_b]:checked')?.value||'own';body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();}
     if(g)body.members=[...$('veil').querySelectorAll('.picks input:checked')].map(i=>i.value);
     try{const r=await api(edit?(g?'groups/':'bots/')+cur:(g?'groups':'bots'),edit?'PUT':'POST',body);
       if(!edit)cur=r.id;closeSheet();await refresh();$('app').classList.add('chat')}
@@ -698,7 +811,7 @@ function shotSheet(ids){
     ${b.browser==='mine'?`<div class="meta">這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。</div>`:`<div class="row2"><button class="btn" data-open="${id}">在電腦上叫出上次的畫面</button><button class="ghost" data-url="${id}">打開其他網址…</button></div>`}</div>`}).join('')}
   <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
   $('veil').hidden=false;$('sx').onclick=closeSheet;
-  ids.forEach(id=>{if(bot(id).shot_ts)api('shot/'+id).then(d=>{const im=$('img_'+id);if(im&&d.data)im.src=`data:${d.mime};base64,${d.data}`}).catch(()=>{})});
+  ids.forEach(id=>{if(bot(id).shot_ts)api('shot/'+id).then(d=>d.file?fileData(d.file):d).then(d=>{const im=$('img_'+id);if(im&&d.data)im.src=`data:${d.mime};base64,${d.data}`}).catch(e=>{const im=$('img_'+id);if(im)im.replaceWith(Object.assign(document.createElement('div'),{className:'noshot',textContent:e.message}))})});
   $('veil').querySelectorAll('[data-open]').forEach(x=>x.onclick=()=>{closeSheet();openBrowser(x.dataset.open)});
   $('veil').querySelectorAll('[data-url]').forEach(x=>x.onclick=()=>urlSheet(x.dataset.url));
   $('veil').querySelectorAll('.shot').forEach(im=>im.onclick=()=>{const id=im.id.slice(4);closeSheet();openBrowser(id)});
@@ -767,74 +880,81 @@ $('nb').onclick=()=>sheet('b');$('ng').onclick=()=>sheet('g');
 $('edit').onclick=()=>sheet(isG(cur)?'g':'b',true);
 
 $('settings').onclick=()=>openSettings();
-async function openSettings(){
-  const site=location.origin,isNew=arguments[0]===true;
-  let st={notes:'',notifyAll:false,tg:{},line:{}},ds=null;
-  try{st=await api('settings')}catch(e){}
-  if(DESK()){try{ds=await api('desktop/status')}catch(e){}}
-  const runnerHtml=DESK()?`
-  <h3>這台電腦</h3>
-  <div class="kv"><span>Claude Code</span><b>${ds?.claude?.ok?'已安裝 '+esc(ds.claude.version||''):'<span class="p-pr">找不到</span>'}</b>
-    <span>Google Chrome</span><b>${ds?.chrome?'已安裝':'<span class="p-pr">找不到</span>'}</b>
-    <span>程式版本</span><b>${esc(ds?.version||'')}${UPD?` <button type="button" class="ghost" id="dUpd" style="margin-left:6px;padding:2px 10px">檢查更新</button> <span id="dUpdMsg" style="font-weight:400;color:var(--mute)"></span>`:''}</b></div>
-  <div class="row2">${ds?.claude?.ok?'':'<a class="ghost" href="https://code.claude.com" target="_blank" rel="noopener">安裝 Claude Code</a>'}<button class="ghost" id="dLogin">登入 Claude（開終端機）</button><button class="ghost" id="dFolder">打開資料夾</button></div>
+/* ---------- settings: a menu, each item opens its own page ---------- */
+const field='flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--ink);font:inherit';
+function subSheet(title,html,opts={}){
+  $('veil').innerHTML=`<div class="sheet"><div class="shd"><button type="button" class="back2" id="sBack" aria-label="返回設定">‹</button><h2>${title}</h2></div>${html}
+  <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;$('sBack').onclick=()=>(opts.back||openSettings)();}
+function openSettings(){
+  const rows=[
+    ['acct','👤','帳號與裝置',CFG.local?'離線模式不使用帳號':esc(S.me)],
+    ['pc','🖥','電腦與主機',S.runnerOnline?(CFG.local?'電腦在線':'主機在線'):(CFG.local?'電腦離線':'主機離線')],
+    ['ai','🔌','AI 連線','連接 AI、查看剩餘流量'],
+    ['noti','🔔','通知','這個裝置、Telegram、LINE'],
+    ['sched','⏰','例行任務排程',S.sched==='pc'?'電腦排程':'雲端排程'],
+    ['files','📁','檔案儲存','附件、截圖、機器人的輸出'],
+    ['notes','📝','共用資料','所有機器人都會讀'],
+    ['tpl','🧩','範本','一鍵建立常用的機器人'],
+    ['logs','📋','工作紀錄','最近 100 筆'],
+    ['guide','🧭','設定指引','從頭設定一次'],
+    ['ver','✨','最新版本',(window._upd&&['available','ready'].includes(window._upd.state))?'有新版本':'版本與更新內容']];
+  $('veil').innerHTML=`<div class="sheet"><h2>設定</h2>
+  <nav class="smenu">${rows.map(([k,i,t,d])=>`<button type="button" data-s="${k}"><span class="si">${i}</span><span class="st"><b>${t}</b><small>${d}</small></span><span class="sa">›</span></button>`).join('')}</nav>
+  <label class="toggle"><span>🌐 <span>語言</span></span>${I18N.select('sLang')}</label>
+  <div class="acts">${CFG.local?'':'<button class="del" id="lo">登出</button>'}<button class="btn" id="sx">關閉</button></div></div>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;
+  if($('lo'))$('lo').onclick=()=>{closeSheet();logoutAsk()};
+  $('sLang').onchange=e=>setLang(e.target.value);
+  const go={acct:openAccount,pc:openComputers,ai:()=>openAI(),noti:openNotify,sched:openSched,files:openStore,notes:openNotes,tpl:openTpl,logs:openLogs,guide:openGuide,ver:openVersion};
+  $('veil').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>go[b.dataset.s]())}
+const when=t=>t?new Date(t).toLocaleString(I18N.lang,{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+/* account & devices */
+async function openAccount(){
+  if(CFG.local){subSheet('帳號與裝置','<p>離線模式不使用帳號，資料只在這台電腦。要讓手機使用，請到「電腦與主機」開啟手機遠端，或改用雲端帳號。</p>');return}
+  subSheet('帳號與裝置',`<p>帳號：<b data-u>${esc(S.me)}</b></p><div id="devs"><p class="fade">讀取中…</p></div>
+  <h3>移除裝置</h3><p>勾選上面的裝置，輸入密碼後移除，那些裝置會被登出。</p>
+  <div class="row2"><input id="dPw" type="password" autocomplete="current-password" placeholder="目前的密碼" style="${field}"><button class="ghost" id="dRm">移除選定的裝置</button></div><p class="errmsg" id="dMsg"></p>
+  <h3>修改密碼</h3>
+  <div class="row2"><input id="pOld" type="password" autocomplete="current-password" placeholder="目前的密碼" style="${field}"><input id="pNew" type="password" autocomplete="new-password" placeholder="新密碼（至少 8 碼）" style="${field}"></div>
+  <div class="row2"><button class="ghost" id="pGo">修改密碼</button><span id="pMsg" style="font-size:12px;color:var(--mute)"></span></div>
+  <h3>忘記密碼用的重設碼</h3><p>在另一台裝置忘記密碼時，可以在這裡產生重設碼（15 分鐘內有效），到登入畫面按「忘記密碼？」輸入。有設定 Telegram 或 LINE 通知的話，也能直接從登入畫面把重設碼傳到那裡。</p>
+  <div class="row2"><button class="ghost" id="rcGo">產生重設碼</button><b id="rcOut" style="font-size:20px;letter-spacing:.2em;user-select:all"></b></div>`);
+  let d={devices:[]};try{d=await api('devices')}catch(e){}
+  $('devs').innerHTML=`<div class="devs">${d.devices.map(x=>`<label class="dev"><input type="checkbox" value="${x.id}" ${x.current?'disabled':''}><span><b data-u>${esc(x.name)}</b>${x.current?' <span class="pill p-ok">這個裝置</span>':''}<small><span data-u>${esc(x.place||'')}</span>${x.place?' · ':''}<span>上次使用</span> ${when(x.seen)}</small></span></label>`).join('')||'<p>沒有其他裝置</p>'}</div>`;
+  $('dRm').onclick=async()=>{const ids=[...$('devs').querySelectorAll('input:checked')].map(i=>i.value);$('dMsg').textContent='';
+    if(!ids.length){$('dMsg').textContent=I18N.t('請勾選要移除的裝置');return}
+    try{await api('devices/remove','POST',{ids,pw:$('dPw').value});toast(I18N.t('已移除'));openAccount()}catch(e){$('dMsg').textContent=e.message}};
+  $('pGo').onclick=async()=>{try{await api('password','POST',{old:$('pOld').value,pw:$('pNew').value});$('pMsg').textContent=I18N.t('已修改，其他裝置需要重新登入');$('pOld').value=$('pNew').value=''}catch(e){$('pMsg').textContent=e.message}};
+  $('rcGo').onclick=async()=>{try{const r=await api('reset-code','POST');$('rcOut').textContent=r.code}catch(e){toast(e.message)}}}
+/* computers: one host does the work */
+async function openComputers(){
+  let ds=null;if(DESK()){try{ds=await api('desktop/status')}catch(e){}}
+  const here=DESK()?`<h3>這台電腦</h3>
+  <div class="kv"><span>Google Chrome</span><b>${ds?.chrome?'已安裝':'<span class="p-pr">找不到</span>'}</b>
+    <span>程式版本</span><b data-u>${esc(ds?.version||'')}</b></div>
   <label class="toggle">開機自動啟動<button type="button" class="sw ${ds?.autostart?'on':''}" id="dAuto"></button></label>
   <h3>使用我的 Chrome ${ds?.extToken?'<span class="pill p-ok">已連接</span>':'<span class="pill p-off">未連接</span>'}</h3>
   <p>讓選了「使用我的 Chrome」的機器人，直接用你 Chrome 已登入的網站和已儲存的密碼。每個機器人會在自己的分頁群組裡工作，不會動到你其他分頁。</p>
   <ol class="ol"><li>在 Chrome 安裝 <a href="https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm" target="_blank" rel="noopener">Playwright Extension</a></li>
     <li>點 Chrome 右上角的擴充功能圖示，複製畫面上的 PLAYWRIGHT_MCP_EXTENSION_TOKEN</li>
-    <li>貼在這裡並儲存：<div class="row2" style="margin-top:6px"><input id="dExt" type="password" autocomplete="off" placeholder="${ds?.extToken?'已儲存（要更換再貼上新的）':'貼上 token'}" style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--ink);font:inherit"><button class="btn" id="dExtSave">儲存</button>${ds?.extToken?'<button class="ghost" id="dExtDel">移除</button>':''}</div></li></ol>
+    <li>貼在這裡並儲存：<div class="row2" style="margin-top:6px"><input id="dExt" type="password" autocomplete="off" placeholder="${ds?.extToken?'已儲存（要更換再貼上新的）':'貼上 token'}" style="${field}"><button class="btn" id="dExtSave">儲存</button>${ds?.extToken?'<button class="ghost" id="dExtDel">移除</button>':''}</div></li></ol>
   ${CFG.local?`<h3>手機遠端</h3>
   <p>開啟後會產生一個網址和配對碼，手機打開網址、輸入配對碼就能使用。關掉就斷開。</p>
   <label class="toggle">手機遠端<button type="button" class="sw ${ds?.remote?.on?'on':''}" id="dRemote"></button></label>
-  <div id="dRemoteInfo">${ds?.remote?.on?remoteInfo(ds.remote):''}</div>`:'<p>手機打開 octa.yzprojecttw.com 登入同一個帳號，就能隨時指揮這台電腦上的機器人。</p>'}
-  ${window.octaDesktop?`<div class="row2"><button class="ghost" id="dMode">${CFG.local?'改用雲端帳號（同步）':'改用離線模式（不同步）'}</button></div>`:''}`:`
-  <h3>連接你的電腦</h3>
-  <p>機器人由你電腦上的 AI 工具執行，用的是你自己的帳號。需要 Node 18 以上與 Google Chrome。每個機器人有自己獨立的 Chrome 視窗，最多 3 個同時工作。</p>
-  <p>1. 下載執行器到一個資料夾（例如 C:\\octa）：</p>
+  <div id="dRemoteInfo">${ds?.remote?.on?remoteInfo(ds.remote):''}</div>`:''}
+  ${window.octaDesktop?`<div class="row2"><button class="ghost" id="dMode">${CFG.local?'改用雲端帳號（同步）':'改用離線模式（不同步）'}</button></div>`:''}`:'';
+  subSheet('電腦與主機',`${CFG.local?'<p>離線模式：機器人在這台電腦上工作。</p>':`<p>機器人在「主機」電腦上工作。手機、平板和其他電腦打開 <b data-u>${esc(location.host)}</b> 登入同一個帳號，就能指揮、看結果。有多台電腦裝了 OCTA 時，只有主機會接工作，其他電腦待命。</p><div id="pcs"><p class="fade">讀取中…</p></div>`}
+  ${here}
+  ${DESK()?'':`<h3>沒有安裝桌面版的電腦</h3>
+  <p>也可以用指令列執行器（需要 Node 18 以上與 Google Chrome）：</p>
   <pre class="code">mkdir C:\\octa; cd C:\\octa
-curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
-  <p>2. 產生金鑰後，第一次執行（之後只要 <code>node octa-runner.mjs</code>）：</p>
-  <div class="row2"><button class="btn" id="gen">產生執行器金鑰</button><span style="font-size:12px;color:var(--faint)">會讓舊金鑰失效</span></div>
-  <pre class="code" id="cmd" hidden></pre>
-  <p>想讓機器人用你 Chrome 已登入的網站和已儲存的密碼：在 Chrome 安裝 <a href="https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm" target="_blank" rel="noopener">Playwright Extension</a>，把它顯示的 token 加到執行器資料夾的 octa-runner.json：<code>"extToken": "你的 token"</code>，再把機器人的瀏覽器設成「使用我的 Chrome」。</p>`;
-  $('veil').innerHTML=`<div class="sheet"><h2>設定</h2><p>${CFG.local?'本機':'帳號：'+esc(S.me)}　·　執行器：${S.runnerOnline?'<span class="p-ok">在線</span>':'離線'}</p>
-  <div class="row2"><button class="ghost" id="guideBtn">設定指引</button><button class="ghost" id="aiBtn">AI 連線</button><span style="margin-left:auto">${I18N.select('sLang')}</span></div>
-  ${runnerHtml}
-  <h3>共用資料</h3>
-  <label class="field">所有機器人都會讀的固定資訊<textarea id="gNotes" maxlength="20000" placeholder="例如：公司名稱、常用網站、聯絡方式、做事原則">${esc(st.notes)}</textarea></label>
-  <h3>通知</h3>
-  <p>機器人卡住、需要你核准、或出錯時通知你。${DESK()?'桌面版也會跳出電腦通知。':''}</p>
-  <label class="field">Telegram Bot Token<input id="tgTok" value="${esc(st.tg.token||'')}" placeholder="從 @BotFather 取得"></label>
-  <div class="row2"><input id="tgChat" style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--ink);font:inherit" value="${esc(st.tg.chat||'')}" placeholder="Chat ID"><button class="ghost" id="tgDet">自動偵測</button></div>
-  <label class="field">LINE Messaging API Channel Access Token<input id="lnTok" value="${esc(st.line.token||'')}" placeholder="LINE Developers 後台取得"></label>
-  <label class="field">LINE 接收者 User ID<input id="lnTo" value="${esc(st.line.to||'')}" placeholder="U 開頭"></label>
-  <label class="toggle">完成工作也通知<button type="button" class="sw ${st.notifyAll?'on':''}" id="nAll"></button></label>
-  <div class="row2"><button class="btn" id="sSave">儲存</button><button class="ghost" id="nTest">傳測試通知</button><span id="sMsg" style="font-size:12px;color:var(--mute)"></span></div>
-  <h3>工作紀錄</h3>
-  <div class="row2"><button class="ghost" id="logsBtn">查看最近 100 筆</button></div>
-  <h3>範本</h3>
-  ${tplHtml()}
-  <div class="acts">${CFG.local?'':'<button class="del" id="lo">登出</button>'}<button class="btn" id="sx">關閉</button></div></div>`;
-  $('veil').hidden=false;$('sx').onclick=closeSheet;
-  if($('lo'))$('lo').onclick=()=>{closeSheet();logout()};
-  if($('gen'))$('gen').onclick=async()=>{const d=await api('runner-token','POST');$('cmd').hidden=false;$('cmd').textContent=`node octa-runner.mjs ${site} ${d.token}`};
-  bindTpl($('veil'));
-  $('nAll').onclick=()=>$('nAll').classList.toggle('on');
-  const say=t=>$('sMsg').textContent=t;
-  const saveS=()=>api('settings','PUT',{notes:$('gNotes').value,notifyAll:$('nAll').classList.contains('on'),tg:{token:$('tgTok').value,chat:$('tgChat').value},line:{token:$('lnTok').value,to:$('lnTo').value}});
-  $('sSave').onclick=async()=>{try{await saveS();say('已儲存 ✓')}catch(e){say(e.message)}};
-  $('nTest').onclick=async()=>{try{await saveS();const r=await api('notify/test','POST');say('已送出：'+r.sent.join('、'))}catch(e){say(e.message)}};
-  $('tgDet').onclick=async()=>{try{await saveS();const r=await api('notify/detect','POST');$('tgChat').value=r.chat;say('找到 Chat ID ✓')}catch(e){say(e.message)}};
-  $('logsBtn').onclick=openLogs;$('guideBtn').onclick=openGuide;$('sLang').onchange=e=>setLang(e.target.value);$('aiBtn').onclick=()=>openAI();
-  if($('dUpd'))$('dUpd').onclick=async()=>{$('dUpdMsg').textContent=I18N.t('檢查中…');let u=await UPD.check();
-    for(let i=0;i<20&&['idle','checking'].includes(u.state);i++){await new Promise(r=>setTimeout(r,700));u=await UPD.status()}
-    $('dUpdMsg').textContent=I18N.t(u.state==='none'?'已是最新版':u.state==='available'?'有新版本，按左上角「更新」':u.state==='error'?'無法檢查更新':u.state==='downloading'?'下載新版本中…':u.state==='ready'?'新版本已下載好':'檢查中…');renderUpd(u)};
+curl.exe -o octa-runner.mjs ${location.origin}/octa-runner.mjs</pre>
+  <div class="row2"><button class="ghost" id="gen">產生執行器金鑰</button></div><pre class="code" id="cmd" hidden></pre>`}`);
+  if($('gen'))$('gen').onclick=async()=>{const d=await api('runner-token','POST');$('cmd').hidden=false;$('cmd').textContent=`node octa-runner.mjs ${location.origin} ${d.token}`};
   if(DESK()){
-    $('dLogin').onclick=()=>api('desktop/login-claude','POST').catch(e=>alertSheet('無法開啟',e.message));
-    const saveExt=async t=>{try{await api('desktop/ext-token','POST',{token:t});toast(t?'已連接 Chrome':'已移除');openSettings()}catch(e){toast(e.message)}};
+    const saveExt=async t=>{try{await api('desktop/ext-token','POST',{token:t});toast(t?'已連接 Chrome':'已移除');openComputers()}catch(e){toast(e.message)}};
     $('dExtSave').onclick=()=>{const t=$('dExt').value.trim();if(t)saveExt(t)};if($('dExtDel'))$('dExtDel').onclick=()=>saveExt('');
-    $('dFolder').onclick=()=>api('desktop/open-folder','POST').catch(()=>{});
     $('dAuto').onclick=async()=>{const on=!$('dAuto').classList.contains('on');$('dAuto').classList.toggle('on',on);await api('desktop/autostart','POST',{on}).catch(()=>{})};
     if($('dMode'))$('dMode').onclick=()=>{closeSheet();boot.show('切換中…');CFG.local?window.octaDesktop.useCloud():window.octaDesktop.useOffline()};
     if($('dRemote'))$('dRemote').onclick=async()=>{const on=!$('dRemote').classList.contains('on');const b=$('dRemote');b.disabled=true;b.classList.toggle('on',on);
@@ -842,43 +962,144 @@ curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
       try{const r=await api('desktop/remote','POST',{on});$('dRemoteInfo').innerHTML=on?remoteInfo(r):''}
       catch(e){b.classList.toggle('on',!on);$('dRemoteInfo').innerHTML=`<p class="errmsg">${esc(e.message)}</p>`}finally{b.disabled=false}};
   }
-}
+  if(CFG.local)return;
+  let d={computers:[]};try{d=await api('devices')}catch(e){}
+  if(!$('pcs'))return;
+  $('pcs').innerHTML=d.computers.length?`<div class="devs">${d.computers.map(c=>`<div class="dev"><span><b data-u>${esc(c.name)}</b> ${c.host?'<span class="pill p-ok">主機</span>':'<span class="pill p-off">備用</span>'} ${c.online?'<span class="pill p-ok">在線</span>':'<span class="pill p-off">離線</span>'}
+    <small>${c.version?'<span>版本</span> <span data-u>'+esc(c.version)+'</span> · ':''}<span>上次連線</span> ${when(c.seen)}${c.engines?' · '+Object.keys(ENG).filter(k=>c.engines[k]).map(k=>ENG[k].n).join('、'):''}</small></span>
+    <span class="row2">${c.host?'':`<button class="ghost" data-host="${c.id}">設為主機</button>`}<button class="ghost" data-rmpc="${c.id}">移除</button></span></div>`).join('')}</div>`
+    :'<p>還沒有電腦連上。在電腦安裝 OCTA 桌面版並登入這個帳號，它就會成為主機。</p>';
+  $('pcs').querySelectorAll('[data-host]').forEach(b=>b.onclick=async()=>{try{await api('host','POST',{id:b.dataset.host});toast(I18N.t('已切換主機'));await refresh();openComputers()}catch(e){toast(e.message)}});
+  $('pcs').querySelectorAll('[data-rmpc]').forEach(b=>b.onclick=()=>{
+    $('veil').innerHTML=`<form class="sheet" id="rmf"><h2>移除這台電腦</h2><p>移除後，那台電腦需要重新登入 OCTA 才能再幫你工作。</p>
+    <label class="field">密碼<input id="rmPw" type="password" autocomplete="current-password" required></label><div class="errmsg" id="rmE"></div>
+    <div class="acts"><button type="button" class="no" id="sx">取消</button><button class="btn">移除</button></div></form>`;
+    $('rmPw').focus();$('sx').onclick=openComputers;
+    $('rmf').onsubmit=ev=>{ev.preventDefault();api('devices/remove','POST',{ids:[b.dataset.rmpc],pw:$('rmPw').value}).then(()=>{toast(I18N.t('已移除'));openComputers()}).catch(e=>$('rmE').textContent=e.message)}})}
+/* notifications */
+async function openNotify(){
+  let st={notifyAll:false,tg:{},line:{}};try{st=await api('settings')}catch(e){}
+  const perm='Notification' in window?Notification.permission:'unsupported';
+  subSheet('通知',`<h3>這個裝置</h3><p>機器人回覆時，在這個裝置跳出通知（不在那個對話裡或視窗在背景時）。手機要把 OCTA 加到主畫面才收得到。</p>
+  <label class="toggle">在這個裝置跳出通知<button type="button" class="sw ${notiOn()&&perm==='granted'?'on':''}" id="nDev" ${perm==='unsupported'?'disabled':''}></button></label>
+  ${perm==='denied'?'<p class="errmsg">瀏覽器封鎖了通知，請在網址列左邊的網站設定裡允許通知。</p>':perm==='unsupported'?'<p>這個瀏覽器不支援通知。</p>':''}
+  <h3>Telegram／LINE</h3><p>機器人卡住、需要你核准、出錯，或例行任務時間到但主機離線時通知你。</p>
+  <label class="field">Telegram Bot Token<input id="tgTok" value="${esc(st.tg.token||'')}" placeholder="從 @BotFather 取得"></label>
+  <div class="row2"><input id="tgChat" style="${field}" value="${esc(st.tg.chat||'')}" placeholder="Chat ID"><button class="ghost" id="tgDet">自動偵測</button></div>
+  <label class="field">LINE Messaging API Channel Access Token<input id="lnTok" value="${esc(st.line.token||'')}" placeholder="LINE Developers 後台取得"></label>
+  <label class="field">LINE 接收者 User ID<input id="lnTo" value="${esc(st.line.to||'')}" placeholder="U 開頭"></label>
+  <label class="toggle">完成工作也通知<button type="button" class="sw ${st.notifyAll?'on':''}" id="nAll"></button></label>
+  <div class="row2"><button class="btn" id="sSave">儲存</button><button class="ghost" id="nTest">傳測試通知</button><span id="sMsg" style="font-size:12px;color:var(--mute)"></span></div>`);
+  $('nDev').onclick=async()=>{const want=!$('nDev').classList.contains('on');
+    if(want&&Notification.permission!=='granted'){const p=await Notification.requestPermission().catch(()=>'denied');if(p!=='granted'){toast(I18N.t('沒有取得通知權限'));return openNotify()}}
+    try{localStorage.setItem(NOTI_KEY,want?'1':'0')}catch(e){}$('nDev').classList.toggle('on',want);
+    if(want)try{new Notification('OCTA',{body:I18N.t('通知已開啟'),icon:'/icon.png?v=octopus'})}catch(e){}};
+  $('nAll').onclick=()=>$('nAll').classList.toggle('on');
+  const say=t=>$('sMsg').textContent=t;
+  const saveS=()=>api('settings','PUT',{notifyAll:$('nAll').classList.contains('on'),tg:{token:$('tgTok').value,chat:$('tgChat').value},line:{token:$('lnTok').value,to:$('lnTo').value}});
+  $('sSave').onclick=async()=>{try{await saveS();say(I18N.t('已儲存 ✓'))}catch(e){say(e.message)}};
+  $('nTest').onclick=async()=>{try{await saveS();const r=await api('notify/test','POST');say(I18N.t('已送出：')+r.sent.join('、'))}catch(e){say(e.message)}};
+  $('tgDet').onclick=async()=>{try{await saveS();const r=await api('notify/detect','POST');$('tgChat').value=r.chat;say(I18N.t('找到 Chat ID ✓'))}catch(e){say(e.message)}}}
+/* routine schedule mode */
+function openSched(){
+  const v=S.sched==='pc'?'pc':'cloud';
+  subSheet('例行任務排程',`<p>決定例行任務由誰看時間、按時觸發。</p>
+  <div class="bchoice"><label class="bc"><input type="radio" name="sc" value="cloud" ${v==='cloud'?'checked':''}><span><b>雲端排程（建議）</b><small>時間到由雲端觸發。主機電腦剛好沒開時，任務會排隊，電腦一連上就執行，並用 Telegram／LINE 通知你。</small></span></label>
+  <label class="bc"><input type="radio" name="sc" value="pc" ${v==='pc'?'checked':''}><span><b>電腦排程</b><small>由主機電腦自己看時間。電腦沒開的時段就跳過，不會補做。</small></span></label></div>
+  <p class="hmuted">${CFG.local?'離線模式只能用電腦排程。':'時區：台灣時間（UTC+8）'}</p>`);
+  $('veil').querySelectorAll('input[name=sc]').forEach(r=>r.onchange=async()=>{try{await api('settings','PUT',{sched:r.value});S.sched=r.value;toast(I18N.t('已儲存 ✓'))}catch(e){toast(e.message)}})}
+/* where files are kept */
+async function openStore(){
+  if(!DESK()){subSheet('檔案儲存',`<p>附件、截圖和機器人做出的檔案都存在主機電腦的 OCTA 資料夾，每個機器人和群組各有一個資料夾（附件、截圖、輸出），機器人之間可以互相讀取。</p>
+    <p>你從手機或這裡傳的檔案，會先暫存在雲端，主機電腦一收到就存進資料夾並刪除雲端那份。之後要看時，會從主機電腦即時讀取（主機要開著）。</p>
+    <p>要改存到 Google 雲端硬碟或其他資料夾，請在主機電腦的 OCTA 桌面版「設定 → 檔案儲存」更改。</p>`);return}
+  let st=null;try{st=await api('desktop/store')}catch(e){}
+  subSheet('檔案儲存',`<p>附件、截圖和機器人做出的檔案存在這個資料夾，每個機器人和群組各一個資料夾（附件、截圖、輸出），機器人之間可以互相讀取。</p>
+  <div class="kv"><span>目前位置</span><b data-u style="overflow-wrap:anywhere">${esc(st?.path||'')}</b></div>
+  <div class="row2"><button class="ghost" id="stOpen">打開資料夾</button></div>
+  <h3>改存到</h3>
+  <div class="bchoice">
+   <label class="bc"><input type="radio" name="stw" value="default" ${st?.isDefault?'checked':''}><span><b>這台電腦（預設）</b><small>OCTA 程式資料夾裡的 files。</small></span></label>
+   <label class="bc"><input type="radio" name="stw" value="google" ${st?.onGoogle?'checked':''} ${st?.google?'':'disabled'}><span><b>Google 雲端硬碟</b><small>${st?.google?'存到 <span data-u>'+esc(st.google)+'</span>，會自動同步到你的 Google 雲端硬碟，手機也能直接看。':'需要先安裝「Google 雲端硬碟電腦版」並登入，裝好後重新打開這頁。'}</small></span></label>
+   <label class="bc"><input type="radio" name="stw" value="pick" ${!st?.isDefault&&!st?.onGoogle?'checked':''}><span><b>自己選資料夾…</b><small>例如 OneDrive、Dropbox 或外接硬碟。</small></span></label></div>
+  <label class="toggle">把現有檔案一起搬過去<button type="button" class="sw on" id="stMove"></button></label>
+  <div class="row2"><button class="btn" id="stGo">套用</button><span id="stMsg" style="font-size:12px;color:var(--mute)"></span></div>
+  ${st?.google?'':'<p><a href="https://www.google.com/drive/download/" target="_blank" rel="noopener">下載 Google 雲端硬碟電腦版</a></p>'}`);
+  $('stOpen').onclick=()=>api('desktop/open-store','POST').catch(()=>{});
+  $('stMove').onclick=()=>$('stMove').classList.toggle('on');
+  $('stGo').onclick=async()=>{const v=$('veil').querySelector('input[name=stw]:checked')?.value;if(!v)return;
+    try{await api('desktop/store','POST',{set:v,move:$('stMove').classList.contains('on')});toast(I18N.t('已儲存 ✓'));openStore()}catch(e){$('stMsg').textContent=e.message}}}
+async function openNotes(){
+  let st={notes:''};try{st=await api('settings')}catch(e){}
+  subSheet('共用資料',`<label class="field">所有機器人都會讀的固定資訊<textarea id="gNotes" maxlength="20000" style="min-height:220px" placeholder="例如：公司名稱、常用網站、聯絡方式、做事原則">${esc(st.notes)}</textarea></label>
+  <p>只給某個分區的資料，請在左邊分區名稱旁的 ⋯ →「分區名稱與資料」填寫。</p>
+  <div class="row2"><button class="btn" id="gSave">儲存</button><span id="gMsg" style="font-size:12px;color:var(--mute)"></span></div>`);
+  $('gSave').onclick=async()=>{try{await api('settings','PUT',{notes:$('gNotes').value});$('gMsg').textContent=I18N.t('已儲存 ✓')}catch(e){$('gMsg').textContent=e.message}}}
+function openTpl(){subSheet('範本',`<p>一鍵建立一組常用的機器人，之後都能改名、改任務。</p>${tplHtml()}`);bindTpl($('veil'))}
+/* version & what's new */
+let CHANGES=null;
+async function changelog(){if(CHANGES)return CHANGES;try{CHANGES=await (await fetch('/changelog.json',{cache:'no-cache'})).json()}catch(e){CHANGES=[]}return CHANGES}
+async function openVersion(){
+  const log=await changelog(),web=log[0]?.v||'';
+  const app=window.octaDesktop?await window.octaDesktop.version().catch(()=>''):'';
+  const u=window._upd;
+  const updHtml=!UPD?'':u&&['available','downloading','ready'].includes(u.state)?`<p>桌面版有新版本 <b data-u>v${esc(u.version)}</b>。</p><div class="row2"><button class="btn" id="vGo">${u.state==='ready'?'重新啟動並更新':u.state==='downloading'?'下載中…':'更新'}</button></div>${u.notes?`<pre class="notes" data-u>${esc(u.notes)}</pre>`:''}`
+    :`<div class="row2"><button class="ghost" id="vChk">檢查更新</button><span id="vMsg" style="font-size:12px;color:var(--mute)"></span></div>`;
+  subSheet('最新版本',`<div class="kv"><span>網頁版</span><b data-u>v${esc(web)}</b>${app?`<span>桌面版（這台電腦）</span><b data-u>v${esc(app)}</b>`:''}</div>
+  ${updHtml}
+  ${!UPD&&CFG.download?`<p>桌面版：<a href="${esc(CFG.download)}">下載最新版 Windows 安裝檔</a>（已安裝的會自動提示更新）</p>`:''}
+  <h3>更新內容</h3>
+  <div class="chg">${log.map(x=>{const ns=(I18N.lang==='en'&&x.notes_en)||(I18N.lang==='ja'&&x.notes_ja)||x.notes;return `<div><b data-u>v${esc(x.v)}</b> <small data-u>${esc(x.date||'')}</small><ul data-u>${ns.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`}).join('')||'<p>讀不到更新內容</p>'}</div>`);
+  if($('vGo'))$('vGo').onclick=()=>{if(u.state==='ready'){boot.show('正在更新，OCTA 會自動重新開啟…');UPD.install()}else if(u.state!=='downloading'){UPD.download();toast(I18N.t('下載新版本中…'));closeSheet()}};
+  if($('vChk'))$('vChk').onclick=async()=>{$('vMsg').textContent=I18N.t('檢查中…');let x=await UPD.check();
+    for(let i=0;i<20&&['idle','checking'].includes(x.state);i++){await new Promise(r=>setTimeout(r,700));x=await UPD.status()}
+    renderUpd(x);if(['available','ready','downloading'].includes(x.state))return openVersion();
+    $('vMsg').textContent=I18N.t(x.state==='none'?'已是最新版':x.state==='error'?'無法檢查更新':'檢查中…')}}
 function remoteInfo(r){return `<div class="kv"><span>網址</span><b style="overflow-wrap:anywhere;user-select:all">${esc(r.url)}</b><span>配對碼</span><b style="font-size:20px;letter-spacing:.2em;user-select:all">${esc(r.code)}</b></div>
   ${r.qr?`<img src="${r.qr}" alt="手機掃描開啟" style="width:180px;height:180px;background:#fff;border-radius:10px;padding:8px">`:''}
   <p>網址每次開啟都會不同。配對碼只給信任的人。</p>`}
 async function openLogs(){
   let d={logs:[]};try{d=await api('logs')}catch(e){}
-  const t=x=>x?new Date(x).toLocaleString(I18N.lang,{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
   const dur=l=>l.finished&&l.started?new Intl.NumberFormat(I18N.lang,{style:'unit',unit:'second',unitDisplay:'short'}).format(Math.max(1,Math.round((l.finished-l.started)/1000))):'';
   const stc={done:['p-ok','完成'],error:['p-pr','失敗'],running:['','執行中'],pending:['p-off','排隊']};
-  $('veil').innerHTML=`<div class="sheet"><h2>工作紀錄</h2><div class="logs">${d.logs.length?d.logs.map(l=>`<div class="log"><span class="pill st ${stc[l.status]?.[0]||''}">${stc[l.status]?.[1]||l.status}</span><b style="font-weight:500"><span data-u>${esc(l.kind==='test'?(ENG[l.url]?.n||l.url):l.bot)}</span>${l.kind==='open'?'（開瀏覽器）':l.kind==='test'?'（連線測試）':''}</b><span style="font-size:12px;color:var(--faint)">${t(l.created)} ${dur(l)}</span><small data-u>${esc(l.convName)}${l.convName?'：':''}${esc(l.prompt)}</small></div>`).join(''):'<p>還沒有紀錄</p>'}</div>
-  <div class="acts"><button class="no" id="lb2">返回設定</button><button class="btn" id="sx">關閉</button></div></div>`;
-  $('veil').hidden=false;$('sx').onclick=closeSheet;$('lb2').onclick=()=>openSettings()}
+  subSheet('工作紀錄',`<div class="logs">${d.logs.length?d.logs.map(l=>`<div class="log"><span class="pill st ${stc[l.status]?.[0]||''}">${stc[l.status]?.[1]||l.status}</span><b style="font-weight:500"><span data-u>${esc(l.kind==='test'?(ENG[l.url]?.n||l.url):l.bot)}</span>${l.kind==='open'?'（開瀏覽器）':l.kind==='test'?'（連線測試）':''}</b><span style="font-size:12px;color:var(--faint)">${when(l.created)} ${dur(l)}</span><small data-u>${esc(l.convName)}${l.convName?'：':''}${esc(l.prompt)}</small></div>`).join(''):'<p>還沒有紀錄</p>'}</div>`)}
 
 /* ---------- AI connections ---------- */
 const aiTests={};
 function aiInstallCmd(e,os){return e.npm?`npm install -g ${e.npm}`:e[os]}
 function copyBtn(text){return `<button type="button" class="ghost" data-copy="${esc(text)}">複製</button>`}
-function openAI(focus){
+const pct=n=>Math.max(0,Math.min(100,Math.round(n)));
+function quotaHtml(k,U){   // how much of the plan is left, as far as each service lets us know
+  const e=ENG[k],stt=engState(k),u=U?.usage?.[k],n=U?.today?.[k]||0;
+  if(stt==='no')return '<span class="qt off">未接上</span>';
+  if(stt==='unknown')return '<span class="qt off">主機離線，無法檢查</span>';
+  const today=n?`<small>今天 OCTA 用了 ${n} 次</small>`:'';
+  if(e.quota==='local')return '<span class="qt">本機 AI，無流量限制</span>';
+  if(e.quota==='plan'){
+    if(u?.windows?.length){const lab={'5h':'5 小時內','7d':'本週'};
+      return `<span class="qt">${u.windows.map(w=>`<span class="qw"><span>${lab[w.k]||w.k}</span> <b>剩 ${pct(100-w.used)}%</b><span class="ytrack qbar"><span class="yfill" style="width:${pct(100-w.used)}%"></span></span>${w.reset?`<small>重置 ${when(Date.parse(w.reset))}</small>`:''}</span>`).join('')}</span>${today}`}
+    return `<span class="qt off">${u?.error?'無法讀取剩餘流量':'正在讀取剩餘流量…'}</span>${today}`}
+  return `<span class="qt off">官方沒有提供剩餘流量查詢</span>${e.limit?`<small>${e.limit}</small>`:''}${today}`}
+async function openAI(focus){
   const online=S.runnerOnline||CFG.local;const desk=DESK();
+  let U=null;try{U=await api('ai-usage');if(U.engines)S.engines=U.engines}catch(e){}
   const card=k=>{const e=ENG[k],stt=engState(k),t=aiTests[k];
-    const badge=stt==='ok'?'<span class="pill p-ok">已連接</span>':stt==='no'?'<span class="pill p-off">還沒連接</span>':'<span class="pill p-off">電腦離線，無法檢查</span>';
+    const badge=stt==='ok'?'<span class="pill p-ok">已連接</span>':stt==='no'?'<span class="pill p-off">未接上</span>':'<span class="pill p-off">主機離線</span>';
+    const pre=e.pre?`<li><a href="https://ollama.com/download" target="_blank" rel="noopener">先下載安裝 Ollama</a></li>`:'';
     const steps=desk?`<div class="row2"><button class="btn" data-install="${k}">${stt==='ok'?'重新登入':'一鍵安裝並登入'}</button><button class="ghost" data-test="${k}" ${online?'':'disabled'}>測試</button></div>
       <p>${stt==='ok'?'已安裝。如果測試失敗，按「重新登入」。':'會打開一個黑色視窗自動安裝，接著：'+esc(e.hint)+'。'}${e.npm?' 這個工具需要先裝 <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a>。':''}</p>`
-     :`<ol class="ol"><li>安裝（PowerShell）：<pre class="code">${esc(aiInstallCmd(e,'win'))}</pre>${e.npm?'':`<small>Mac：<code>${esc(aiInstallCmd(e,'mac'))}</code></small>`}</li>
-      <li>登入：輸入 <code>${esc(e.login)}</code>，${esc(e.hint)}</li>
-      <li>回到這裡按「測試」<div class="row2" style="margin-top:6px"><button class="ghost" data-test="${k}" ${online?'':'disabled'}>測試</button>${online?'':'<small>電腦連上 OCTA 後才能測試</small>'}</div></li></ol>`;
+     :`<ol class="ol">${pre}<li>安裝（PowerShell）：<pre class="code">${esc(aiInstallCmd(e,'win'))}</pre>${e.npm?'':`<small>Mac：<code>${esc(aiInstallCmd(e,'mac'))}</code></small>`}</li>
+      <li>${e.pre?'下載模型':'登入'}：輸入 <code>${esc(e.login)}</code>，${esc(e.hint)}</li>
+      <li>回到這裡按「測試」<div class="row2" style="margin-top:6px"><button class="ghost" data-test="${k}" ${online?'':'disabled'}>測試</button>${online?'':'<small>主機電腦連上 OCTA 後才能測試</small>'}</div></li></ol>`;
     const res=t?(t==='run'?'<p class="fade">測試中，第一次可能要一分鐘…</p>':t.ok?'<p class="p-ok">成功！這個 AI 可以用了。</p>':`<p class="errmsg">${esc(t.text)}</p>`):'';
-    return `<details class="aic" data-k="${k}" ${focus===k||(!focus&&stt!=='ok'&&k==='claude')?'open':''}><summary><b>${e.n}</b>${e.tag?`<span class="pill p-pr" style="color:var(--gold2)">${e.tag}</span>`:''}${badge}</summary>
+    return `<details class="aic" data-k="${k}" ${focus===k?'open':''}><summary><span class="ait"><b>${e.n}</b>${e.tag?` <span class="pill p-pr" style="color:var(--gold2)">${e.tag}</span>`:''} ${badge}<small class="aigood">${esc(e.good)}</small><span class="aiq">${quotaHtml(k,U)}</span></span></summary>
       <div class="aib"><p>適合：${esc(e.who)}。${esc(e.cost)}。</p>${steps}${res}<p><a href="${e.site}" target="_blank" rel="noopener">官方說明</a></p></div></details>`};
-  $('veil').innerHTML=`<div class="sheet"><h2>AI 連線</h2>
-  <p>機器人用你電腦上登入的 AI 工作，用的是你自己的帳號或訂閱。連一個就能開始，之後在每個機器人的「任務設定 → AI 引擎」選要用哪個。</p>
+  subSheet('AI 連線',`<p>機器人用主機電腦上登入的 AI 工作，用的是你自己的帳號或訂閱。連一個就能開始，之後在每個機器人的「任務設定 → AI 引擎」選要用哪個。點開每一項看安裝方式。</p>
   <div class="ais">${Object.keys(ENG).map(card).join('')}</div>
-  <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
-  $('veil').hidden=false;$('sx').onclick=closeSheet;
+  <p class="hmuted">剩餘流量每 10 分鐘更新一次。Claude 與 ChatGPT 會顯示方案剩下的比例；其他服務沒有提供查詢，改顯示 OCTA 今天用了幾次。</p>`);
   $('veil').querySelectorAll('pre.code').forEach(p=>{p.insertAdjacentHTML('afterend',`<div class="row2" style="margin-top:4px">${copyBtn(p.textContent)}</div>`)});
-  $('veil').querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.copy).then(()=>b.textContent='已複製 ✓').catch(()=>{})});
-  $('veil').querySelectorAll('[data-install]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('desktop/install','POST',{engine:b.dataset.install});b.textContent='已打開安裝視窗'}catch(e){b.disabled=false;alertSheet('無法開啟',e.message)}});
+  $('veil').querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.copy).then(()=>b.textContent=I18N.t('已複製 ✓')).catch(()=>{})});
+  $('veil').querySelectorAll('[data-install]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('desktop/install','POST',{engine:b.dataset.install});b.textContent=I18N.t('已打開安裝視窗')}catch(e){b.disabled=false;alertSheet('無法開啟',e.message)}});
   $('veil').querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>testAI(b.dataset.test));
 }
 async function testAI(k){
@@ -886,7 +1107,7 @@ async function testAI(k){
   try{const {id}=await api('engine-test','POST',{engine:k});const t0=Date.now();
     while(Date.now()-t0<180000){await new Promise(r=>setTimeout(r,3000));const j=await api('job/'+id);
       if(j.status==='done'||j.status==='error'){aiTests[k]={ok:j.status==='done',text:j.result||''};break}}
-    if(aiTests[k]==='run')aiTests[k]={ok:false,text:'三分鐘內沒有結果，請看電腦上的執行器視窗。'};
+    if(aiTests[k]==='run')aiTests[k]={ok:false,text:'三分鐘內沒有結果，請看主機電腦上的 OCTA 是否開著。'};
   }catch(e){aiTests[k]={ok:false,text:e.message}}
   await refresh();if(!$('veil').hidden&&$('veil').querySelector('.ais'))openAI(k)}
 
@@ -923,11 +1144,11 @@ curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre><p>然後按下面的�
 }
 async function runTest(){
   const b=S.bots[0];if(!b)return;testState='run';openGuide();
-  const before=S.msgs.length?S.msgs[S.msgs.length-1].id:0;
+  const before=topBotId();
   try{await api('messages','POST',{conv:b.id,text:'這是設定測試，請只回覆：OK'})}catch(e){testState=e.message;return openGuide()}
   const t0=Date.now();
   while(Date.now()-t0<180000){await new Promise(r=>setTimeout(r,3000));await refresh();
-    const m=S.msgs.find(x=>x.id>before&&x.conv===b.id&&x.by===b.id);
+    const l=lastOf(b.id),m=l&&l.id>before&&l.by===b.id?l:null;
     if(m){testState=/^⚠/.test(m.text)?m.text.slice(0,300):'ok';break}}
   if(testState==='run')testState=S.runnerOnline?'三分鐘內沒有回覆，請看執行器視窗有沒有錯誤訊息。':'電腦還沒連線，請先完成上面的步驟。';
   if(!$('veil').hidden&&$('gRes'))openGuide();
@@ -943,21 +1164,23 @@ const UPD=window.octaDesktop?.update;
 function renderUpd(u){const el=$('upd');if(!el||!u)return;window._upd=u;
   const show=['available','downloading','ready'].includes(u.state)||(u.state==='error'&&u.version);
   el.hidden=!show;if(!show)return;
-  el.innerHTML=u.state==='available'?`<span>有新版本 <b data-u>v${esc(u.version)}</b></span><button class="btn" id="updGo">更新</button>`
+  el.innerHTML=u.state==='available'?`<span>有新版本 <b data-u>v${esc(u.version)}</b></span><button class="ghost" id="updWhat">看更新內容</button><button class="btn" id="updGo">更新</button>`
     :u.state==='downloading'?`<span>下載新版本中…</span><div class="ytrack"><div class="yfill" style="width:${u.percent||0}%"></div></div><span data-u>${u.percent||0}%</span>`
     :u.state==='ready'?`<span>新版本已下載好</span><button class="btn" id="updGo">重新啟動並更新</button>`
     :`<span>更新失敗，請稍後再試</span><button class="ghost" id="updGo">重試</button>`;
+  if($('updWhat'))$('updWhat').onclick=openVersion;
   const b=$('updGo');if(b)b.onclick=()=>{if(u.state==='ready'){boot.show('正在更新，OCTA 會自動重新開啟…');UPD.install()}else UPD.download()};
   if(u.state==='downloading'&&!$('boot').hidden)boot.set(u.percent,'下載新版本中…');}
 if(UPD){UPD.onChange(renderUpd);UPD.status().then(renderUpd).catch(()=>{})}
 
 /* ---------- boot ---------- */
 let CFG={};
-async function start(){$('login').hidden=true;$('home').hidden=true;lastId=0;
+async function start(){$('login').hidden=true;$('home').hidden=true;
   boot.set(60,'讀取機器人與對話…');
   if(window.octaDesktop&&TOKEN&&!CFG.local)window.octaDesktop.connect(TOKEN).catch(e=>toast(e.message));   // this computer works for the signed-in account
   await refresh();
-  boot.set(100,'完成');$('app').hidden=false;boot.hide();
+  if(cur)await loadMsgs(cur,'first').catch(()=>{});
+  boot.set(100,'完成');$('app').hidden=false;boot.hide();render(true);live();
   let g=null;try{g=localStorage.getItem('ebot_guided')}catch(e){}if(!S.bots.length&&!g)openGuide()}
 (async()=>{mountLang();boot.set(25,'連線中…');
   try{CFG=await (await fetch('/api/config')).json()}catch(e){}
