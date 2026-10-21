@@ -1,25 +1,36 @@
 // OCTA desktop (Electron): window + tray around the local server.
-import { app, BrowserWindow, Tray, Menu, Notification, shell, nativeImage } from 'electron';
+import { app, BrowserWindow, Tray, Menu, Notification, shell, nativeImage, dialog } from 'electron';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { existsSync } from 'node:fs';
+import { existsSync, appendFileSync, mkdirSync } from 'node:fs';
 import { startServer } from './server.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const unpacked = p => p.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 
-if (!app.requestSingleInstanceLock()) app.quit();
+if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }   // already running: the first copy shows its window
 app.setAppUserModelId('tw.yzproject.octa');
 
 let win = null, tray = null, server = null, quitting = false;
+const LOGIN_ARGS = ['--hidden'];
+const hiddenStart = process.argv.includes('--hidden') || app.getLoginItemSettings({ args: LOGIN_ARGS }).wasOpenedAtLogin;
+
+// anything that goes wrong at startup is written to octa-error.log and shown, instead of failing silently
+function logError(where, e) {
+  const line = `[${new Date().toISOString()}] ${where}: ${e?.stack || e}\n`;
+  try { mkdirSync(app.getPath('userData'), { recursive: true }); appendFileSync(join(app.getPath('userData'), 'octa-error.log'), line); } catch { }
+  return line;
+}
+process.on('uncaughtException', e => logError('uncaught', e));
+process.on('unhandledRejection', e => logError('unhandled', e));
 const icon = () => nativeImage.createFromPath(join(here, 'icon.png'));
 
 function showWindow() {
   if (!win) {
     win = new BrowserWindow({
-      width: 1180, height: 800, minWidth: 380, minHeight: 520, backgroundColor: '#12110e', title: 'OCTA｜奧克塔', icon: icon(),
+      width: 1180, height: 800, minWidth: 380, minHeight: 520, backgroundColor: '#12110e', title: 'OCTA｜奧克塔', icon: icon(), show: false,
       autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true }
     });
     win.loadURL(server.url);
@@ -29,7 +40,11 @@ function showWindow() {
     });
     win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
     win.on('closed', () => (win = null));
+    win.once('ready-to-show', () => { win.show(); win.focus(); });
+    win.webContents.on('did-fail-load', (_e, code, desc) => logError('load', `${code} ${desc}`));
+    return;
   }
+  if (win.isMinimized()) win.restore();
   win.show(); win.focus();
 }
 
@@ -41,15 +56,22 @@ app.on('window-all-closed', e => e.preventDefault());   // keep running in the t
 const oldDir = join(app.getPath('appData'), 'E·BOT');
 const dataDir = existsSync(join(oldDir, 'ebot.sqlite')) && !existsSync(join(app.getPath('userData'), 'ebot.sqlite')) ? oldDir : app.getPath('userData');
 
-app.whenReady().then(async () => {
+app.whenReady().then(start).catch(e => {
+  const msg = logError('start', e);
+  dialog.showErrorBox('OCTA 無法啟動', `${e?.message || e}\n\n詳細紀錄：${join(app.getPath('userData'), 'octa-error.log')}\n\n${msg.slice(0, 1500)}`);
+  app.exit(1);
+});
+
+async function start() {
   const pwCli = unpacked(join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'));
   server = await startServer({
     dataDir,
     onNotify: text => new Notification({ title: 'OCTA', body: text.replace(/^【OCTA】/, '').slice(0, 240), icon: icon() }).on('click', showWindow).show(),
     hooks: {
       openFolder: () => shell.openPath(dataDir),
-      getAutostart: () => app.getLoginItemSettings().openAtLogin,
-      setAutostart: on => app.setLoginItemSettings({ openAtLogin: on, args: ['--hidden'] })
+      // Windows only reports the entry when asked with the same args it was registered with
+      getAutostart: () => app.getLoginItemSettings({ args: LOGIN_ARGS }).openAtLogin,
+      setAutostart: on => app.setLoginItemSettings({ openAtLogin: on, args: LOGIN_ARGS, path: process.execPath })
     },
     // run the bundled Playwright MCP with Electron's own Node, so users don't need Node installed
     runnerOpts: { pwCli, nodeBin: process.execPath, nodeEnv: { ELECTRON_RUN_AS_NODE: '1' } }
@@ -64,5 +86,6 @@ app.whenReady().then(async () => {
     { label: '結束（機器人會停止工作）', click: async () => { quitting = true; await server.close(); app.quit(); } }
   ]));
   tray.on('click', showWindow);
-  if (!process.argv.includes('--hidden')) showWindow();
-});
+  if (!hiddenStart) showWindow();
+  else new Notification({ title: 'OCTA', body: '已在背景啟動，點右下角章魚圖示打開。', icon: icon() }).on('click', showWindow).show();
+}
