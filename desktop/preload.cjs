@@ -7,5 +7,12 @@ contextBridge.exposeInMainWorld('octaDesktop', {
   connect: webToken => ipcRenderer.invoke('octa:connect', webToken),   // signed in: start this computer's runner for the account
   disconnect: () => ipcRenderer.invoke('octa:disconnect'),
   useOffline: () => ipcRenderer.invoke('octa:offline'),
-  useCloud: () => ipcRenderer.invoke('octa:cloud')
+  useCloud: () => ipcRenderer.invoke('octa:cloud'),
+  update: {
+    status: () => ipcRenderer.invoke('octa:update-status'),
+    check: () => ipcRenderer.invoke('octa:update-check'),
+    download: () => ipcRenderer.invoke('octa:update-download'),
+    install: () => ipcRenderer.invoke('octa:update-install'),
+    onChange: cb => ipcRenderer.on('octa:update', (_e, u) => cb(u))
+  }
 });

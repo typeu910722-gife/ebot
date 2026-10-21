@@ -9,6 +9,20 @@ import { existsSync, appendFileSync, mkdirSync, readFileSync, writeFileSync } fr
 import os from 'node:os';
 import { startServer } from './server.mjs';
 
+// ---------- updates (GitHub Releases) ----------
+const { autoUpdater } = createRequire(import.meta.url)('electron-updater');
+let upd = { state: 'idle', version: '', percent: 0, error: '' };   // idle | checking | available | none | downloading | ready | error
+function setUpd(u) { upd = { ...upd, ...u }; win?.webContents.send('octa:update', upd); }
+autoUpdater.autoDownload = false;                 // ask first: the user presses 更新
+autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.on('checking-for-update', () => setUpd({ state: 'checking', error: '' }));
+autoUpdater.on('update-available', i => setUpd({ state: 'available', version: i.version }));
+autoUpdater.on('update-not-available', () => setUpd({ state: 'none' }));
+autoUpdater.on('download-progress', p => setUpd({ state: 'downloading', percent: Math.round(p.percent || 0) }));
+autoUpdater.on('update-downloaded', i => setUpd({ state: 'ready', version: i.version, percent: 100 }));
+autoUpdater.on('error', e => { setUpd({ state: 'error', error: String(e?.message || e).slice(0, 300) }); });
+function checkUpdates() { if (app.isPackaged) autoUpdater.checkForUpdates().catch(() => { }); }
+
 const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const unpacked = p => p.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
@@ -128,6 +142,10 @@ handle('octa:offline', async () => {
   stopRunner(); await startRunnerFor(server.url, '');
   await win.loadURL(server.url); return { ok: true };
 });
+handle('octa:update-status', () => upd);
+handle('octa:update-check', () => { checkUpdates(); return upd; });
+handle('octa:update-download', () => { if (upd.state === 'available' || upd.state === 'error') { setUpd({ state: 'downloading', percent: 0 }); autoUpdater.downloadUpdate().catch(() => { }); } return upd; });
+handle('octa:update-install', () => { if (upd.state === 'ready') { quitting = true; stopRunner(); setImmediate(() => autoUpdater.quitAndInstall(false, true)); } return upd; });
 handle('octa:cloud', async () => {
   cfg = { ...cfg, mode: 'cloud' }; writeCfg(cfg);
   stopRunner(); await showSplash(); progress(60, '重新連線…'); await loadMain(); return { ok: true };
@@ -184,5 +202,7 @@ async function start() {
   tray.on('click', showWindow);
 
   await loadMain();
+  setTimeout(checkUpdates, 8000);                       // look for a new version shortly after start…
+  setInterval(checkUpdates, 6 * 3600 * 1000);           // …and every six hours
   if (hiddenStart) new Notification({ title: 'OCTA', body: '已在背景啟動，點右下角章魚圖示打開。', icon: icon() }).on('click', showWindow).show();
 }

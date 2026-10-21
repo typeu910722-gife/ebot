@@ -193,6 +193,11 @@ form.in .send,form.in .clip{height:46px}
 .emo-b.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,169,106,.35)}
 .emo-in{width:76px;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:0 10px;color:var(--ink);font:inherit;font-size:16px;height:38px}
 .emo{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:1.25em;line-height:1}
+.upd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);font-size:13px;color:var(--mute);animation:rise .25s ease}
+.upd span:first-child{flex:1;min-width:0}
+.upd b{color:var(--gold2);font-weight:500}
+.upd .btn{padding:6px 12px;font-size:13px}
+.upd .ytrack{flex:1 1 100%;width:auto}
 .tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .tplc{display:grid;gap:2px;text-align:left;border:1px solid var(--line2);background:var(--bg);border-radius:12px;padding:10px 12px}
 .tplc:hover{border-color:var(--line)}
@@ -369,6 +374,7 @@ body.yblock::before{content:"";position:fixed;inset:0;z-index:89;background:rgba
   <aside class="rail">
     <header><div class="hl"><img src="/icon.png?v=octopus" alt="" class="logo"><div><div class="brand">OCTA｜奧克塔</div><h1>機器人</h1></div></div>
       <div class="hr"><span class="pill p-off" id="online">電腦離線</span><button class="gear" id="settings">設定</button></div></header>
+    <div class="upd" id="upd" hidden></div>
     <div class="new"><button id="nb">＋ 機器人</button><button id="ng">＋ 群組</button><button id="nf">＋ 分區</button></div>
     <div class="search"><input id="q" type="search" placeholder="搜尋機器人（Ctrl+K）" autocomplete="off"></div>
     <nav class="list" id="list"></nav>
@@ -742,7 +748,7 @@ async function openSettings(){
   <h3>這台電腦</h3>
   <div class="kv"><span>Claude Code</span><b>${ds?.claude?.ok?'已安裝 '+esc(ds.claude.version||''):'<span class="p-pr">找不到</span>'}</b>
     <span>Google Chrome</span><b>${ds?.chrome?'已安裝':'<span class="p-pr">找不到</span>'}</b>
-    <span>程式版本</span><b>${esc(ds?.version||'')}</b></div>
+    <span>程式版本</span><b>${esc(ds?.version||'')}${UPD?` <button type="button" class="ghost" id="dUpd" style="margin-left:6px;padding:2px 10px">檢查更新</button> <span id="dUpdMsg" style="font-weight:400;color:var(--mute)"></span>`:''}</b></div>
   <div class="row2">${ds?.claude?.ok?'':'<a class="ghost" href="https://code.claude.com" target="_blank" rel="noopener">安裝 Claude Code</a>'}<button class="ghost" id="dLogin">登入 Claude（開終端機）</button><button class="ghost" id="dFolder">打開資料夾</button></div>
   <label class="toggle">開機自動啟動<button type="button" class="sw ${ds?.autostart?'on':''}" id="dAuto"></button></label>
   ${CFG.local?`<h3>手機遠端</h3>
@@ -787,6 +793,9 @@ curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
   $('nTest').onclick=async()=>{try{await saveS();const r=await api('notify/test','POST');say('已送出：'+r.sent.join('、'))}catch(e){say(e.message)}};
   $('tgDet').onclick=async()=>{try{await saveS();const r=await api('notify/detect','POST');$('tgChat').value=r.chat;say('找到 Chat ID ✓')}catch(e){say(e.message)}};
   $('logsBtn').onclick=openLogs;$('guideBtn').onclick=openGuide;$('sLang').onchange=e=>setLang(e.target.value);$('aiBtn').onclick=()=>openAI();
+  if($('dUpd'))$('dUpd').onclick=async()=>{$('dUpdMsg').textContent=I18N.t('檢查中…');let u=await UPD.check();
+    for(let i=0;i<20&&['idle','checking'].includes(u.state);i++){await new Promise(r=>setTimeout(r,700));u=await UPD.status()}
+    $('dUpdMsg').textContent=I18N.t(u.state==='none'?'已是最新版':u.state==='available'?'有新版本，按左上角「更新」':u.state==='error'?'無法檢查更新':u.state==='downloading'?'下載新版本中…':u.state==='ready'?'新版本已下載好':'檢查中…');renderUpd(u)};
   if(DESK()){
     $('dLogin').onclick=()=>api('desktop/login-claude','POST').catch(e=>alertSheet('無法開啟',e.message));
     $('dFolder').onclick=()=>api('desktop/open-folder','POST').catch(()=>{});
@@ -892,6 +901,19 @@ async function runTest(){
 function setLang(l){I18N.set(l);if(TOKEN||CFG.local)api('settings','PUT',{lang:l}).catch(()=>{});mountLang()}
 function mountLang(){for(const id of ['hLang','lLang']){const el=$(id);if(el){el.innerHTML=I18N.select(id+'Sel');$(id+'Sel').onchange=e=>setLang(e.target.value)}}}
 window.addEventListener('octa-lang',()=>{if(S.loaded)render(false)});
+
+/* ---------- desktop updates ---------- */
+const UPD=window.octaDesktop?.update;
+function renderUpd(u){const el=$('upd');if(!el||!u)return;window._upd=u;
+  const show=['available','downloading','ready'].includes(u.state)||(u.state==='error'&&u.version);
+  el.hidden=!show;if(!show)return;
+  el.innerHTML=u.state==='available'?`<span>有新版本 <b data-u>v${esc(u.version)}</b></span><button class="btn" id="updGo">更新</button>`
+    :u.state==='downloading'?`<span>下載新版本中…</span><div class="ytrack"><div class="yfill" style="width:${u.percent||0}%"></div></div><span data-u>${u.percent||0}%</span>`
+    :u.state==='ready'?`<span>新版本已下載好</span><button class="btn" id="updGo">重新啟動並更新</button>`
+    :`<span>更新失敗，請稍後再試</span><button class="ghost" id="updGo">重試</button>`;
+  const b=$('updGo');if(b)b.onclick=()=>{if(u.state==='ready'){boot.show('正在更新，OCTA 會自動重新開啟…');UPD.install()}else UPD.download()};
+  if(u.state==='downloading'&&!$('boot').hidden)boot.set(u.percent,'下載新版本中…');}
+if(UPD){UPD.onChange(renderUpd);UPD.status().then(renderUpd).catch(()=>{})}
 
 /* ---------- boot ---------- */
 let CFG={};

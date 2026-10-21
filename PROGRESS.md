@@ -30,6 +30,8 @@
 - [x] runner-token 依 label 分開，不會把其他電腦的金鑰作廢
 - [x] 效能：AI 工具偵測改非同步並快取（原本 spawnSync 會卡住整個程式）、本機資料庫存檔改 3 秒批次
 - [x] YZ 進度條：啟動畫面（splash）、網頁載入遮罩、操作中頂部進度條，重要操作期間鎖住畫面
+## 自動更新
+- [x] electron-updater（GitHub Releases，latest.yml）：啟動 8 秒後與每 6 小時檢查；左上角「更新」→ 下載進度 → 重新啟動並更新；設定可手動檢查
 ## 待辦
 - [x] 公版清理：範本改通用（助理、研究、門市、民宿），移除個人化字樣；加入「設定指引」（無機器人時自動開啟，可試跑）；README 重寫
 - [x] 倉庫已公開；Release v1.5.0 自動發布 OCTA-Setup.exe（固定網址 releases/latest/download/OCTA-Setup.exe）

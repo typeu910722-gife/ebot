@@ -43,4 +43,7 @@ jobs:
           body: |
             Windows 安裝檔：下載 OCTA-Setup.exe 後執行。
             第一次執行若出現「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」。
-          files: desktop/dist/OCTA-Setup.exe
+          files: |
+            desktop/dist/OCTA-Setup.exe
+            desktop/dist/OCTA-Setup.exe.blockmap
+            desktop/dist/latest.yml
