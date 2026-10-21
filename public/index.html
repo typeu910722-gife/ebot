@@ -41,8 +41,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .link{background:none;border:0;color:var(--gold2);font-size:13px;padding:4px}
 .errmsg{color:var(--prio);font-size:13px;min-height:1em}
 /* ---------- app ---------- */
-.app{height:100%;display:grid;grid-template-columns:300px 1fr;max-width:1200px;margin:0 auto}
-.rail{border-right:1px solid var(--line2);display:flex;flex-direction:column;min-height:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px}
+.app{height:100%;display:grid;grid-template-columns:300px minmax(0,1fr);max-width:1200px;margin:0 auto}
+.rail{border-right:1px solid var(--line2);display:flex;flex-direction:column;min-height:0;min-width:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px}
 .rail header{padding-block:18px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .rail h1{margin:4px 0 0;font-family:var(--tc);font-size:22px;font-weight:700}
 .hr{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
@@ -152,7 +152,7 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
 .row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 /* ---------- phone ---------- */
 @media (max-width:760px){
-  .app{grid-template-columns:1fr}
+  .app{grid-template-columns:minmax(0,1fr)}
   .rail{border:0;padding-right:max(16px,env(safe-area-inset-right,0px))}
   .app.chat .rail{display:none}
   .app:not(.chat) .pane{display:none}
