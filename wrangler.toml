@@ -1,0 +1,12 @@
+name = "ebot"
+pages_build_output_dir = "public"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ebot"
+database_id = "fa3975d5-b35c-45fd-a28f-96b4abb9264b"
+
+[vars]
+TZ_OFFSET_MIN = "480"   # 排程時區（分鐘），台灣 +8 = 480
+ALLOW_SIGNUP = "true"   # 是否開放註冊

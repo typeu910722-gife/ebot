@@ -1,7 +1,9 @@
 # E·BOT 進度
-- [x] 前端原型（E·ROOM 金黑風格）：機器人/群組列表、新建、任務設定、群組 @ 協作（資料存 localStorage，回覆為示範）
-- [x] 部署 Cloudflare Pages（專案 ebot，GitHub main 自動部署）→ ebot-pqf.pages.dev
-- [x] 自訂網域 bot.yzprojecttw.com 已生效
-- [ ] 後端：Worker + D1 存機器人/群組/訊息
-- [ ] 執行引擎：使用者電腦 WSL 跑 Claude Code（Max），輪詢任務並回寫
-- [ ] 排程：每日入住流程
+- [x] 前端（E·ROOM 金黑風格）：登入/註冊、機器人/群組、任務設定、排程、@ 協作、執行狀態、停止
+- [x] 部署 Cloudflare Pages（專案 ebot，GitHub main 自動部署）→ bot.yzprojecttw.com
+- [x] 後端：Pages Functions `functions/api/[[path]].js` + D1 `ebot`（多帳號隔離）
+- [x] 執行器 `public/ebot-runner.mjs`：輪詢任務 → `claude -p --chrome` → 回寫
+- [x] 範本：一般助理、旅館每日入住流程
+- [x] README / MIT 授權（開源準備）
+- [ ] 倉庫改公開（需 Yz 在 GitHub 設定）
+- [ ] Yz 電腦安裝執行器並實測

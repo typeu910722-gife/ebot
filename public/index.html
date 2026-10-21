@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12110e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="E·BOT">
+<meta name="robots" content="noindex,nofollow">
+<title>E·BOT 機器人</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500&display=swap">
+<style>
+/* E·ROOM dark-gold. Desktop: rail + chat pane. Phone: list ⇄ chat. */
+:root{
+  --bg:#12110e; --panel:#1f1c17; --panel2:#27231c; --ink:#efe8da; --mute:#9b927f; --faint:#5f584c;
+  --gold:#c9a96a; --gold2:#e4cb93; --line:rgba(201,169,106,.22); --line2:rgba(239,232,218,.08);
+  --done:#8fb08a; --in:#8ea7c4; --prio:#e08a6d; --r:12px;
+  --sans:"Noto Sans TC",system-ui,sans-serif; --serif:"Cormorant Garamond","Noto Serif TC",serif; --tc:"Noto Serif TC",serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.brand{font-family:var(--serif);font-size:13px;letter-spacing:.5em;color:var(--gold);white-space:nowrap}
+.pill{font-size:11px;border-radius:99px;padding:1px 8px;border:1px solid currentColor;white-space:nowrap}
+.p-ok{color:var(--done)}.p-off{color:var(--faint)}.p-pr{color:var(--prio)}
+/* ---------- login ---------- */
+.login{min-height:100%;display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.login form{width:min(360px,100%);display:grid;gap:14px}
+.login h1{margin:6px 0 4px;font-family:var(--tc);font-size:28px}
+.login p{margin:0 0 8px;color:var(--mute);font-size:13px;line-height:1.7}
+.field{display:grid;gap:6px;font-size:12px;color:var(--mute);letter-spacing:.1em}
+.field input,.field textarea{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 12px;color:var(--ink);font:inherit;font-size:15px;letter-spacing:0}
+.btn{background:var(--gold);color:#12110e;border:0;border-radius:10px;padding:11px 18px;font-weight:500}
+.link{background:none;border:0;color:var(--gold2);font-size:13px;padding:4px}
+.errmsg{color:var(--prio);font-size:13px;min-height:1em}
+/* ---------- app ---------- */
+.app{height:100%;display:grid;grid-template-columns:300px 1fr;max-width:1200px;margin:0 auto}
+.rail{border-right:1px solid var(--line2);display:flex;flex-direction:column;min-height:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px}
+.rail header{padding-block:18px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.rail h1{margin:4px 0 0;font-family:var(--tc);font-size:22px;font-weight:700}
+.hr{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.gear{background:none;border:1px solid var(--line2);border-radius:99px;padding:3px 10px;font-size:12px;color:var(--mute)}
+.new{display:flex;gap:8px;padding-bottom:12px}
+.new button{flex:1;border:1px solid var(--line);background:transparent;border-radius:var(--r);padding:9px 0;font-size:13px;color:var(--gold2)}
+.new button:hover{background:var(--panel)}
+.list{flex:1;overflow-y:auto;min-height:0;padding-bottom:16px}
+.sec{font-family:var(--tc);font-size:12px;letter-spacing:.2em;color:var(--mute);padding:14px 4px 6px}
+.empty{color:var(--faint);font-size:13px;padding:8px 4px;line-height:1.7}
+.item{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:transparent;border-radius:var(--r);padding:10px 8px}
+.item:hover{background:var(--panel)}
+.item.on{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--line)}
+.item .t{min-width:0;flex:1}
+.item b{display:block;font-weight:500;font-size:14px}
+.item small{display:block;color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-family:var(--tc);font-weight:700;background:var(--panel2);border:1px solid var(--line);color:var(--gold2);font-size:15px;position:relative}
+.av.grp{border-radius:11px;font-family:var(--serif);font-size:13px}
+.av.sm{width:28px;height:28px;font-size:12px}
+.av .dot{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:var(--gold);border:2px solid var(--bg);animation:fade 1.2s infinite}
+.pane{display:flex;flex-direction:column;min-height:0;min-width:0}
+.ph{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line2);padding-block:14px;padding-left:20px;padding-right:max(20px,env(safe-area-inset-right,0px))}
+.back{display:none;border:0;background:none;font-size:24px;color:var(--gold);padding:0 6px 0 0}
+.ph .t{flex:1;min-width:0}
+.ph b{font-family:var(--tc);font-size:17px}
+.ph small{display:block;color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ghost{border:1px solid var(--line);background:none;border-radius:99px;padding:6px 12px;font-size:12px;color:var(--gold2);white-space:nowrap}
+.task{margin:12px 20px 0;padding:10px 14px;border:1px dashed var(--line);border-radius:var(--r);font-size:13px;color:var(--mute);line-height:1.6;white-space:pre-wrap}
+.task em{font-style:normal;color:var(--gold);font-family:var(--tc);margin-right:6px}
+.msgs{flex:1;overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:14px;padding:16px 20px}
+.m{display:flex;gap:10px;align-items:flex-start;max-width:680px}
+.m .who{font-size:12px;color:var(--gold);margin-bottom:4px;font-family:var(--tc)}
+.m .bx{min-width:0}
+.bub{background:var(--panel);border:1px solid var(--line2);border-radius:4px var(--r) var(--r) var(--r);padding:10px 14px;line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap}
+.m.me{align-self:flex-end;flex-direction:row-reverse}
+.m.me .bub{background:var(--panel2);border-color:var(--line);border-radius:var(--r) 4px var(--r) var(--r)}
+.bub .at{color:var(--gold2)}
+.bub a{color:var(--gold2)}
+.sys{align-self:center;font-size:12px;color:var(--faint);font-family:var(--tc);letter-spacing:.1em}
+.work{align-self:flex-start;font-size:13px;color:var(--mute);display:flex;gap:10px;align-items:center}
+.work button{background:none;border:1px solid var(--line2);border-radius:99px;padding:2px 10px;font-size:12px;color:var(--mute)}
+.fade{animation:fade 1.2s infinite}
+@keyframes fade{50%{opacity:.35}}
+.mention{display:flex;gap:6px;flex-wrap:wrap;padding:0 20px 6px}
+.mention button{border:1px solid var(--line2);background:var(--panel);border-radius:99px;padding:4px 10px;font-size:12px;color:var(--mute)}
+.mention button:hover{color:var(--gold2);border-color:var(--line)}
+form.in{display:flex;gap:10px;border-top:1px solid var(--line2);padding:12px max(20px,env(safe-area-inset-right,0px)) 14px 20px}
+form.in textarea{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;color:var(--ink);font:inherit;resize:none;height:46px;max-height:140px}
+.send{border:0;background:var(--gold);color:#12110e;border-radius:var(--r);padding:0 18px;font-weight:500}
+.note{text-align:center;font-size:11px;color:var(--faint);padding-bottom:6px}
+.blank{flex:1;display:grid;place-items:center;color:var(--faint);font-family:var(--tc);padding:24px;text-align:center;line-height:1.8}
+/* ---------- sheet ---------- */
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:20;padding:16px}
+.sheet{width:min(480px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:14px;max-height:90vh;overflow:auto}
+.sheet h2{margin:0;font-family:var(--tc);font-size:18px}
+.sheet h3{margin:6px 0 0;font-family:var(--tc);font-size:14px;color:var(--gold)}
+.sheet p{margin:0;font-size:13px;color:var(--mute);line-height:1.7}
+.sheet .field input,.sheet .field textarea{background:var(--bg)}
+.sheet textarea{min-height:110px;resize:vertical;line-height:1.6}
+.picks{display:grid;gap:6px}
+.pick{display:flex;gap:10px;align-items:center;border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:14px;letter-spacing:0;color:var(--ink)}
+.pick input{accent-color:var(--gold)}
+.acts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.acts .no{background:none;border:1px solid var(--line2);border-radius:10px;padding:9px 16px;color:var(--mute)}
+.acts .del{margin-right:auto;background:none;border:1px solid rgba(224,138,109,.4);border-radius:10px;padding:9px 14px;color:var(--prio)}
+.tpl{display:flex;gap:6px;flex-wrap:wrap}
+.tpl button{border:1px solid var(--line2);background:none;border-radius:99px;padding:4px 10px;font-size:12px;color:var(--mute);letter-spacing:0}
+pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;overflow-x:auto;white-space:pre;color:var(--gold2);user-select:all}
+.row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* ---------- phone ---------- */
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .rail{border:0;padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .app.chat .rail{display:none}
+  .app:not(.chat) .pane{display:none}
+  .back{display:block}
+  .ph,form.in{padding-left:max(16px,env(safe-area-inset-left,0px))}
+  .msgs,.mention{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .task{margin-left:max(16px,env(safe-area-inset-left,0px));margin-right:16px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="login" id="login" hidden>
+  <form id="lf">
+    <div class="brand">E · BOT</div>
+    <h1 id="lt">登入</h1>
+    <p>建立自己的機器人與群組，交給你電腦上的 Claude Code 執行。每個帳號只會用到自己的 Claude 方案。</p>
+    <label class="field">帳號<input id="ln" autocomplete="username" required></label>
+    <label class="field">密碼<input id="lp" type="password" autocomplete="current-password" required minlength="8"></label>
+    <div class="errmsg" id="le"></div>
+    <button class="btn" id="lb">登入</button>
+    <button type="button" class="link" id="ls">還沒有帳號？註冊</button>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
+  <aside class="rail">
+    <header><div><div class="brand">E · BOT</div><h1>機器人</h1></div>
+      <div class="hr"><span class="pill p-off" id="online">電腦離線</span><button class="gear" id="settings">設定</button></div></header>
+    <div class="new"><button id="nb">＋ 新機器人</button><button id="ng">＋ 新群組</button></div>
+    <nav class="list" id="list"></nav>
+  </aside>
+  <section class="pane">
+    <div class="blank" id="blank">左邊選一個機器人或群組開始對話</div>
+    <div class="ph" id="ph" hidden><button class="back" id="back" aria-label="返回">‹</button><div class="av" id="pav"></div>
+      <div class="t"><b id="pname"></b><small id="psub"></small></div><button class="ghost" id="edit">任務設定</button></div>
+    <div class="task" id="task" hidden></div>
+    <div class="msgs" id="msgs" aria-live="polite" hidden></div>
+    <div class="mention" id="mention"></div>
+    <form class="in" id="f" hidden><textarea id="msg" rows="1" placeholder="輸入指示，群組可用 @ 指定機器人"></textarea><button class="send">送出</button></form>
+    <div class="note" id="note" hidden></div>
+  </section>
+</div>
+<div class="veil" id="veil" hidden></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let TOKEN=null; try{TOKEN=localStorage.getItem('ebot_token')}catch(e){}
+let S={bots:[],groups:[],msgs:[],busy:[],runnerOnline:false,me:''}, lastId=0, cur=null, poller=null;
+try{cur=localStorage.getItem('ebot_cur')}catch(e){}
+
+async function api(path,method='GET',body){
+  const r=await fetch('/api/'+path,{method,headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:body?JSON.stringify(body):undefined});
+  const d=await r.json().catch(()=>({error:'網路錯誤'}));
+  if(r.status===401&&path!=='login'){logout(true);throw new Error(d.error)}
+  if(!r.ok)throw new Error(d.error||'發生錯誤');
+  return d;
+}
+/* ---------- login ---------- */
+let signup=false;
+function showLogin(){ $('app').hidden=true;$('login').hidden=false;
+  api('config').then(c=>{$('ls').hidden=!c.signup}).catch(()=>{}) }
+$('ls').onclick=()=>{signup=!signup;$('lt').textContent=$('lb').textContent=signup?'註冊':'登入';
+  $('ls').textContent=signup?'已有帳號？登入':'還沒有帳號？註冊';$('lp').autocomplete=signup?'new-password':'current-password';$('le').textContent=''};
+$('lf').onsubmit=async e=>{e.preventDefault();$('le').textContent='';$('lb').disabled=true;
+  try{const d=await api(signup?'signup':'login','POST',{name:$('ln').value,pw:$('lp').value});
+    TOKEN=d.token;try{localStorage.setItem('ebot_token',TOKEN)}catch(e){}
+    $('lp').value='';start(signup)}
+  catch(err){$('le').textContent=err.message}finally{$('lb').disabled=false}};
+function logout(silent){ if(!silent&&TOKEN)api('logout','POST').catch(()=>{});
+  TOKEN=null;try{localStorage.removeItem('ebot_token')}catch(e){}
+  clearTimeout(poller);S={bots:[],groups:[],msgs:[],busy:[]};lastId=0;showLogin() }
+
+/* ---------- data ---------- */
+async function refresh(){
+  try{const d=await api('state'+(lastId?'?after='+lastId:''));
+    Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,busy:d.busy,runnerOnline:d.runnerOnline});
+    if(lastId)S.msgs.push(...d.msgs);else S.msgs=d.msgs;
+    if(d.msgs.length)lastId=d.msgs[d.msgs.length-1].id;
+    if(cur&&!conv(cur))cur=null;
+    render(d.msgs.length>0);
+  }catch(e){}
+  clearTimeout(poller);poller=setTimeout(refresh,document.hidden?15000:3000);
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TOKEN)refresh()});
+const bot=id=>S.bots.find(b=>b.id===id);
+const conv=id=>bot(id)||S.groups.find(g=>g.id===id);
+const isG=id=>id&&id.startsWith('g-');
+const init=n=>esc((n||'?').slice(0,1));
+const nameOf=by=>by==='me'?'你':by==='sys'?'系統':(bot(by)?.name||'已刪除');
+const convMsgs=id=>S.msgs.filter(m=>m.conv===id);
+const busyIn=id=>S.busy.filter(b=>b.conv===id);
+function preview(id){const m=convMsgs(id).filter(x=>x.by!=='sys').slice(-1)[0];if(!m)return conv(id).task;
+  return (m.by==='me'?'你：':isG(id)?nameOf(m.by)+'：':'')+m.text}
+function fmt(t){return esc(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/@([^\s@，。、]+)/g,'<span class="at">@$1</span>')}
+
+/* ---------- render ---------- */
+function render(scroll){
+  $('online').className='pill '+(S.runnerOnline?'p-ok':'p-off');$('online').textContent=S.runnerOnline?'電腦在線':'電腦離線';
+  let h='';
+  if(!S.bots.length)h+=`<div class="empty">還沒有機器人。按「＋ 新機器人」，或到「設定」套用範本。</div>`;
+  if(S.groups.length){h+='<div class="sec">群組</div>';
+    S.groups.forEach(g=>h+=`<button class="item ${cur===g.id?'on':''}" data-id="${g.id}"><span class="av grp">${g.members.length}人${busyIn(g.id).length?'<i class="dot"></i>':''}</span><span class="t"><b>${esc(g.name)}</b><small>${esc(preview(g.id))}</small></span></button>`)}
+  if(S.bots.length){h+='<div class="sec">機器人</div>';
+    S.bots.forEach(b=>h+=`<button class="item ${cur===b.id?'on':''}" data-id="${b.id}"><span class="av">${init(b.name)}${S.busy.some(x=>x.bot_id===b.id&&x.status==='running')?'<i class="dot"></i>':''}</span><span class="t"><b>${esc(b.name)}</b><small>${esc(preview(b.id))}</small></span></button>`)}
+  $('list').innerHTML=h;
+  const c=cur&&conv(cur);
+  ['ph','task','msgs','f','note'].forEach(k=>$(k).hidden=!c);$('blank').hidden=!!c;
+  if(!c){$('mention').innerHTML='';return}
+  const g=isG(cur);
+  $('pav').className='av'+(g?' grp':'');$('pav').textContent=g?c.members.length+'人':c.name[0];
+  $('pname').textContent=c.name;
+  $('psub').textContent=(g?c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'):'機器人')+(c.schedule?' · 每天 '+c.schedule:'');
+  $('task').innerHTML='<em>'+(g?'協作規則':'指定任務')+'</em>'+esc(c.task);
+  $('mention').innerHTML=g?c.members.map(id=>bot(id)?`<button data-at="${esc(bot(id).name)}">@${esc(bot(id).name)}</button>`:'').join(''):'';
+  const box=$('msgs'),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;
+  let mh=convMsgs(cur).map(m=>{
+    if(m.by==='sys')return `<div class="sys">${esc(m.text)}</div>`;
+    if(m.by==='me')return `<div class="m me"><div class="bx"><div class="bub">${fmt(m.text)}</div></div></div>`;
+    return `<div class="m"><span class="av sm">${init(nameOf(m.by))}</span><div class="bx">${g?`<div class="who">${esc(nameOf(m.by))}</div>`:''}<div class="bub">${fmt(m.text)}</div></div></div>`}).join('');
+  const bz=busyIn(cur);
+  if(bz.length){const run=bz.find(b=>b.status==='running');
+    mh+=`<div class="work"><span class="fade">${run?esc(nameOf(run.bot_id))+' 處理中…':S.runnerOnline?'排隊中…':'等待電腦上線…'}</span><button id="stop">停止</button></div>`}
+  box.innerHTML=mh;
+  if(scroll||atBottom)box.scrollTop=box.scrollHeight;
+  $('note').textContent=S.runnerOnline?'由你電腦上的 Claude Code 執行':'電腦離線：訊息會先排隊，執行器啟動後才會處理';
+}
+
+/* ---------- events ---------- */
+$('list').onclick=e=>{const it=e.target.closest('.item');if(!it)return;cur=it.dataset.id;try{localStorage.setItem('ebot_cur',cur)}catch(e){}
+  render(true);$('app').classList.add('chat')};
+$('back').onclick=()=>$('app').classList.remove('chat');
+$('mention').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=$('msg');i.value=(i.value+' @'+b.dataset.at+' ').trimStart();i.focus()};
+$('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).then(refresh)};
+$('msg').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('f').requestSubmit()}});
+$('f').onsubmit=async e=>{e.preventDefault();const v=$('msg').value.trim();if(!v)return;$('msg').value='';
+  try{await api('messages','POST',{conv:cur,text:v});refresh()}catch(err){$('msg').value=v;$('note').textContent=err.message}};
+
+/* ---------- sheets ---------- */
+const TPL=['讀 Booking 後台訂單','讀 LINE 官方帳號暱稱','更新 E·ROOM','寫入 Google 試算表','擬好訊息給我確認再發'];
+function closeSheet(){$('veil').hidden=true;$('veil').innerHTML=''}
+$('veil').onclick=e=>{if(e.target.id==='veil')closeSheet()};
+function sheet(kind,edit){
+  const g=kind==='g',c=edit?conv(cur):null;
+  if(g&&!S.bots.length){alertSheet('先建立機器人','群組需要至少一個機器人成員。');return}
+  $('veil').innerHTML=`<form class="sheet" id="sf"><h2>${edit?'任務設定':g?'新群組':'新機器人'}</h2>
+  <label class="field">名稱<input id="sn" required maxlength="20" value="${c?esc(c.name):''}" placeholder="${g?'例如：退房檢查':'例如：評論員'}"></label>
+  ${g?`<div class="field">成員（依執行順序）<div class="picks">${S.bots.map(b=>`<label class="pick"><input type="checkbox" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm">${init(b.name)}</span>${esc(b.name)}</label>`).join('')}</div></div>`:''}
+  <label class="field">${g?'協作規則':'指定任務'}<textarea id="st" required maxlength="4000" placeholder="${g?'誰先做、做完交給誰':'要做什麼、去哪個網站、結果怎麼回報'}">${c?esc(c.task):''}</textarea></label>
+  ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
+  <label class="field">每天自動執行（選填）<input id="ss" type="time" value="${c?.schedule||''}"></label>
+  <div class="errmsg" id="se"></div>
+  <div class="acts">${edit?'<button type="button" class="del" id="sd">刪除</button>':''}<button type="button" class="no" id="sx">取消</button><button class="btn">${edit?'儲存':'建立'}</button></div></form>`;
+  $('veil').hidden=false;$('sn').focus();
+  $('sx').onclick=closeSheet;
+  $('veil').querySelectorAll('.tpl button').forEach(b=>b.onclick=()=>{const t=$('st');t.value=(t.value?t.value+'；':'')+b.textContent});
+  if(edit)$('sd').onclick=()=>{const d=$('sd');if(d.dataset.sure){api((g?'groups/':'bots/')+cur,'DELETE').then(()=>{closeSheet();cur=null;lastId=0;refresh();$('app').classList.remove('chat')})}
+    else{d.dataset.sure=1;d.textContent='再按一次確認刪除'}};
+  $('sf').onsubmit=async e=>{e.preventDefault();
+    const body={name:$('sn').value,task:$('st').value,schedule:$('ss').value||null};
+    if(g)body.members=[...$('veil').querySelectorAll('.picks input:checked')].map(i=>i.value);
+    try{const r=await api(edit?(g?'groups/':'bots/')+cur:(g?'groups':'bots'),edit?'PUT':'POST',body);
+      if(!edit)cur=r.id;closeSheet();await refresh();$('app').classList.add('chat')}
+    catch(err){$('se').textContent=err.message}}}
+function alertSheet(t,p){$('veil').innerHTML=`<div class="sheet"><h2>${esc(t)}</h2><p>${esc(p)}</p><div class="acts"><button class="btn" id="sx">知道了</button></div></div>`;$('veil').hidden=false;$('sx').onclick=closeSheet}
+$('nb').onclick=()=>sheet('b');$('ng').onclick=()=>sheet('g');
+$('edit').onclick=()=>sheet(isG(cur)?'g':'b',true);
+
+$('settings').onclick=()=>{
+  const site=location.origin;
+  $('veil').innerHTML=`<div class="sheet"><h2>設定</h2><p>帳號：${esc(S.me)}　·　執行器：${S.runnerOnline?'<span class="p-ok">在線</span>':'離線'}</p>
+  <h3>連接你的電腦</h3>
+  <p>機器人由你電腦上的 Claude Code 執行，用的是你自己的 Claude 方案（Pro / Max）。需要：Node 18 以上、Claude Code（已用 /login 登入）、Chrome 與 Claude in Chrome 擴充功能。</p>
+  <p>1. 下載執行器到一個資料夾（例如 C:\\ebot）：</p>
+  <pre class="code">mkdir C:\\ebot; cd C:\\ebot
+curl.exe -o ebot-runner.mjs ${site}/ebot-runner.mjs</pre>
+  <p>2. 產生金鑰後，第一次執行（之後只要 <code>node ebot-runner.mjs</code>）：</p>
+  <div class="row2"><button class="btn" id="gen">產生執行器金鑰</button><span style="font-size:12px;color:var(--faint)">會讓舊金鑰失效</span></div>
+  <pre class="code" id="cmd" hidden></pre>
+  <p>執行器視窗開著、電腦不休眠，機器人就會工作。可在 C:\\ebot\\work\\CLAUDE.md 寫下機器人要知道的固定資料。</p>
+  <h3>範本</h3>
+  <div class="row2"><button class="ghost" data-t="assistant">＋ 一般助理</button><button class="ghost" data-t="guesthouse">＋ 旅館每日入住流程</button></div>
+  <div class="acts"><button class="del" id="lo">登出</button><button class="btn" id="sx">關閉</button></div></div>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;$('lo').onclick=()=>{closeSheet();logout()};
+  $('gen').onclick=async()=>{const d=await api('runner-token','POST');$('cmd').hidden=false;$('cmd').textContent=`node ebot-runner.mjs ${site} ${d.token}`};
+  $('veil').querySelectorAll('[data-t]').forEach(b=>b.onclick=async()=>{b.disabled=true;await api('template','POST',{name:b.dataset.t});b.textContent='已加入 ✓';refresh()});
+};
+
+function start(isNew){$('login').hidden=true;$('app').hidden=false;lastId=0;refresh().then(()=>{if(isNew)$('settings').click()})}
+TOKEN?start():showLogin();
+</script>
+</body>
+</html>
