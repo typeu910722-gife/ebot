@@ -10,5 +10,5 @@ database_id = "fa3975d5-b35c-45fd-a28f-96b4abb9264b"
 [vars]
 TZ_OFFSET_MIN = "480"   # 排程時區（分鐘），台灣 +8 = 480
 ALLOW_SIGNUP = "true"   # 是否開放註冊
-CANONICAL_HOST = ""     # 主要網址，例如 octa.example.com（留空不轉址）
-LEGACY_HOSTS = ""       # 要轉到主要網址的舊網址，逗號分隔
+CANONICAL_HOST = "octa.yzprojecttw.com"     # 主要網址，例如 octa.example.com（留空不轉址）
+LEGACY_HOSTS = "bot.yzprojecttw.com,ebot-pqf.pages.dev"       # 要轉到主要網址的舊網址，逗號分隔
