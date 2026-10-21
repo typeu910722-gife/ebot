@@ -48,7 +48,12 @@ function showWindow() {
   win.show(); win.focus();
 }
 
-app.on('second-instance', () => server && showWindow());
+app.on('second-instance', () => {
+  if (server) return showWindow();
+  // still starting (or stuck): let the user restart instead of nothing happening
+  const r = dialog.showMessageBoxSync({ type: 'info', title: 'OCTA', message: 'OCTA 還在啟動中。', detail: '如果一直沒有出現，按「重新啟動」。', buttons: ['重新啟動', '再等一下'], defaultId: 0, cancelId: 1 });
+  if (r === 0) { app.relaunch(); app.exit(0); }
+});
 app.on('before-quit', () => (quitting = true));
 app.on('window-all-closed', e => e.preventDefault());   // keep running in the tray
 
@@ -63,7 +68,12 @@ app.whenReady().then(start).catch(e => {
 });
 
 async function start() {
+  const slow = setTimeout(() => {   // startup should take a few seconds; tell the user if it doesn't
+    const r = dialog.showMessageBoxSync({ type: 'warning', title: 'OCTA', message: 'OCTA 啟動比平常久。', detail: `可以再等一下，或按「重新啟動」。\n紀錄檔：${join(app.getPath('userData'), 'octa-error.log')}`, buttons: ['重新啟動', '再等一下'], defaultId: 1, cancelId: 1 });
+    if (r === 0) { app.relaunch(); app.exit(0); }
+  }, 45000);
   const pwCli = unpacked(join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'));
+  logError('start', 'v' + app.getVersion() + ' starting, data ' + dataDir);
   server = await startServer({
     dataDir,
     onNotify: text => new Notification({ title: 'OCTA', body: text.replace(/^【OCTA】/, '').slice(0, 240), icon: icon() }).on('click', showWindow).show(),
@@ -77,6 +87,7 @@ async function start() {
     runnerOpts: { pwCli, nodeBin: process.execPath, nodeEnv: { ELECTRON_RUN_AS_NODE: '1' } }
   });
 
+  clearTimeout(slow);
   tray = new Tray(icon().resize({ width: 16, height: 16 }));
   tray.setToolTip('OCTA｜奧克塔');
   tray.setContextMenu(Menu.buildFromTemplate([

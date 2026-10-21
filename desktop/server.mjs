@@ -94,9 +94,13 @@ async function sendResponse(res, r) {
 }
 const json = (res, data, status = 200) => { res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
 const readJson = async req => { const c = []; for await (const x of req) c.push(x); try { return JSON.parse(Buffer.concat(c).toString() || '{}'); } catch { return {}; } };
-function listen(server, port) {
+// Windows reserves random port ranges (Hyper-V, WSL, Docker): a blocked port fails with EACCES, a used one with EADDRINUSE.
+function listen(server, port, tries = 0) {
   return new Promise((ok, no) => {
-    server.once('error', e => (e.code === 'EADDRINUSE' ? ok(listen(server, port + 2)) : no(e)));
+    server.once('error', e => {
+      if (!['EADDRINUSE', 'EACCES', 'EPERM'].includes(e.code)) return no(e);
+      ok(listen(server, tries < 20 ? port + 2 : 0, tries + 1));   // after 20 tries let the system pick a free port
+    });
     server.listen(port, '127.0.0.1', () => ok(server.address().port));
   });
 }
@@ -166,7 +170,12 @@ export async function startServer(opts = {}) {
       await callApi(req, res, { ...base, isLocal: true, runnerOnline: () => Date.now() - runnerSeen < 30000 }, `http://${host}`);
     } catch (e) { json(res, { error: e.message }, 500); }
   });
-  localPort = await listen(local, opts.port || 17777);
+  // reuse last port so the window keeps its saved preferences (language, drafts)
+  const portFile = join(dataDir, 'port.txt');
+  let want = opts.port || 17777;
+  try { const p = +readFileSync(portFile, 'utf8'); if (p > 1024 && p < 65535) want = p; } catch { }
+  localPort = await listen(local, want);
+  try { writeFileSync(portFile, String(localPort)); } catch { }
 
   // remote port: only reached through the tunnel; phone must pair first
   const remoteSrv = http.createServer(async (req, res) => {
