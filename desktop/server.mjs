@@ -133,7 +133,7 @@ const newCode = () => Array.from({ length: 8 }, () => CODE_CHARS[randomInt(CODE_
 // ---------- main ----------
 // opts: { dataDir, port, onNotify(text), hooks: { loginClaude, openFolder, getAutostart, setAutostart }, runnerOpts }
 export async function startServer(opts = {}) {
-  const dataDir = opts.dataDir || join(os.homedir(), '.ebot');
+  const dataDir = opts.dataDir || (existsSync(join(os.homedir(), '.ebot')) ? join(os.homedir(), '.ebot') : join(os.homedir(), '.octa'));
   mkdirSync(dataDir, { recursive: true });
   const db = await openDb(join(dataDir, 'ebot.sqlite'));
   db.exec(readFileSync(SCHEMA, 'utf8'));
@@ -219,7 +219,7 @@ export async function startServer(opts = {}) {
     const body = req.method === 'POST' ? await readJson(req) : {};
     if (p === 'status') {
       const c = spawnSync('claude', ['--version'], { shell: WIN, encoding: 'utf8', timeout: 15000, windowsHide: true });
-      const { findChrome } = await import(pathToFileURL(join(WEB, 'ebot-runner.mjs')).href);
+      const { findChrome } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
       return json(res, {
         version: APP_VERSION,
         claude: { ok: c.status === 0, version: (c.stdout || '').trim().split(/\s/)[0] },
@@ -238,7 +238,7 @@ export async function startServer(opts = {}) {
   }
 
   // built-in runner
-  const { startRunner } = await import(pathToFileURL(join(WEB, 'ebot-runner.mjs')).href);
+  const { startRunner } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
   let bundled = {};
   try { bundled = { pwCli: join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'), nodeBin: process.execPath }; } catch { }
   const runner = startRunner({ url: `http://127.0.0.1:${localPort}`, token: '', home: dataDir, ...bundled, ...opts.runnerOpts });

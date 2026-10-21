@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url);
 const unpacked = p => p.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 
 if (!app.requestSingleInstanceLock()) app.quit();
-app.setAppUserModelId('tw.yzproject.ebot');
+app.setAppUserModelId('tw.yzproject.octa');
 
 let win = null, tray = null, server = null, quitting = false;
 const icon = () => nativeImage.createFromPath(join(here, 'icon.png'));

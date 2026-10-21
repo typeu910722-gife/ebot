@@ -33,7 +33,7 @@
 手機 / 電腦瀏覽器 ─► Cloudflare Pages（網頁 + API）─► D1 資料庫
                               ▲
                               │ 每 5 秒領任務、回寫結果
-                    使用者電腦上的 ebot-runner.mjs
+                    使用者電腦上的 octa-runner.mjs
                               │
                     claude -p ＋ 每個機器人的專屬 Chrome
 ```
@@ -41,10 +41,10 @@
 1. Fork 這個倉庫
 2. 建資料庫：
    ```
-   npx wrangler d1 create ebot
-   npx wrangler d1 execute ebot --remote --file schema.sql
+   npx wrangler d1 create octa
+   npx wrangler d1 execute octa --remote --file schema.sql
    ```
-3. 把 `wrangler.toml` 的 `database_id` 換成你的
+3. 把 `wrangler.toml` 的 `database_name`、`database_id` 換成你的
 4. Cloudflare → Workers 和 Pages → 建立 → Pages → 連接 Git，選你的 fork，其他保持預設
 5. `wrangler.toml` 可調整 `TZ_OFFSET_MIN`（例行任務時區）與 `ALLOW_SIGNUP`（是否開放註冊）
 
@@ -54,7 +54,7 @@
 
 ```
 # 雲端版
-npx wrangler d1 execute ebot --local --file schema.sql
+npx wrangler d1 execute <你的資料庫名稱> --local --file schema.sql
 npx wrangler pages dev
 
 # 桌面版
@@ -71,7 +71,7 @@ npm run dist       # 打包 Windows 安裝檔（Linux 需要 wine64 + wine32）
 | --- | --- |
 | `public/index.html` | 網頁介面（雲端版與桌面版共用） |
 | `functions/api/[[path]].js` | API（雲端版與桌面版共用） |
-| `public/ebot-runner.mjs` | 執行器：領任務、呼叫 Claude Code、管理每個機器人的瀏覽器 |
+| `public/octa-runner.mjs` | 執行器：領任務、呼叫 Claude Code、管理每個機器人的瀏覽器 |
 | `desktop/` | 桌面版：本機 SQLite、Electron 視窗、手機遠端 |
 | `schema.sql` | 資料表 |
 

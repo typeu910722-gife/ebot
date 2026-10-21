@@ -1,4 +1,5 @@
 .wrangler/
 node_modules/
 public/ebot-runner.json
+public/octa-runner.json
 public/work/

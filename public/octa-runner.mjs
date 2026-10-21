@@ -4,8 +4,8 @@
 // so several bots can work at the same time without touching each other.
 //
 // CLI (cloud version):
-//   first time:  node ebot-runner.mjs <網站網址> <執行器金鑰>
-//   afterwards:  node ebot-runner.mjs
+//   first time:  node octa-runner.mjs <網站網址> <執行器金鑰>
+//   afterwards:  node octa-runner.mjs
 // The desktop app imports startRunner() instead.
 // Requires: Node 18+, Claude Code (`claude` logged in with /login), Google Chrome.
 
@@ -159,7 +159,7 @@ function openJob(job) {
     const { profile } = botDir(job.bot.id);
     const chrome = findChrome();
     if (!chrome) {
-      api('runner/done', { id: job.id, ok: false, text: '⚠ 找不到 Chrome。請在 ebot-runner.json 加上 "chrome": "Chrome 執行檔路徑"。' }).finally(resolve);
+      api('runner/done', { id: job.id, ok: false, text: '⚠ 找不到 Chrome。請在 octa-runner.json 加上 "chrome": "Chrome 執行檔路徑"。' }).finally(resolve);
       return;
     }
     log(`🌐 開啟 ${job.bot.name} 的瀏覽器`);
@@ -218,10 +218,10 @@ export function startRunner(opts) {
 // ---------- CLI ----------
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const here = dirname(fileURLToPath(import.meta.url));
-  const cfgPath = join(here, 'ebot-runner.json');
-  let c = existsSync(cfgPath) ? JSON.parse(readFileSync(cfgPath, 'utf8')) : {};
+  const cfgPath = join(here, 'octa-runner.json'), oldCfg = join(here, 'ebot-runner.json');
+  let c = existsSync(cfgPath) ? JSON.parse(readFileSync(cfgPath, 'utf8')) : existsSync(oldCfg) ? JSON.parse(readFileSync(oldCfg, 'utf8')) : {};
   if (process.argv[2]) { c = { ...c, url: process.argv[2].replace(/\/+$/, ''), token: process.argv[3] }; writeFileSync(cfgPath, JSON.stringify(c, null, 2)); }
-  if (!c.url || !c.token) { console.error('第一次請執行：node ebot-runner.mjs <網站網址> <執行器金鑰>'); process.exit(1); }
+  if (!c.url || !c.token) { console.error('第一次請執行：node octa-runner.mjs <網站網址> <執行器金鑰>'); process.exit(1); }
   console.log(`連線到 ${c.url}（Ctrl+C 停止）`);
   startRunner({ ...c, home: here, onFatal: m => { console.error(m); process.exit(1); } });
 }

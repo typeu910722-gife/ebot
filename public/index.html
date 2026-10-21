@@ -509,10 +509,10 @@ async function openSettings(){
   <div id="dRemoteInfo">${ds?.remote?.on?remoteInfo(ds.remote):''}</div>`:`
   <h3>連接你的電腦</h3>
   <p>機器人由你電腦上的 Claude Code 執行，用的是你自己的 Claude 方案（Pro / Max）。需要：Node 18 以上、Claude Code（已用 /login 登入）、Google Chrome。每個機器人有自己獨立的 Chrome 視窗，最多 3 個同時工作。</p>
-  <p>1. 下載執行器到一個資料夾（例如 C:\\ebot）：</p>
-  <pre class="code">mkdir C:\\ebot; cd C:\\ebot
-curl.exe -o ebot-runner.mjs ${site}/ebot-runner.mjs</pre>
-  <p>2. 產生金鑰後，第一次執行（之後只要 <code>node ebot-runner.mjs</code>）：</p>
+  <p>1. 下載執行器到一個資料夾（例如 C:\\octa）：</p>
+  <pre class="code">mkdir C:\\octa; cd C:\\octa
+curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
+  <p>2. 產生金鑰後，第一次執行（之後只要 <code>node octa-runner.mjs</code>）：</p>
   <div class="row2"><button class="btn" id="gen">產生執行器金鑰</button><span style="font-size:12px;color:var(--faint)">會讓舊金鑰失效</span></div>
   <pre class="code" id="cmd" hidden></pre>`;
   $('veil').innerHTML=`<div class="sheet"><h2>設定</h2><p>${CFG.local?'本機':'帳號：'+esc(S.me)}　·　執行器：${S.runnerOnline?'<span class="p-ok">在線</span>':'離線'}</p>
@@ -535,7 +535,7 @@ curl.exe -o ebot-runner.mjs ${site}/ebot-runner.mjs</pre>
   <div class="acts">${CFG.local?'':'<button class="del" id="lo">登出</button>'}<button class="btn" id="sx">關閉</button></div></div>`;
   $('veil').hidden=false;$('sx').onclick=closeSheet;
   if($('lo'))$('lo').onclick=()=>{closeSheet();logout()};
-  if($('gen'))$('gen').onclick=async()=>{const d=await api('runner-token','POST');$('cmd').hidden=false;$('cmd').textContent=`node ebot-runner.mjs ${site} ${d.token}`};
+  if($('gen'))$('gen').onclick=async()=>{const d=await api('runner-token','POST');$('cmd').hidden=false;$('cmd').textContent=`node octa-runner.mjs ${site} ${d.token}`};
   bindTpl($('veil'));
   $('nAll').onclick=()=>$('nAll').classList.toggle('on');
   const say=t=>$('sMsg').textContent=t;
@@ -580,8 +580,8 @@ async function openGuide(){
     steps.push({cls:st(ds?.chrome,ds&&!ds.chrome),t:'安裝 Google Chrome',b:ds?.chrome?'<p>已安裝。每個機器人會用自己獨立的 Chrome 視窗工作。</p>':'<p>機器人用 Chrome 操作網站。請安裝後按「重新檢查」。</p><div class="row2"><a class="btn" href="https://www.google.com/chrome/" target="_blank" rel="noopener">下載 Chrome</a><button class="ghost" data-recheck>重新檢查</button></div>'});
   }else{
     steps.push({cls:'',t:'在電腦安裝 Claude Code 並登入',b:`<p>機器人在你自己的電腦上用 Claude Code 工作（需要 Claude Pro 或 Max 方案）。另外需要 Node 18 以上和 Google Chrome。</p><p>裝好後在終端機輸入 <code>claude</code>，再輸入 <code>/login</code> 登入。</p><div class="row2"><a class="ghost" href="https://code.claude.com" target="_blank" rel="noopener">Claude Code 官網</a><a class="ghost" href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a></div>`});
-    steps.push({cls:st(S.runnerOnline),t:'連接執行器',b:S.runnerOnline?'<p>電腦已連線。</p>':`<p>在 PowerShell（Mac 用終端機）執行：</p><pre class="code">mkdir ebot; cd ebot
-curl.exe -o ebot-runner.mjs ${site}/ebot-runner.mjs</pre><p>再按下面產生金鑰，複製出現的指令執行。視窗開著，機器人就會工作。</p><div class="row2"><button class="btn" id="gGen">產生金鑰與指令</button></div><pre class="code" id="gCmd" hidden></pre>`});
+    steps.push({cls:st(S.runnerOnline),t:'連接執行器',b:S.runnerOnline?'<p>電腦已連線。</p>':`<p>在 PowerShell（Mac 用終端機）執行：</p><pre class="code">mkdir octa; cd octa
+curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre><p>再按下面產生金鑰，複製出現的指令執行。視窗開著，機器人就會工作。</p><div class="row2"><button class="btn" id="gGen">產生金鑰與指令</button></div><pre class="code" id="gCmd" hidden></pre>`});
   }
   steps.push({cls:st(hasBot),t:'建立機器人',b:hasBot?`<p>已有 ${S.bots.length} 個機器人。可以再加範本，或用左邊「＋ 機器人」自己建。</p>${tplHtml()}`:`<p>選一個範本開始，之後都能改名、改任務。也可以關掉指引，用左邊「＋ 機器人」自己建立。</p>${tplHtml()}`});
   steps.push({cls:testState==='ok'?'ok':testState&&testState!=='run'?'bad':'',t:'試跑一次',b:`<p>傳一句話給第一個機器人，確認整條流程能動。第一次可能要等一分鐘。</p><div class="row2"><button class="btn" id="gTest" ${hasBot?'':'disabled'}>${testState==='run'?'等待回覆中…':'開始測試'}</button></div><div id="gRes">${testState==='ok'?'<p class="p-ok">成功，機器人回覆了。之後在「任務設定」可以加例行任務，讓它每天自動做事。</p>':testState&&testState!=='run'?`<p class="errmsg">${esc(testState)}</p>`:''}</div>`});
@@ -592,7 +592,7 @@ curl.exe -o ebot-runner.mjs ${site}/ebot-runner.mjs</pre><p>再按下面產生�
   $('sx').onclick=()=>{closeSheet();try{localStorage.setItem('ebot_guided','1')}catch(e){}};
   $('veil').querySelectorAll('[data-recheck]').forEach(b=>b.onclick=openGuide);
   if($('gLogin'))$('gLogin').onclick=()=>api('desktop/login-claude','POST').catch(e=>alertSheet('無法開啟',e.message));
-  if($('gGen'))$('gGen').onclick=async()=>{const d=await api('runner-token','POST');$('gCmd').hidden=false;$('gCmd').textContent=`node ebot-runner.mjs ${site} ${d.token}`};
+  if($('gGen'))$('gGen').onclick=async()=>{const d=await api('runner-token','POST');$('gCmd').hidden=false;$('gCmd').textContent=`node octa-runner.mjs ${site} ${d.token}`};
   bindTpl($('veil'),openGuide);
   $('gTest').onclick=runTest;
 }
