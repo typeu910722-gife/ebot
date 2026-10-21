@@ -13,14 +13,21 @@ CREATE TABLE IF NOT EXISTS sessions (
   label TEXT,
   created INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS folders (   -- 分區: bots in the same folder can ask each other
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS bots (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   task TEXT NOT NULL,
-  schedule TEXT,                 -- 'HH:MM' local time, optional
-  last_run TEXT,                 -- 'YYYY-MM-DD'
-  created INTEGER NOT NULL
+  folder TEXT,
+  created INTEGER NOT NULL,
+  shot_ts INTEGER,
+  page TEXT                      -- last page the bot reported
 );
 CREATE TABLE IF NOT EXISTS groups_ (
   id TEXT PRIMARY KEY,
@@ -28,14 +35,24 @@ CREATE TABLE IF NOT EXISTS groups_ (
   name TEXT NOT NULL,
   task TEXT NOT NULL,
   members TEXT NOT NULL,         -- JSON array of bot ids, in order
-  schedule TEXT,
-  last_run TEXT,
+  folder TEXT,
+  created INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS routines (  -- 例行任務
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  conv TEXT NOT NULL,            -- bot id or group id
+  name TEXT NOT NULL,
+  prompt TEXT,
+  times TEXT NOT NULL,           -- JSON ["06:10","12:10"] local time
+  enabled INTEGER NOT NULL DEFAULT 1,
+  fired TEXT,                    -- JSON {"06:10":"2026-10-21"}
   created INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id TEXT NOT NULL,
-  conv TEXT NOT NULL,            -- bot id or group id
+  conv TEXT NOT NULL,
   by_ TEXT NOT NULL,             -- 'me' | 'sys' | bot id
   text TEXT NOT NULL,
   ts INTEGER NOT NULL
@@ -46,10 +63,20 @@ CREATE TABLE IF NOT EXISTS jobs (
   user_id TEXT NOT NULL,
   conv TEXT NOT NULL,
   bot_id TEXT NOT NULL,
-  chain TEXT NOT NULL DEFAULT '[]', -- bot ids to run after this one
+  chain TEXT NOT NULL DEFAULT '[]', -- steps to run after this one: [{b, p}]
   prompt TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending', -- pending | running | done | error
   created INTEGER NOT NULL,
-  started INTEGER
+  started INTEGER,
+  kind TEXT NOT NULL DEFAULT 'chat', -- chat | open (open the bot's browser for manual login)
+  url TEXT,
+  depth INTEGER NOT NULL DEFAULT 0  -- bot-to-bot question hops
 );
 CREATE INDEX IF NOT EXISTS job_user ON jobs(user_id, status, id);
+CREATE TABLE IF NOT EXISTS shots (   -- latest browser screenshot per bot
+  bot_id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  data TEXT NOT NULL,            -- base64
+  ts INTEGER NOT NULL
+);

@@ -3,9 +3,10 @@
 像 Grok bot 一樣用聊天介面指揮多個 AI 機器人，但實際執行的是**你自己電腦上的 Claude Code**，用的是你自己的 Claude 方案（Pro / Max），不用另外付 API 費。
 
 - 新建機器人，給每個機器人指定任務
+- **分區**：把不同門市／專案的機器人分開；同分區的機器人可以互相詢問（回覆裡寫 `@同事 問題`）
 - 把機器人拉進群組，依序協作，或用 `@名字` 指定誰做
-- 每天固定時間自動執行
-- 機器人透過 Claude in Chrome 操作你已登入的網站（後台、試算表等）
+- **例行任務**：每天多個固定時間自動執行，可隨時開關
+- **每個機器人有自己的瀏覽器**（獨立 Chrome 設定檔：分頁、登入、Cookie 各自分開），最多 3 個同時工作互不干擾；聊天室裡可看它最後停在哪一頁、或叫電腦打開它的瀏覽器讓你登入
 - 多帳號：每個人登入自己的帳號、連自己的電腦
 
 ## 架構
@@ -16,7 +17,7 @@
                                    │ 每 5 秒領任務、回寫結果
                      你電腦上的執行器 ebot-runner.mjs
                                    │
-                             claude -p --chrome（你的 Claude 登入）
+          claude -p ＋ 每個機器人專屬的 Playwright Chrome（你的 Claude 登入）
 ```
 
 網站只負責存資料與排隊；所有 AI 執行都發生在使用者自己的電腦，用使用者自己的 Claude 帳號。
@@ -27,7 +28,7 @@
 2. 「設定」→ 照步驟下載執行器、產生金鑰、執行
 3. 新建機器人或套用範本，開始對話
 
-執行器需求：Node 18+、[Claude Code](https://code.claude.com)（用 `/login` 登入 Pro/Max）、Chrome + [Claude in Chrome](https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn) 擴充功能。Windows 請用原生 PowerShell（Claude in Chrome 不支援 WSL）。
+執行器需求：Node 18+、[Claude Code](https://code.claude.com)（用 `/login` 登入 Pro/Max）、Google Chrome。瀏覽器工具用 [@playwright/mcp](https://github.com/microsoft/playwright-mcp)，執行器會自動透過 npx 取得。同時工作數量可在 `ebot-runner.json` 加 `"max": 3` 調整。
 
 ## 自己架一份
 

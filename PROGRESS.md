@@ -1,9 +1,12 @@
 # E·BOT 進度
-- [x] 前端（E·ROOM 金黑風格）：登入/註冊、機器人/群組、任務設定、排程、@ 協作、執行狀態、停止
+- [x] 前端（E·ROOM 金黑風格）：登入/註冊、機器人/群組、任務設定、@ 協作、執行狀態、停止
 - [x] 部署 Cloudflare Pages（專案 ebot，GitHub main 自動部署）→ bot.yzprojecttw.com
 - [x] 後端：Pages Functions `functions/api/[[path]].js` + D1 `ebot`（多帳號隔離）
-- [x] 執行器 `public/ebot-runner.mjs`：輪詢任務 → `claude -p --chrome` → 回寫
-- [x] 範本：一般助理、旅館每日入住流程
-- [x] README / MIT 授權（開源準備）
+- [x] 執行器 v3 `public/ebot-runner.mjs`：最多 3 個機器人並行、每個機器人獨立 Chrome 設定檔（Playwright MCP）、截圖回傳、遠端開啟瀏覽器給使用者登入
+- [x] 分區（folders）：側欄分組、⋯ 選單移至/建立分區；同分區機器人可用「@同事 問題」互問（最多 4 層）
+- [x] 例行任務（routines）：每天多個時間、開關
+- [x] 範本：一般助理、旅館每日入住流程（放進「旅館」分區）
+- [x] README / MIT 授權
 - [ ] 倉庫改公開（需 Yz 在 GitHub 設定）
-- [ ] Yz 電腦安裝執行器並實測
+- [ ] Yz 電腦安裝執行器 v3 並實測（v1 用 --chrome，要重新下載）
+- 備註：R2 未啟用，截圖存 D1 shots 表

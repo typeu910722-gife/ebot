@@ -55,6 +55,34 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .empty{color:var(--faint);font-size:13px;padding:8px 4px;line-height:1.7}
 .item{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:transparent;border-radius:var(--r);padding:10px 8px}
 .item:hover{background:var(--panel)}
+.iw{position:relative}
+.more{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:var(--panel2);border-radius:8px;width:28px;height:28px;color:var(--mute);font-size:16px;line-height:1;opacity:0}
+.iw:hover .more,.more:focus-visible,.iw .item.on+.more{opacity:1}
+@media (hover:none){.more{opacity:1;background:none}}
+.sec{display:flex;align-items:center;justify-content:space-between}
+.sec .more{position:static;transform:none;opacity:.7;width:24px;height:22px;background:none}
+.menu{position:fixed;z-index:30;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:grid}
+.menu button{display:flex;gap:10px;align-items:center;border:0;background:none;text-align:left;padding:9px 10px;border-radius:8px;font-size:14px}
+.menu button:hover{background:var(--panel2)}
+.menu .lab{font-size:11px;color:var(--faint);padding:6px 10px 2px;letter-spacing:.1em}
+.menu .ck{width:14px;color:var(--gold)}
+.menu .danger{color:var(--prio)}
+.menu hr{border:0;border-top:1px solid var(--line2);margin:4px 0}
+.rt{display:grid;gap:8px}
+.rrow{display:flex;align-items:center;gap:12px;border:1px solid var(--line2);border-radius:12px;padding:10px 12px;cursor:pointer;text-align:left;background:none;width:100%}
+.rrow:hover{border-color:var(--line)}
+.rrow .t{flex:1;min-width:0}
+.rrow b{display:block;font-weight:500;font-size:14px}
+.rrow small{color:var(--mute);font-size:12px}
+.sw{flex:none;width:42px;height:24px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);position:relative;padding:0}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--faint);transition:transform .15s}
+.sw.on{background:var(--gold);border-color:var(--gold)}
+.sw.on::after{transform:translateX(18px);background:#12110e}
+.rform{display:grid;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px}
+.times{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.times input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--ink);font:inherit;font-size:13px}
+.times button{border:1px solid var(--line2);background:none;border-radius:8px;padding:5px 9px;font-size:12px;color:var(--mute)}
+select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--ink);font:inherit;font-size:14px;letter-spacing:0}
 .item.on{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--line)}
 .item .t{min-width:0;flex:1}
 .item b{display:block;font-weight:500;font-size:14px}
@@ -69,6 +97,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .ph .t{flex:1;min-width:0}
 .ph b{font-family:var(--tc);font-size:17px}
 .ph small{display:block;color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph .ghost+.ghost{margin-left:-4px}
 .ghost{border:1px solid var(--line);background:none;border-radius:99px;padding:6px 12px;font-size:12px;color:var(--gold2);white-space:nowrap}
 .task{margin:12px 20px 0;padding:10px 14px;border:1px dashed var(--line);border-radius:var(--r);font-size:13px;color:var(--mute);line-height:1.6;white-space:pre-wrap}
 .task em{font-style:normal;color:var(--gold);font-family:var(--tc);margin-right:6px}
@@ -110,6 +139,15 @@ form.in textarea{flex:1;min-width:0;background:var(--panel);border:1px solid var
 .acts .del{margin-right:auto;background:none;border:1px solid rgba(224,138,109,.4);border-radius:10px;padding:9px 14px;color:var(--prio)}
 .tpl{display:flex;gap:6px;flex-wrap:wrap}
 .tpl button{border:1px solid var(--line2);background:none;border-radius:99px;padding:4px 10px;font-size:12px;color:var(--mute);letter-spacing:0}
+.bw{display:grid;gap:8px;border-top:1px solid var(--line2);padding-top:12px}
+.bw .hd{display:flex;align-items:center;gap:10px}
+.bw .hd b{font-family:var(--tc);font-weight:500;flex:1}
+.shot{width:100%;border-radius:10px;border:1px solid var(--line2);background:var(--bg);display:block;max-height:340px;object-fit:contain}
+.noshot{border:1px dashed var(--line2);border-radius:10px;padding:18px;text-align:center;font-size:12px;color:var(--faint)}
+.bw .meta{font-size:12px;color:var(--mute);overflow-wrap:anywhere}
+.bw form{display:flex;gap:8px}
+.bw input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;color:var(--ink);font:inherit;font-size:13px}
+.bw .btn{padding:9px 12px;font-size:13px;white-space:nowrap}
 pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;overflow-x:auto;white-space:pre;color:var(--gold2);user-select:all}
 .row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 /* ---------- phone ---------- */
@@ -145,13 +183,13 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
   <aside class="rail">
     <header><div><div class="brand">E · BOT</div><h1>機器人</h1></div>
       <div class="hr"><span class="pill p-off" id="online">電腦離線</span><button class="gear" id="settings">設定</button></div></header>
-    <div class="new"><button id="nb">＋ 新機器人</button><button id="ng">＋ 新群組</button></div>
+    <div class="new"><button id="nb">＋ 機器人</button><button id="ng">＋ 群組</button><button id="nf">＋ 分區</button></div>
     <nav class="list" id="list"></nav>
   </aside>
   <section class="pane">
     <div class="blank" id="blank">左邊選一個機器人或群組開始對話</div>
     <div class="ph" id="ph" hidden><button class="back" id="back" aria-label="返回">‹</button><div class="av" id="pav"></div>
-      <div class="t"><b id="pname"></b><small id="psub"></small></div><button class="ghost" id="edit">任務設定</button></div>
+      <div class="t"><b id="pname"></b><small id="psub"></small></div><button class="ghost" id="browser">瀏覽器</button><button class="ghost" id="edit">任務設定</button></div>
     <div class="task" id="task" hidden></div>
     <div class="msgs" id="msgs" aria-live="polite" hidden></div>
     <div class="mention" id="mention"></div>
@@ -165,7 +203,7 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let TOKEN=null; try{TOKEN=localStorage.getItem('ebot_token')}catch(e){}
-let S={bots:[],groups:[],msgs:[],busy:[],runnerOnline:false,me:''}, lastId=0, cur=null, poller=null;
+let S={bots:[],groups:[],folders:[],routines:[],msgs:[],busy:[],runnerOnline:false,me:''}, lastId=0, cur=null, poller=null;
 try{cur=localStorage.getItem('ebot_cur')}catch(e){}
 
 async function api(path,method='GET',body){
@@ -188,12 +226,12 @@ $('lf').onsubmit=async e=>{e.preventDefault();$('le').textContent='';$('lb').dis
   catch(err){$('le').textContent=err.message}finally{$('lb').disabled=false}};
 function logout(silent){ if(!silent&&TOKEN)api('logout','POST').catch(()=>{});
   TOKEN=null;try{localStorage.removeItem('ebot_token')}catch(e){}
-  clearTimeout(poller);S={bots:[],groups:[],msgs:[],busy:[]};lastId=0;showLogin() }
+  clearTimeout(poller);S={bots:[],groups:[],folders:[],routines:[],msgs:[],busy:[]};lastId=0;showLogin() }
 
 /* ---------- data ---------- */
 async function refresh(){
   try{const d=await api('state'+(lastId?'?after='+lastId:''));
-    Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,busy:d.busy,runnerOnline:d.runnerOnline});
+    Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline});
     if(lastId)S.msgs.push(...d.msgs);else S.msgs=d.msgs;
     if(d.msgs.length)lastId=d.msgs[d.msgs.length-1].id;
     if(cur&&!conv(cur))cur=null;
@@ -217,11 +255,15 @@ function fmt(t){return esc(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" targ
 function render(scroll){
   $('online').className='pill '+(S.runnerOnline?'p-ok':'p-off');$('online').textContent=S.runnerOnline?'電腦在線':'電腦離線';
   let h='';
-  if(!S.bots.length)h+=`<div class="empty">還沒有機器人。按「＋ 新機器人」，或到「設定」套用範本。</div>`;
-  if(S.groups.length){h+='<div class="sec">群組</div>';
-    S.groups.forEach(g=>h+=`<button class="item ${cur===g.id?'on':''}" data-id="${g.id}"><span class="av grp">${g.members.length}人${busyIn(g.id).length?'<i class="dot"></i>':''}</span><span class="t"><b>${esc(g.name)}</b><small>${esc(preview(g.id))}</small></span></button>`)}
-  if(S.bots.length){h+='<div class="sec">機器人</div>';
-    S.bots.forEach(b=>h+=`<button class="item ${cur===b.id?'on':''}" data-id="${b.id}"><span class="av">${init(b.name)}${S.busy.some(x=>x.bot_id===b.id&&x.status==='running')?'<i class="dot"></i>':''}</span><span class="t"><b>${esc(b.name)}</b><small>${esc(preview(b.id))}</small></span></button>`)}
+  if(!S.bots.length)h+=`<div class="empty">還沒有機器人。按「＋ 機器人」，或到「設定」套用範本。</div>`;
+  const gItem=g=>`<div class="iw"><button class="item ${cur===g.id?'on':''}" data-id="${g.id}"><span class="av grp">${g.members.length}人${busyIn(g.id).length?'<i class="dot"></i>':''}</span><span class="t"><b>${esc(g.name)}</b><small>${esc(preview(g.id))}</small></span></button><button class="more" data-more="${g.id}" aria-label="更多">⋯</button></div>`;
+  const bItem=b=>`<div class="iw"><button class="item ${cur===b.id?'on':''}" data-id="${b.id}"><span class="av">${init(b.name)}${S.busy.some(x=>x.bot_id===b.id&&x.status==='running')?'<i class="dot"></i>':''}</span><span class="t"><b>${esc(b.name)}</b><small>${esc(preview(b.id))}</small></span></button><button class="more" data-more="${b.id}" aria-label="更多">⋯</button></div>`;
+  const sect=(f,title)=>{const gs=S.groups.filter(g=>(g.folder||null)===f),bs=S.bots.filter(b=>(b.folder||null)===f);
+    if(!f&&!gs.length&&!bs.length)return '';
+    return `<div class="sec"><span>${esc(title)}</span>${f?`<button class="more" data-folder="${f}" aria-label="分區選項">⋯</button>`:''}</div>`+
+      (gs.length||bs.length?gs.map(gItem).join('')+bs.map(bItem).join(''):'<div class="empty">空的分區。用機器人旁的 ⋯ 移進來。</div>')};
+  S.folders.forEach(f=>h+=sect(f.id,f.name));
+  h+=sect(null,S.folders.length?'未分區':'全部');
   $('list').innerHTML=h;
   const c=cur&&conv(cur);
   ['ph','task','msgs','f','note'].forEach(k=>$(k).hidden=!c);$('blank').hidden=!!c;
@@ -229,7 +271,8 @@ function render(scroll){
   const g=isG(cur);
   $('pav').className='av'+(g?' grp':'');$('pav').textContent=g?c.members.length+'人':c.name[0];
   $('pname').textContent=c.name;
-  $('psub').textContent=(g?c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'):'機器人')+(c.schedule?' · 每天 '+c.schedule:'');
+  const fn=S.folders.find(f=>f.id===c.folder)?.name,rn=S.routines.filter(r=>r.conv===cur&&r.enabled).length;
+  $('psub').textContent=(fn?fn+' · ':'')+(g?c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'):'機器人')+(rn?` · ${rn} 個例行任務`:'');
   $('task').innerHTML='<em>'+(g?'協作規則':'指定任務')+'</em>'+esc(c.task);
   $('mention').innerHTML=g?c.members.map(id=>bot(id)?`<button data-at="${esc(bot(id).name)}">@${esc(bot(id).name)}</button>`:'').join(''):'';
   const box=$('msgs'),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;
@@ -239,14 +282,17 @@ function render(scroll){
     return `<div class="m"><span class="av sm">${init(nameOf(m.by))}</span><div class="bx">${g?`<div class="who">${esc(nameOf(m.by))}</div>`:''}<div class="bub">${fmt(m.text)}</div></div></div>`}).join('');
   const bz=busyIn(cur);
   if(bz.length){const run=bz.find(b=>b.status==='running');
-    mh+=`<div class="work"><span class="fade">${run?esc(nameOf(run.bot_id))+' 處理中…':S.runnerOnline?'排隊中…':'等待電腦上線…'}</span><button id="stop">停止</button></div>`}
+    mh+=`<div class="work"><span class="fade">${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器開著，關掉視窗後才會繼續':esc(nameOf(run.bot_id))+' 處理中…'):S.runnerOnline?'排隊中…':'等待電腦上線…'}</span><button id="stop">停止</button></div>`}
   box.innerHTML=mh;
   if(scroll||atBottom)box.scrollTop=box.scrollHeight;
   $('note').textContent=S.runnerOnline?'由你電腦上的 Claude Code 執行':'電腦離線：訊息會先排隊，執行器啟動後才會處理';
 }
 
 /* ---------- events ---------- */
-$('list').onclick=e=>{const it=e.target.closest('.item');if(!it)return;cur=it.dataset.id;try{localStorage.setItem('ebot_cur',cur)}catch(e){}
+$('list').onclick=e=>{
+  const mo=e.target.closest('[data-more]');if(mo){e.stopPropagation();itemMenu(mo,mo.dataset.more);return}
+  const fo=e.target.closest('[data-folder]');if(fo){e.stopPropagation();folderMenu(fo,fo.dataset.folder);return}
+  const it=e.target.closest('.item');if(!it)return;cur=it.dataset.id;try{localStorage.setItem('ebot_cur',cur)}catch(e){}
   render(true);$('app').classList.add('chat')};
 $('back').onclick=()=>$('app').classList.remove('chat');
 $('mention').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=$('msg');i.value=(i.value+' @'+b.dataset.at+' ').trimStart();i.focus()};
@@ -257,7 +303,7 @@ $('f').onsubmit=async e=>{e.preventDefault();const v=$('msg').value.trim();if(!v
 
 /* ---------- sheets ---------- */
 const TPL=['讀 Booking 後台訂單','讀 LINE 官方帳號暱稱','更新 E·ROOM','寫入 Google 試算表','擬好訊息給我確認再發'];
-function closeSheet(){$('veil').hidden=true;$('veil').innerHTML=''}
+function closeSheet(){$('veil').hidden=true;$('veil').innerHTML='';rtEdit=null}
 $('veil').onclick=e=>{if(e.target.id==='veil')closeSheet()};
 function sheet(kind,edit){
   const g=kind==='g',c=edit?conv(cur):null;
@@ -267,21 +313,98 @@ function sheet(kind,edit){
   ${g?`<div class="field">成員（依執行順序）<div class="picks">${S.bots.map(b=>`<label class="pick"><input type="checkbox" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm">${init(b.name)}</span>${esc(b.name)}</label>`).join('')}</div></div>`:''}
   <label class="field">${g?'協作規則':'指定任務'}<textarea id="st" required maxlength="4000" placeholder="${g?'誰先做、做完交給誰':'要做什麼、去哪個網站、結果怎麼回報'}">${c?esc(c.task):''}</textarea></label>
   ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
-  <label class="field">每天自動執行（選填）<input id="ss" type="time" value="${c?.schedule||''}"></label>
+  <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
+  ${edit?`<div class="field">例行任務<div class="rt" id="rt"></div></div>`:'<p>建立後可以在「任務設定」加入例行任務（每天固定時間自動執行）。</p>'}
   <div class="errmsg" id="se"></div>
   <div class="acts">${edit?'<button type="button" class="del" id="sd">刪除</button>':''}<button type="button" class="no" id="sx">取消</button><button class="btn">${edit?'儲存':'建立'}</button></div></form>`;
   $('veil').hidden=false;$('sn').focus();
   $('sx').onclick=closeSheet;
+  if(edit)renderRoutines();
   $('veil').querySelectorAll('.tpl button').forEach(b=>b.onclick=()=>{const t=$('st');t.value=(t.value?t.value+'；':'')+b.textContent});
   if(edit)$('sd').onclick=()=>{const d=$('sd');if(d.dataset.sure){api((g?'groups/':'bots/')+cur,'DELETE').then(()=>{closeSheet();cur=null;lastId=0;refresh();$('app').classList.remove('chat')})}
     else{d.dataset.sure=1;d.textContent='再按一次確認刪除'}};
   $('sf').onsubmit=async e=>{e.preventDefault();
-    const body={name:$('sn').value,task:$('st').value,schedule:$('ss').value||null};
+    const body={name:$('sn').value,task:$('st').value,folder:$('sf_f').value||null};
     if(g)body.members=[...$('veil').querySelectorAll('.picks input:checked')].map(i=>i.value);
     try{const r=await api(edit?(g?'groups/':'bots/')+cur:(g?'groups':'bots'),edit?'PUT':'POST',body);
       if(!edit)cur=r.id;closeSheet();await refresh();$('app').classList.add('chat')}
     catch(err){$('se').textContent=err.message}}}
 function alertSheet(t,p){$('veil').innerHTML=`<div class="sheet"><h2>${esc(t)}</h2><p>${esc(p)}</p><div class="acts"><button class="btn" id="sx">知道了</button></div></div>`;$('veil').hidden=false;$('sx').onclick=closeSheet}
+const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?'剛剛':m<60?m+' 分鐘前':m<1440?Math.round(m/60)+' 小時前':Math.round(m/1440)+' 天前'};
+$('browser').onclick=()=>{
+  const c=conv(cur),ids=isG(cur)?c.members.filter(bot):[cur];
+  $('veil').innerHTML=`<div class="sheet"><h2>機器人的瀏覽器</h2>
+  <p>每個機器人在你電腦上有自己的瀏覽器（獨立的分頁、登入和 Cookie），可以同時工作、互不干擾。第一次用某個網站前，先在電腦上幫它登入一次，之後會記住。</p>
+  ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm">${init(b.name)}</span><b>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
+    ${b.shot_ts?`<img class="shot" alt="${esc(b.name)} 最後的畫面" id="img_${id}"><div class="meta">截圖：${ago(b.shot_ts)}${b.page?' · '+esc(b.page):''}</div>`:`<div class="noshot">還沒有畫面。機器人用過瀏覽器後，這裡會顯示它最後停在哪一頁。</div>`}
+    <form data-open="${id}"><input id="u_${id}" placeholder="要開的網址（選填）" value="${esc(b.page||'')}"><button class="btn">在電腦上開啟</button></form></div>`}).join('')}
+  <div class="errmsg" id="be"></div>
+  <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;
+  ids.forEach(id=>{if(bot(id).shot_ts)api('shot/'+id).then(d=>{const im=$('img_'+id);if(im&&d.data)im.src=`data:${d.mime};base64,${d.data}`}).catch(()=>{})});
+  $('veil').querySelectorAll('form[data-open]').forEach(f=>f.onsubmit=async e=>{e.preventDefault();const id=f.dataset.open,btn=f.querySelector('button');
+    try{btn.disabled=true;await api('open','POST',{bot:id,conv:cur,url:$('u_'+id).value});btn.textContent=S.runnerOnline?'已送出 ✓':'已排隊（電腦離線）';refresh()}
+    catch(err){$('be').textContent=err.message;btn.disabled=false}});
+};
+/* ---------- menus ---------- */
+function closeMenu(){document.querySelectorAll('.menu').forEach(m=>m.remove())}
+document.addEventListener('click',e=>{if(!e.target.closest('.menu'))closeMenu()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
+function popMenu(anchor,html,handlers){closeMenu();const m=document.createElement('div');m.className='menu';m.innerHTML=html;document.body.appendChild(m);
+  const r=anchor.getBoundingClientRect(),w=m.offsetWidth,hh=m.offsetHeight;
+  m.style.left=Math.max(8,Math.min(r.right-w,innerWidth-w-8))+'px';m.style.top=(r.bottom+hh+8>innerHeight?Math.max(8,r.top-hh-4):r.bottom+4)+'px';
+  m.onclick=e=>{const b=e.target.closest('button[data-a]');if(!b)return;e.stopPropagation();closeMenu();handlers[b.dataset.a]?.(b.dataset.v)};
+  m.querySelector('button')?.focus()}
+function itemMenu(anchor,id){const c=conv(id);if(!c)return;
+  popMenu(anchor,`<div class="lab">移至</div>${S.folders.map(f=>`<button data-a="mv" data-v="${f.id}"><span class="ck">${c.folder===f.id?'✓':''}</span>${esc(f.name)}</button>`).join('')}
+    <button data-a="mv" data-v=""><span class="ck">${!c.folder?'✓':''}</span>未分區</button><hr>
+    <button data-a="nf"><span class="ck">＋</span>建立分區並移入</button>
+    <button data-a="ed"><span class="ck">✎</span>任務設定</button>`,
+   {mv:async v=>{await api('move','POST',{id,folder:v||null});refresh()},
+    nf:()=>folderSheet(null,id),
+    ed:()=>{cur=id;render(true);$('app').classList.add('chat');sheet(isG(id)?'g':'b',true)}})}
+function folderMenu(anchor,fid){
+  popMenu(anchor,`<button data-a="rn"><span class="ck">✎</span>重新命名分區</button><button data-a="del" class="danger"><span class="ck">✕</span>刪除分區（內容移到未分區）</button>`,
+   {rn:()=>folderSheet(fid),del:async()=>{await api('folders/'+fid,'DELETE');refresh()}})}
+function folderSheet(fid,moveId){const f=fid&&S.folders.find(x=>x.id===fid);
+  $('veil').innerHTML=`<form class="sheet" id="ff"><h2>${f?'重新命名分區':'建立分區'}</h2>
+  <p>分區用來區隔不同門市或專案。同一個分區的機器人可以互相詢問、協作；不同分區互不干擾。</p>
+  <label class="field">分區名稱<input id="fn" required maxlength="20" value="${f?esc(f.name):''}" placeholder="例如：貳宿、貳洋樓"></label>
+  <div class="errmsg" id="fe"></div><div class="acts"><button type="button" class="no" id="sx">取消</button><button class="btn">${f?'儲存':'建立'}</button></div></form>`;
+  $('veil').hidden=false;$('fn').focus();$('sx').onclick=closeSheet;
+  $('ff').onsubmit=async e=>{e.preventDefault();try{
+    if(f)await api('folders/'+fid,'PUT',{name:$('fn').value});
+    else{const r=await api('folders','POST',{name:$('fn').value});if(moveId)await api('move','POST',{id:moveId,folder:r.id})}
+    closeSheet();refresh()}catch(err){$('fe').textContent=err.message}}}
+$('nf').onclick=()=>folderSheet(null);
+
+/* ---------- routines (例行任務) ---------- */
+const hm12=t=>{const [h,m]=t.split(':').map(Number);return (h<12?'上午':'下午')+((h%12)||12)+':'+String(m).padStart(2,'0')};
+const timesText=ts=>'每天 '+ts.map(hm12).join('和');
+let rtEdit=null;
+function renderRoutines(){const box=$('rt');if(!box)return;const list=S.routines.filter(r=>r.conv===cur);
+  box.innerHTML=list.map(r=>rtEdit===r.id?rForm(r):`<div class="rrow" data-r="${r.id}" role="button" tabindex="0"><span class="t"><b>${esc(r.name)}</b><small>${timesText(r.times)}</small></span><button type="button" class="sw ${r.enabled?'on':''}" data-sw="${r.id}" aria-label="${r.enabled?'停用':'啟用'}" aria-pressed="${r.enabled}"></button></div>`).join('')
+   +(rtEdit==='new'?rForm(null):`<button type="button" class="ghost" id="rtAdd" style="justify-self:start">＋ 例行任務</button>`);
+  box.querySelectorAll('[data-sw]').forEach(b=>b.onclick=async e=>{e.stopPropagation();const r=S.routines.find(x=>x.id===b.dataset.sw);
+    r.enabled=!r.enabled;renderRoutines();await api('routines/'+r.id,'PUT',{enabled:r.enabled}).catch(()=>{});refresh()});
+  box.querySelectorAll('.rrow').forEach(row=>row.onclick=()=>{rtEdit=row.dataset.r;renderRoutines()});
+  if($('rtAdd'))$('rtAdd').onclick=()=>{rtEdit='new';renderRoutines()};
+  const f=box.querySelector('.rform');if(!f)return;
+  f.querySelector('[data-add]').onclick=()=>{const i=document.createElement('input');i.type='time';i.value='08:00';f.querySelector('.times').insertBefore(i,f.querySelector('[data-add]'))};
+  f.querySelector('[data-cancel]').onclick=()=>{rtEdit=null;renderRoutines()};
+  const del=f.querySelector('[data-del]');if(del)del.onclick=async()=>{if(!del.dataset.sure){del.dataset.sure=1;del.textContent='再按一次刪除';return}
+    await api('routines/'+rtEdit,'DELETE');rtEdit=null;await refresh();renderRoutines()};
+  f.querySelector('[data-save]').onclick=async()=>{const body={name:f.querySelector('[name=rn]').value,prompt:f.querySelector('[name=rp]').value,
+      times:[...f.querySelectorAll('.times input')].map(i=>i.value).filter(Boolean)};
+    try{if(rtEdit==='new')await api('routines','POST',{...body,conv:cur});else await api('routines/'+rtEdit,'PUT',body);
+      rtEdit=null;await refresh();renderRoutines()}catch(err){f.querySelector('.errmsg').textContent=err.message}};
+}
+function rForm(r){return `<div class="rform"><label class="field">名稱<input name="rn" maxlength="40" value="${r?esc(r.name):''}" placeholder="例如：eroom 登入檢查"></label>
+  <div class="field">每天的時間<div class="times">${(r?r.times:['08:00']).map(t=>`<input type="time" value="${t}">`).join('')}<button type="button" data-add>＋ 時間</button></div></div>
+  <label class="field">要做什麼（選填，空白就執行指定任務）<textarea name="rp" maxlength="2000" style="min-height:70px">${r?esc(r.prompt||''):''}</textarea></label>
+  <div class="errmsg"></div>
+  <div class="acts">${r?'<button type="button" class="del" data-del>刪除</button>':''}<button type="button" class="no" data-cancel>取消</button><button type="button" class="btn" data-save>${r?'儲存':'加入'}</button></div></div>`}
+
 $('nb').onclick=()=>sheet('b');$('ng').onclick=()=>sheet('g');
 $('edit').onclick=()=>sheet(isG(cur)?'g':'b',true);
 
@@ -289,7 +412,7 @@ $('settings').onclick=()=>{
   const site=location.origin;
   $('veil').innerHTML=`<div class="sheet"><h2>設定</h2><p>帳號：${esc(S.me)}　·　執行器：${S.runnerOnline?'<span class="p-ok">在線</span>':'離線'}</p>
   <h3>連接你的電腦</h3>
-  <p>機器人由你電腦上的 Claude Code 執行，用的是你自己的 Claude 方案（Pro / Max）。需要：Node 18 以上、Claude Code（已用 /login 登入）、Chrome 與 Claude in Chrome 擴充功能。</p>
+  <p>機器人由你電腦上的 Claude Code 執行，用的是你自己的 Claude 方案（Pro / Max）。需要：Node 18 以上、Claude Code（已用 /login 登入）、Google Chrome。每個機器人會有自己獨立的 Chrome 視窗，最多 3 個同時工作。</p>
   <p>1. 下載執行器到一個資料夾（例如 C:\\ebot）：</p>
   <pre class="code">mkdir C:\\ebot; cd C:\\ebot
 curl.exe -o ebot-runner.mjs ${site}/ebot-runner.mjs</pre>
