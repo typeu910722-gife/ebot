@@ -8,7 +8,7 @@
 - [x] server.mjs：sql.js 本機資料庫（D1 相容包裝）、共用同一份 API 與網頁、內建執行器、localhost 防 CSRF / DNS rebinding
 - [x] 手機遠端：cloudflared 快速通道 + 8 碼配對碼（10 次錯誤自動換碼）
 - [x] main.mjs：Electron 視窗、系統匣、電腦通知、開機自動啟動、內建 Playwright MCP（用 Electron 當 Node）
-- [x] electron-builder NSIS 打包成功（Linux + wine 建置）；GitHub Actions 推 v* 標籤自動打包
+- [x] electron-builder NSIS 打包成功（Linux+wine 與 GitHub Actions windows-latest 皆成功，run 39585548610）；推 v* 標籤或手動觸發 workflow 可重打包
 - [ ] 在真正的 Windows 上實測安裝檔（尚未）
 - [ ] 手機遠端通道實測（沙盒內無法連 trycloudflare）
 ## 待辦
