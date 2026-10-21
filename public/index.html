@@ -30,6 +30,34 @@ button{font:inherit;color:inherit;cursor:pointer}
 button:disabled{opacity:.5;cursor:default}
 button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .logo{width:40px;height:40px;border-radius:10px;flex:none}
+.home{max-width:960px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+.hhd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:16px}
+.hero{display:grid;justify-items:center;text-align:center;gap:16px;padding-block:40px 48px;border-bottom:1px solid var(--line2)}
+.logo-xl{width:132px;height:132px;border-radius:30px}
+.hero h1{margin:0;font-family:var(--tc);font-size:clamp(28px,5vw,44px);line-height:1.3;text-wrap:balance}
+.hero p{margin:0;max-width:600px;color:var(--mute);line-height:1.8}
+.hero small{color:var(--faint);font-size:12px}
+.cta{justify-content:center}
+.big{padding:13px 22px;font-size:15px;text-decoration:none;display:inline-block}
+a.btn{text-decoration:none}
+.hsec{padding-block:36px;border-bottom:1px solid var(--line2);display:grid;gap:16px}
+.hsec h2{margin:0;font-family:var(--tc);font-size:22px;color:var(--gold2)}
+.hsteps{margin:0;padding:0;list-style:none;counter-reset:s;display:grid;gap:14px}
+.hsteps li{counter-increment:s;display:grid;grid-template-columns:40px 1fr;gap:4px 14px}
+.hsteps li::before{content:counter(s);grid-row:span 2;width:34px;height:34px;border-radius:50%;border:1px solid var(--gold);color:var(--gold2);display:grid;place-items:center;font-family:var(--serif);font-size:16px}
+.hsteps b{font-weight:500;font-size:16px}
+.hsteps span{color:var(--mute);font-size:14px;line-height:1.75}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.hgrid div{border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;display:grid;gap:6px;background:var(--panel)}
+.hgrid b{font-weight:500;color:var(--gold2)}
+.hgrid span{color:var(--mute);font-size:14px;line-height:1.7}
+.hai{margin:0;font-size:15px;line-height:1.9}
+.hmuted{margin:0;color:var(--faint);font-size:13px}
+.hsec details{border:1px solid var(--line2);border-radius:var(--r);padding:12px 16px;background:var(--panel)}
+.hsec summary{cursor:pointer;font-weight:500}
+.hsec details p{margin:10px 0 0;color:var(--mute);line-height:1.8;font-size:14px}
+.hft{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:24px;color:var(--faint);font-size:12px}
+.hft a{color:var(--gold2)}
 .logo-lg{width:72px;height:72px;border-radius:18px}
 .hl{display:flex;gap:10px;align-items:center;min-width:0}
 .brand{font-family:var(--serif);font-size:13px;letter-spacing:.3em;color:var(--gold);white-space:nowrap}
@@ -214,16 +242,60 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
 </head>
 <body>
 
+<div class="home" id="home" hidden>
+  <header class="hhd"><div class="hl"><img src="/icon.png?v=octopus" alt="" class="logo"><div class="brand">OCTA｜奧克塔</div></div><button class="ghost" id="hLogin">登入網頁版</button></header>
+  <section class="hero">
+    <img src="/icon.png?v=octopus" alt="OCTA 章魚標誌" class="logo-xl">
+    <h1>讓一群 AI 小幫手<br>替你把日常工作做完</h1>
+    <p>像傳訊息一樣交代工作：查後台、整理訂單、寫試算表、擬好回覆等你按核准。機器人在你自己的電腦上，用你已經有的 Claude、ChatGPT、Gemini 等帳號工作，不用另外付 API 費用。</p>
+    <div class="row2 cta"><a class="btn big" id="hDl" href="#">下載 Windows 版（免費）</a><button class="ghost big" id="hWeb">改用網頁版</button></div>
+    <small id="hDlNote">Windows 10／11 · 安裝檔約 120 MB · 不用註冊帳號</small>
+  </section>
+  <section class="hsec">
+    <h2>三步驟開始</h2>
+    <ol class="hsteps">
+      <li><b>下載安裝 OCTA</b><span>按上面的下載按鈕，打開安裝檔。Windows 若跳出「已保護您的電腦」，按「其他資訊 → 仍要執行」。</span></li>
+      <li><b>連上一個 AI</b><span>打開 OCTA 後會出現設定指引。選你已經有帳號的 AI（例如 Claude 或 ChatGPT），按「一鍵安裝並登入」，再按「測試」。沒有付費帳號可以先用 Gemini 的免費額度。</span></li>
+      <li><b>建立機器人、交代工作</b><span>從範本開始（門市、民宿、研究…），或自己寫任務。可以設定每天幾點自動做，做完會通知你。</span></li>
+    </ol>
+  </section>
+  <section class="hsec">
+    <h2>能做什麼</h2>
+    <div class="hgrid">
+      <div><b>多個機器人分工</b><span>每個機器人一個任務，拉進群組依序接力，或用 @ 指定誰做。</span></div>
+      <div><b>操作你登入的網站</b><span>每個機器人有自己的瀏覽器，登入一次就記住，互不干擾。</span></div>
+      <div><b>重要的事先問你</b><span>發訊息、付款這類動作會先等你按「核准」。</span></div>
+      <div><b>每天自動執行</b><span>設定時間就會自己做，卡住或需要你時通知電腦、Telegram 或 LINE。</span></div>
+      <div><b>手機也能用</b><span>電腦開著，手機掃描 QR Code 輸入配對碼就能指揮。</span></div>
+      <div><b>資料在你自己電腦</b><span>桌面版不需要帳號，對話與設定只存在本機。</span></div>
+    </div>
+  </section>
+  <section class="hsec">
+    <h2>支援的 AI</h2>
+    <p class="hai">Claude · ChatGPT · Gemini · GitHub Copilot · Cursor · 通義千問 · DeepSeek · Grok · Kimi · Mistral · 本機模型（Ollama）</p>
+    <p class="hmuted">用你自己的帳號登入，費用依各家方案；Gemini 個人帳號有免費額度。</p>
+  </section>
+  <section class="hsec">
+    <h2>常見問題</h2>
+    <details><summary>要錢嗎？</summary><p>OCTA 免費、開源。AI 的部分用你自己的訂閱或免費額度。</p></details>
+    <details><summary>桌面版和網頁版差在哪？</summary><p>桌面版：裝好就能用，不用帳號，資料在本機，推薦大多數人。網頁版：用帳號登入，適合想在不同裝置看同一份資料的人，但仍需要在電腦上執行一個小程式讓機器人工作。</p></details>
+    <details><summary>電腦要一直開著嗎？</summary><p>要。機器人在你的電腦上工作，電腦關機或休眠時會暫停，開機後繼續。</p></details>
+    <details><summary>有 Mac 版嗎？</summary><p>目前先提供 Windows 版；Mac 使用者可以先用網頁版。</p></details>
+  </section>
+  <footer class="hft"><span>OCTA｜奧克塔 · 歪計劃 YZ PROJECT</span><a id="hRepo" href="#" target="_blank" rel="noopener" hidden>原始碼</a></footer>
+</div>
+
 <div class="login" id="login" hidden>
   <form id="lf">
     <img src="/icon.png?v=octopus" alt="" class="logo-lg"><div class="brand">OCTA｜奧克塔</div>
     <h1 id="lt">登入</h1>
-    <p>建立自己的機器人與群組，交給你電腦上的 Claude Code 執行。每個帳號只會用到自己的 Claude 方案。</p>
+    <p>登入網頁版。機器人會在你電腦上用你自己的 AI 帳號工作。</p>
     <label class="field">帳號<input id="ln" autocomplete="username" required></label>
     <label class="field">密碼<input id="lp" type="password" autocomplete="current-password" required minlength="8"></label>
     <div class="errmsg" id="le"></div>
     <button class="btn" id="lb">登入</button>
     <button type="button" class="link" id="ls">還沒有帳號？註冊</button>
+    <button type="button" class="link" id="lHome">← 回首頁</button>
   </form>
 </div>
 
@@ -264,7 +336,12 @@ async function api(path,method='GET',body){
 }
 /* ---------- login ---------- */
 let signup=false;
-function showLogin(){ $('app').hidden=true;$('login').hidden=false;$('ls').hidden=!CFG.signup }
+function showLogin(){ $('app').hidden=true;$('home').hidden=true;$('login').hidden=false;$('ls').hidden=!CFG.signup;$('lHome').hidden=CFG.pair }
+function showHome(){ $('app').hidden=true;$('login').hidden=true;$('home').hidden=false;
+  const dl=CFG.download;$('hDl').hidden=!dl;$('hDlNote').hidden=!dl;if(dl)$('hDl').href=dl;
+  if(/Android|iPhone|iPad/i.test(navigator.userAgent)&&dl){$('hDl').textContent='到電腦下載 Windows 版';$('hDl').removeAttribute('href');$('hDl').onclick=e=>{e.preventDefault();navigator.clipboard?.writeText(location.origin).catch(()=>{});$('hDlNote').textContent='請用電腦打開 '+location.host+' 下載（網址已複製）'}}
+  if(CFG.repo){$('hRepo').hidden=false;$('hRepo').href=CFG.repo}}
+$('hLogin').onclick=$('hWeb').onclick=showLogin;$('lHome').onclick=showHome;
 $('ls').onclick=()=>{signup=!signup;$('lt').textContent=$('lb').textContent=signup?'註冊':'登入';
   $('ls').textContent=signup?'已有帳號？登入':'還沒有帳號？註冊';$('lp').autocomplete=signup?'new-password':'current-password';$('le').textContent=''};
 $('lf').onsubmit=async e=>{e.preventDefault();$('le').textContent='';$('lb').disabled=true;
@@ -274,7 +351,7 @@ $('lf').onsubmit=async e=>{e.preventDefault();$('le').textContent='';$('lb').dis
   catch(err){$('le').textContent=err.message}finally{$('lb').disabled=false}};
 function logout(silent){ if(!silent&&TOKEN)api('logout','POST').catch(()=>{});
   TOKEN=null;try{localStorage.removeItem('ebot_token')}catch(e){}
-  clearTimeout(poller);S={bots:[],groups:[],folders:[],routines:[],msgs:[],busy:[]};lastId=0;showLogin() }
+  clearTimeout(poller);S={bots:[],groups:[],folders:[],routines:[],msgs:[],busy:[]};lastId=0;CFG.pair?showLogin():showHome() }
 
 /* ---------- data ---------- */
 async function refresh(){
@@ -677,12 +754,12 @@ async function runTest(){
 
 /* ---------- boot ---------- */
 let CFG={};
-function start(){$('login').hidden=true;$('app').hidden=false;lastId=0;
+function start(){$('login').hidden=true;$('home').hidden=true;$('app').hidden=false;lastId=0;
   refresh().then(()=>{let g=null;try{g=localStorage.getItem('ebot_guided')}catch(e){}if(!S.bots.length&&!g)openGuide()})}
 (async()=>{try{CFG=await (await fetch('/api/config')).json()}catch(e){}
   if(CFG.pair){$('ln').closest('label').hidden=true;$('ln').required=false;$('lp').previousSibling.textContent='配對碼';$('lp').minLength=4;$('lp').autocomplete='one-time-code';
     $('lf').querySelector('p').textContent='輸入電腦上 OCTA「設定 → 手機遠端」顯示的配對碼。';$('ls').hidden=true}
-  if(CFG.local||TOKEN)start();else showLogin()})();
+  if(CFG.local||TOKEN)start();else if(CFG.pair)showLogin();else showHome()})();
 </script>
 </body>
 </html>

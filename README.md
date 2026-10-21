@@ -16,7 +16,7 @@
 
 1. 安裝至少一個 AI 工具並登入（見上表，預設用 Claude）
 2. 安裝 [Google Chrome](https://www.google.com/chrome/)
-3. 從 [Releases](../../releases) 下載 `OCTA-Setup-x.y.z.exe` 並安裝
+3. 下載 [OCTA-Setup.exe](https://github.com/typeu910722-gife/octa/releases/latest/download/OCTA-Setup.exe) 並安裝（或到 [octa.yzprojecttw.com](https://octa.yzprojecttw.com) 首頁按下載）
 4. 打開 OCTA，照「設定指引」完成，選一個範本試跑
 
 不用註冊帳號，資料只存在你的電腦。第一次執行時 Windows 若顯示「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」（安裝檔未簽章）。
@@ -56,7 +56,7 @@
    ```
 3. 把 `wrangler.toml` 的 `database_name`、`database_id` 換成你的
 4. Cloudflare → Workers 和 Pages → 建立 → Pages → 連接 Git，選你的 fork，其他保持預設
-5. `wrangler.toml` 可調整 `TZ_OFFSET_MIN`（例行任務時區）與 `ALLOW_SIGNUP`（是否開放註冊）
+5. `wrangler.toml` 可調整 `TZ_OFFSET_MIN`（例行任務時區）、`ALLOW_SIGNUP`（是否開放註冊）、`DOWNLOAD_URL`（首頁下載按鈕）
 
 使用者登入後，照網站上的「設定指引」下載執行器並連線（需要 Node 18+）。
 
@@ -75,7 +75,7 @@ npm start          # Electron 視窗
 npm run dist       # 打包 Windows 安裝檔（Linux 需要 wine64 + wine32）
 ```
 
-推送 `v*` 標籤，GitHub Actions 會在 Windows 上打包並附加到 Release。
+在 Actions 執行「Desktop build」（或推送 `v*` 標籤），會在 Windows 上打包並發布成最新 Release；版本號取自 `desktop/package.json`。
 
 | 路徑 | 內容 |
 | --- | --- |

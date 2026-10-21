@@ -12,3 +12,5 @@ TZ_OFFSET_MIN = "480"   # 排程時區（分鐘），台灣 +8 = 480
 ALLOW_SIGNUP = "true"   # 是否開放註冊
 CANONICAL_HOST = "octa.yzprojecttw.com"     # 主要網址，例如 octa.example.com（留空不轉址）
 LEGACY_HOSTS = "bot.yzprojecttw.com,ebot-pqf.pages.dev"       # 要轉到主要網址的舊網址，逗號分隔
+DOWNLOAD_URL = "https://github.com/typeu910722-gife/octa/releases/latest/download/OCTA-Setup.exe"   # 首頁的桌面版下載按鈕（留空隱藏）
+REPO_URL = "https://github.com/typeu910722-gife/octa"

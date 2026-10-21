@@ -1,7 +1,7 @@
 {
   "name": "octa-desktop",
   "productName": "OCTA",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "用自己的 Claude Code 指揮多個 AI 機器人",
   "author": "歪計劃 YZ PROJECT STUDIO",
   "license": "MIT",
@@ -26,7 +26,7 @@
   "build": {
     "appId": "tw.yzproject.octa",
     "productName": "OCTA",
-    "artifactName": "OCTA-Setup-${version}.${ext}",
+    "artifactName": "OCTA-Setup.${ext}",
     "files": ["main.mjs", "server.mjs", "web/**", "api.js", "schema.sql", "icon.png", "package.json"],
     "asarUnpack": ["node_modules/@playwright/**", "node_modules/playwright/**", "node_modules/playwright-core/**"],
     "win": { "target": "nsis", "icon": "icon.png" },

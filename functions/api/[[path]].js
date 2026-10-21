@@ -153,7 +153,7 @@ export async function onRequest({ request: req, env, params }) {
       if (!u || !(await checkPw(String(body.pw || ''), u.pw))) return err('帳號或密碼錯誤', 401);
       return J({ token: await newSession(db, u.id, 'web') });
     }
-    if (path === 'config' && m === 'GET') return J({ signup: env.ALLOW_SIGNUP === 'true', local: !!env.isLocal, pair: !!env.pairCheck });
+    if (path === 'config' && m === 'GET') return J({ signup: env.ALLOW_SIGNUP === 'true', local: !!env.isLocal, pair: !!env.pairCheck, download: env.DOWNLOAD_URL || '', repo: env.REPO_URL || '' });
     if (path === 'pair' && m === 'POST') {   // desktop app: phone pairs with a code instead of an account
       if (!env.pairCheck) return err('這個版本不使用配對碼', 404);
       if (!env.pairCheck(String(body.code || ''))) return err('配對碼錯誤或已失效', 401);
