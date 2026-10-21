@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { dirname, join, extname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const VERSION = '6';
+export const VERSION = '6.1';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const POLL_MS = 5000;
@@ -126,15 +126,31 @@ export const ENGINES = {
 };
 const FILE_INSTR = '請先完整讀取目前資料夾裡的 octa-task.md，依照裡面的指示執行。最後的輸出要直接是給使用者看的回覆。';
 const STDIN_INSTR = '請依照標準輸入中的完整指示執行，最後輸出要給使用者看的回覆。';
+// Windows consoles often answer in the local code page (e.g. Big5), not UTF-8
+function decode(chunks) {
+  const buf = Buffer.concat(chunks), utf = buf.toString('utf8');
+  if (!WIN || !utf.includes('�')) return utf;
+  for (const enc of ['big5', 'gbk', 'shift_jis']) { try { const t = new TextDecoder(enc).decode(buf); if (!t.includes('�')) return t; } catch { } }
+  return utf;
+}
+const installed = {};
+function has(bin) {   // a missing command can't be told apart from a failing one after the fact, so check first
+  if (bin in installed && installed[bin]) return true;
+  const r = spawnSync(WIN ? 'where' : 'which', [bin], { windowsHide: true });
+  return (installed[bin] = r.status === 0);
+}
 function spawnCli(bin, args, dir, input) {
   return new Promise(resolve => {
+    if (!has(bin)) return resolve({ code: -1, out: '', err: '', missing: true });
     const child = spawn(bin, WIN ? args.map(q) : args, { cwd: dir, shell: WIN, windowsHide: true });
-    let out = '', err = '', killed = false;
+    const out = [], err = [];
+    let killed = false;
     const timer = setTimeout(() => { killed = true; child.kill(); }, JOB_TIMEOUT_MS);
-    child.stdout.on('data', d => (out += d));
-    child.stderr.on('data', d => (err += d));
-    child.on('error', e => { clearTimeout(timer); resolve({ code: -1, out, err: e.message, missing: e.code === 'ENOENT' }); });
-    child.on('close', code => { clearTimeout(timer); resolve({ code, out, err: err + (killed ? '\n執行超過 15 分鐘，已中止。' : ''), missing: WIN && code === 1 && /is not recognized|不是內部或外部命令/.test(err) }); });
+    child.stdout.on('data', d => out.push(d));
+    child.stderr.on('data', d => err.push(d));
+    child.on('error', e => { clearTimeout(timer); resolve({ code: -1, out: decode(out), err: e.message, missing: e.code === 'ENOENT' }); });
+    child.on('close', code => { clearTimeout(timer); resolve({ code, out: decode(out), err: decode(err) + (killed ? '\n執行超過 15 分鐘，已中止。' : '') }); });
+    child.stdin.on('error', () => { });
     child.stdin.end(input);
   });
 }
