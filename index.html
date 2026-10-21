@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12110e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="E·BOT">
+<meta name="robots" content="noindex,nofollow">
+<style>html{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>E·BOT 機器人</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500&display=swap">
+<style>
+/* Layout: E·ROOM dark-gold. Desktop = left rail (bots + groups) + chat pane; phone = list view ⇄ chat view. Single-theme dark by choice, matching E·ROOM. */
+:root{
+  --bg:#12110e; --panel:#1f1c17; --panel2:#27231c; --ink:#efe8da; --mute:#9b927f; --faint:#5f584c;
+  --gold:#c9a96a; --gold2:#e4cb93; --line:rgba(201,169,106,.22); --line2:rgba(239,232,218,.08);
+  --done:#8fb08a; --in:#8ea7c4; --prio:#e08a6d; --r:12px;
+  --sans:"Noto Sans TC",system-ui,sans-serif; --serif:"Cormorant Garamond","Noto Serif TC",serif; --tc:"Noto Serif TC",serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.app{height:100%;display:grid;grid-template-columns:300px 1fr;max-width:1200px;margin:0 auto}
+/* ---------- rail ---------- */
+.rail{border-right:1px solid var(--line2);display:flex;flex-direction:column;min-height:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px}
+.rail header{padding-block:18px 14px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.brand{font-family:var(--serif);font-size:13px;letter-spacing:.5em;color:var(--gold);white-space:nowrap}
+.rail h1{margin:4px 0 0;font-family:var(--tc);font-size:22px;font-weight:700}
+.new{display:flex;gap:8px;padding-bottom:12px}
+.new button{flex:1;border:1px solid var(--line);background:transparent;border-radius:var(--r);padding:9px 0;font-size:13px;color:var(--gold2)}
+.new button:hover{background:var(--panel)}
+.list{flex:1;overflow-y:auto;min-height:0;padding-bottom:16px}
+.sec{font-family:var(--tc);font-size:12px;letter-spacing:.2em;color:var(--mute);padding:14px 4px 6px}
+.item{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:transparent;border-radius:var(--r);padding:10px 8px}
+.item:hover{background:var(--panel)}
+.item.on{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--line)}
+.item .t{min-width:0;flex:1}
+.item b{display:block;font-weight:500;font-size:14px}
+.item small{display:block;color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-family:var(--tc);font-weight:700;
+  background:var(--panel2);border:1px solid var(--line);color:var(--gold2);font-size:15px}
+.av.grp{border-radius:11px;font-family:var(--serif);font-size:13px;letter-spacing:.05em}
+.av.sm{width:28px;height:28px;font-size:12px}
+/* ---------- chat ---------- */
+.pane{display:flex;flex-direction:column;min-height:0;min-width:0}
+.ph{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line2);padding-block:14px;
+  padding-left:20px;padding-right:max(20px,env(safe-area-inset-right,0px))}
+.back{display:none;border:0;background:none;font-size:24px;color:var(--gold);padding:0 6px 0 0}
+.ph .t{flex:1;min-width:0}
+.ph b{font-family:var(--tc);font-size:17px}
+.ph small{display:block;color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ghost{border:1px solid var(--line);background:none;border-radius:99px;padding:6px 12px;font-size:12px;color:var(--gold2);white-space:nowrap}
+.task{margin:12px 20px 0;padding:10px 14px;border:1px dashed var(--line);border-radius:var(--r);font-size:13px;color:var(--mute);line-height:1.6}
+.task em{font-style:normal;color:var(--gold);font-family:var(--tc);margin-right:6px}
+.msgs{flex:1;overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:14px;padding:16px 20px}
+.m{display:flex;gap:10px;align-items:flex-start;max-width:640px}
+.m .who{font-size:12px;color:var(--gold);margin-bottom:4px;font-family:var(--tc)}
+.m .bx{min-width:0}
+.bub{background:var(--panel);border:1px solid var(--line2);border-radius:4px var(--r) var(--r) var(--r);padding:10px 14px;line-height:1.65;overflow-wrap:anywhere}
+.m.me{align-self:flex-end;flex-direction:row-reverse}
+.m.me .bub{background:var(--panel2);border-color:var(--line);border-radius:var(--r) 4px var(--r) var(--r)}
+.bub .at{color:var(--gold2)}
+.rows{margin-top:8px;display:grid;gap:4px;font-size:13px}
+.rows div{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line2);padding-top:4px;font-variant-numeric:tabular-nums}
+.pill{font-size:11px;border-radius:99px;padding:1px 8px;border:1px solid currentColor;white-space:nowrap}
+.p-in{color:var(--in)}.p-ok{color:var(--done)}.p-pr{color:var(--prio)}
+.sys{align-self:center;font-size:12px;color:var(--faint);font-family:var(--tc);letter-spacing:.1em}
+.typing{color:var(--mute);letter-spacing:.3em;animation:fade 1.2s infinite}
+@keyframes fade{50%{opacity:.35}}
+.mention{display:flex;gap:6px;flex-wrap:wrap;padding:0 20px 6px}
+.mention button{border:1px solid var(--line2);background:var(--panel);border-radius:99px;padding:4px 10px;font-size:12px;color:var(--mute)}
+.mention button:hover{color:var(--gold2);border-color:var(--line)}
+form.in{display:flex;gap:10px;border-top:1px solid var(--line2);
+  padding:12px max(20px,env(safe-area-inset-right,0px)) max(14px,env(safe-area-inset-bottom,0px)) 20px}
+form.in input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;color:var(--ink);font:inherit}
+.send{border:0;background:var(--gold);color:#12110e;border-radius:var(--r);padding:0 18px;font-weight:500}
+.foot{text-align:center;font-size:11px;color:var(--faint);padding-bottom:6px}
+/* ---------- sheet ---------- */
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:20;padding:16px}
+.sheet{width:min(460px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:14px;max-height:90vh;overflow:auto}
+.sheet h2{margin:0;font-family:var(--tc);font-size:18px}
+.sheet label{display:grid;gap:6px;font-size:12px;color:var(--mute);letter-spacing:.1em}
+.sheet input,.sheet textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--ink);font:inherit;font-size:14px;letter-spacing:0}
+.sheet textarea{min-height:110px;resize:vertical;line-height:1.6}
+.picks{display:grid;gap:6px}
+.pick{display:flex;gap:10px;align-items:center;border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:14px;letter-spacing:0;color:var(--ink)}
+.pick input{accent-color:var(--gold)}
+.acts{display:flex;gap:10px;justify-content:flex-end}
+.acts .ok{background:var(--gold);color:#12110e;border:0;border-radius:10px;padding:9px 20px}
+.acts .no{background:none;border:1px solid var(--line2);border-radius:10px;padding:9px 16px;color:var(--mute)}
+.tpl{display:flex;gap:6px;flex-wrap:wrap}
+.tpl button{border:1px solid var(--line2);background:none;border-radius:99px;padding:4px 10px;font-size:12px;color:var(--mute);letter-spacing:0}
+/* ---------- phone ---------- */
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .rail{border:0;padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .app.chat .rail{display:none}
+  .app:not(.chat) .pane{display:none}
+  .back{display:block}
+  .ph{padding-left:max(16px,env(safe-area-inset-left,0px))}
+  .msgs,.mention{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .task{margin-left:max(16px,env(safe-area-inset-left,0px));margin-right:16px}
+  form.in{padding-left:max(16px,env(safe-area-inset-left,0px))}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <aside class="rail">
+    <header><div><div class="brand">E · BOT</div><h1>機器人</h1></div><span class="pill p-ok">電腦在線</span></header>
+    <div class="new"><button id="nb">＋ 新機器人</button><button id="ng">＋ 新群組</button></div>
+    <nav class="list" id="list"></nav>
+  </aside>
+  <section class="pane">
+    <div class="ph"><button class="back" id="back" aria-label="返回">‹</button><div class="av" id="pav"></div>
+      <div class="t"><b id="pname"></b><small id="psub"></small></div><button class="ghost" id="edit">任務設定</button></div>
+    <div class="task" id="task"></div>
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <div class="mention" id="mention"></div>
+    <form class="in" id="f"><input id="msg" placeholder="輸入訊息，群組可用 @ 指定機器人" autocomplete="off"><button class="send">送出</button></form>
+    <div class="foot">原型示範 · 資料為範例 · 接上電腦後由 Claude Max 執行</div>
+  </section>
+</div>
+<div class="veil" id="veil" hidden></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S={bots:[
+ {id:'b1',name:'訂房員',task:'每天 7:50 開 Booking 後台，抓今天與明天的入住、退房訂單，交給群組。'},
+ {id:'b2',name:'暱稱員',task:'讀貳宿文旅、貳洋樓民宿兩個 LINE 官方帳號的客人暱稱，依「名字 M/D」「M/D-D」「補助」規則整理住宿日期。'},
+ {id:'b3',name:'房務員',task:'整合訂房員與暱稱員的資料，算出今天要掃的房間，8:12 更新到 E·ROOM。'},
+ {id:'b4',name:'記帳員',task:'把每筆訂房寫進「2026 訂房紀錄」試算表，重複的不寫。'},
+ {id:'b5',name:'迎賓員',task:'中午擬好今天入住客人的入住資訊（地址、時間、門鎖、停車），列給 Yz 確認後才發送。'}],
+ groups:[{id:'g1',name:'每日入住流程',members:['b1','b2','b3','b4','b5'],task:'每天早上依序協作：訂房員、暱稱員抓資料 → 房務員更新 E·ROOM → 記帳員寫試算表 → 迎賓員擬入住訊息。'}],
+ msgs:{}, cur:'g1'};
+S.msgs.g1=[
+ {sys:'今天 07:50 · 自動排程啟動'},
+ {by:'b1',html:'抓到今天 <b>3 筆</b> Booking 訂單：<div class="rows"><div><span>貳宿 201　王小姐</span><span class="pill p-in">入住</span></div><div><span>貳洋樓 501　林小姐</span><span class="pill p-in">入住</span></div><div><span>貳宿 305　Kim</span><span class="pill p-pr">退房→入住</span></div></div>'},
+ {by:'b2',html:'LINE 暱稱另有 <b>2 位</b>：陳先生 10/21-23（補助）、阿哲 10/20-20。'},
+ {by:'b3',html:'今日要掃 <b>4 間</b>：201、203、305（優先）、502。<span class="at">已更新 E·ROOM</span>'},
+ {by:'b4',html:'已寫入試算表第 214–218 列，略過 1 筆重複。'},
+ {by:'b5',html:'入住訊息 4 封已擬好，<span class="at">@Yz</span> 確認後發送？'}];
+S.msgs.b5=[{by:'b5',html:'我負責入住資訊。告訴我要發給誰，或等群組流程交給我。'}];
+try{const v=localStorage.getItem('ebot');if(v)S=JSON.parse(v)}catch(e){}
+const save=()=>{try{localStorage.setItem('ebot',JSON.stringify(S))}catch(e){}};
+const bot=id=>S.bots.find(b=>b.id===id);
+const conv=id=>bot(id)||S.groups.find(g=>g.id===id);
+const isG=id=>id[0]==='g';
+const init=n=>esc(n.slice(0,1));
+function last(id){const m=(S.msgs[id]||[]).filter(x=>!x.sys).slice(-1)[0];if(!m)return conv(id).task;
+  return (m.by==='me'?'你：':m.by&&isG(id)?bot(m.by)?.name+'：':'')+m.html.replace(/<[^>]+>/g,'')}
+function renderList(){
+  let h='<div class="sec">群組</div>';
+  S.groups.forEach(g=>h+=`<button class="item ${S.cur===g.id?'on':''}" data-id="${g.id}"><span class="av grp">${g.members.length}人</span><span class="t"><b>${esc(g.name)}</b><small>${esc(last(g.id))}</small></span></button>`);
+  h+='<div class="sec">機器人</div>';
+  S.bots.forEach(b=>h+=`<button class="item ${S.cur===b.id?'on':''}" data-id="${b.id}"><span class="av">${init(b.name)}</span><span class="t"><b>${esc(b.name)}</b><small>${esc(last(b.id))}</small></span></button>`);
+  $('list').innerHTML=h}
+function renderChat(){
+  const c=conv(S.cur),g=isG(S.cur);
+  $('pav').className='av'+(g?' grp':'');$('pav').textContent=g?c.members.length+'人':c.name[0];
+  $('pname').textContent=c.name;
+  $('psub').textContent=g?c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'):'機器人 · 單獨對話';
+  $('task').innerHTML='<em>'+(g?'協作規則':'指定任務')+'</em>'+esc(c.task);
+  $('mention').innerHTML=g?c.members.map(id=>`<button data-at="${esc(bot(id)?.name)}">@${esc(bot(id)?.name)}</button>`).join(''):'';
+  $('msgs').innerHTML=(S.msgs[S.cur]||[]).map(m=>{
+    if(m.sys)return `<div class="sys">${esc(m.sys)}</div>`;
+    if(m.by==='me')return `<div class="m me"><div class="bx"><div class="bub">${m.html}</div></div></div>`;
+    const b=bot(m.by)||{name:'?'};
+    return `<div class="m"><span class="av sm">${init(b.name)}</span><div class="bx">${g?`<div class="who">${esc(b.name)}</div>`:''}<div class="bub">${m.html}</div></div></div>`}).join('');
+  $('msgs').scrollTop=1e9}
+function render(){renderList();renderChat()}
+function push(id,m){(S.msgs[id]=S.msgs[id]||[]).push(m);save();render()}
+function reply(id,text){
+  const c=conv(id);let who=isG(id)?c.members.filter(b=>text.includes('@'+bot(b)?.name)):[id];
+  if(isG(id)&&!who.length)who=[c.members[0]];
+  who.forEach((b,i)=>setTimeout(()=>{
+    push(id,{by:b,html:'<span class="typing">• • •</span>',tmp:1});
+    setTimeout(()=>{const a=S.msgs[id];a.splice(a.findIndex(x=>x.tmp),1);
+      push(id,{by:b,html:`收到，依我的任務處理：「${esc(text.replace(/@\S+\s?/g,'').slice(0,40))}」。<span class="at">（原型：接上電腦後會真的執行）</span>`})},900)},i*1200))}
+$('list').onclick=e=>{const it=e.target.closest('.item');if(!it)return;S.cur=it.dataset.id;save();render();$('app').classList.add('chat')};
+$('back').onclick=()=>$('app').classList.remove('chat');
+$('mention').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=$('msg');i.value=(i.value+' @'+b.dataset.at+' ').trimStart();i.focus()};
+$('f').onsubmit=e=>{e.preventDefault();const v=$('msg').value.trim();if(!v)return;$('msg').value='';
+  push(S.cur,{by:'me',html:esc(v).replace(/@(\S+)/g,'<span class="at">@$1</span>')});reply(S.cur,v)};
+/* ---------- sheets ---------- */
+const TPL=['讀 Booking 後台訂單','讀 LINE 官方帳號暱稱','更新 E·ROOM','寫入 Google 試算表','擬入住訊息給我確認'];
+function sheet(kind,edit){
+  const g=kind==='g',c=edit?conv(S.cur):null;
+  $('veil').innerHTML=`<form class="sheet" id="sf"><h2>${edit?'任務設定':g?'新群組':'新機器人'}</h2>
+  <label>名稱<input id="sn" required maxlength="12" value="${c?esc(c.name):''}" placeholder="${g?'例如：退房檢查':'例如：評論員'}"></label>
+  ${g?`<label>成員<div class="picks">${S.bots.map(b=>`<span class="pick"><input type="checkbox" id="m_${b.id}" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm">${init(b.name)}</span>${esc(b.name)}</span>`).join('')}</div></label>`:''}
+  <label>${g?'協作規則':'指定任務'}<textarea id="st" required placeholder="${g?'誰先做、做完交給誰':'這個機器人每天要做什麼、什麼時候做'}">${c?esc(c.task):''}</textarea></label>
+  ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
+  <div class="acts"><button type="button" class="no" id="sx">取消</button><button class="ok">${edit?'儲存':'建立'}</button></div></form>`;
+  $('veil').hidden=false;$('sn').focus();
+  $('sx').onclick=()=>$('veil').hidden=true;
+  $('veil').querySelectorAll('.tpl button').forEach(b=>b.onclick=()=>{const t=$('st');t.value=(t.value?t.value+'；':'')+b.textContent});
+  $('sf').onsubmit=e=>{e.preventDefault();const name=$('sn').value.trim(),task=$('st').value.trim();
+    const members=g?[...$('veil').querySelectorAll('.picks input:checked')].map(i=>i.value):null;
+    if(g&&!members.length)return;
+    if(c){c.name=name;c.task=task;if(g)c.members=members}
+    else{const id=(g?'g':'b')+Date.now();(g?S.groups:S.bots).push(g?{id,name,members,task}:{id,name,task});
+      S.cur=id;S.msgs[id]=[{sys:g?'群組已建立':'機器人已建立'}]}
+    save();$('veil').hidden=true;render();$('app').classList.add('chat')}}
+$('nb').onclick=()=>sheet('b');$('ng').onclick=()=>sheet('g');
+$('edit').onclick=()=>sheet(isG(S.cur)?'g':'b',true);
+$('veil').onclick=e=>{if(e.target.id==='veil')$('veil').hidden=true};
+render();
+</script>
+</body>
+</html>
