@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { dirname, join, extname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const VERSION = '9';
+export const VERSION = '9.1';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const POLL_MS = 5000;
@@ -253,12 +253,18 @@ function openJob(job) {
       api('runner/done', { id: job.id, ok: false, text: '⚠ 找不到 Chrome。請在 octa-runner.json 加上 "chrome": "Chrome 執行檔路徑"。' }).finally(resolve);
       return;
     }
-    log(`🌐 開啟 ${job.bot.name} 的瀏覽器`);
-    const child = spawn(chrome, [`--user-data-dir=${profile}`, '--no-first-run', '--new-window', job.url || job.bot.page || 'about:blank'], { stdio: 'ignore' });
+    // no address given: bring back the page the bot was last on (or Chrome's last session for this profile)
+    const target = job.url || job.bot.page;
+    const args = [`--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...(target ? ['--new-window', target] : ['--restore-last-session'])];
+    log(`🌐 開啟 ${job.bot.name} 的瀏覽器${target ? '：' + target : '（上次的畫面）'}`);
+    const t0 = Date.now();
+    const child = spawn(chrome, args, { stdio: 'ignore', windowsHide: false });
     child.on('error', e => api('runner/done', { id: job.id, ok: false, text: '⚠ 無法開啟 Chrome：' + e.message }).finally(resolve));
     child.on('exit', () => {
-      api('runner/done', { id: job.id, ok: true, text: '瀏覽器已關閉，登入狀態已保存在我的專屬設定檔。' }).finally(resolve);
-      log(`🌐 ${job.bot.name} 的瀏覽器已關閉`);
+      // a quick exit means the window was handed to a copy that was already open
+      const text = Date.now() - t0 < 4000 ? '已在電腦上叫出我的瀏覽器視窗。' : '你關掉了我的瀏覽器，登入狀態已保存，我可以繼續工作了。';
+      api('runner/done', { id: job.id, ok: true, text }).finally(resolve);
+      log(`🌐 ${job.bot.name}：${text}`);
     });
   });
 }

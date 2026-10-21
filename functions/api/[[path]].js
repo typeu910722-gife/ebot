@@ -903,7 +903,9 @@ export async function onRequest({ request: req, env, params }) {
       if (!bot || !(conv === bot.id || groups.some(g => g.id === conv))) return err('找不到機器人', 404);
       let url = clean(body.url, 500);
       if (url && !/^https?:\/\//.test(url)) url = 'https://' + url;
-      await addMsg(db, U, conv, 'sys', `請電腦開啟「${bot.name}」的瀏覽器${url ? '：' + url : ''}`);
+      // don't stack duplicates if the button is pressed again before the computer picks it up
+      if (await db.prepare("SELECT 1 FROM jobs WHERE user_id=? AND bot_id=? AND kind='open' AND status='pending'").bind(U, bot.id).first()) return J({ ok: true, queued: true });
+      await addMsg(db, U, conv, 'sys', `請電腦開啟「${bot.name}」的瀏覽器${url ? '：' + url : '（上次的畫面）'}`);
       await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url) VALUES (?,?,?,'[]','',?,'open',?)").bind(U, conv, bot.id, now(), url || null).run();
       return J({ ok: true });
     }
