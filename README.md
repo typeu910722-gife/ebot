@@ -1,77 +1,87 @@
 # E·BOT
 
-像 Grok bot 一樣用聊天介面指揮多個 AI 機器人，但實際執行的是**你自己電腦上的 Claude Code**，用的是你自己的 Claude 方案（Pro / Max），不用另外付 API 費。
+用聊天介面指揮多個 AI 機器人。機器人在**你自己的電腦**上用 **Claude Code** 工作，用的是你自己的 Claude 方案（Pro / Max），不用另外付 API 費用。
 
-- 新建機器人，給每個機器人指定任務
-- **分區**：把不同門市／專案的機器人分開；同分區的機器人可以互相詢問（回覆裡寫 `@同事 問題`）
-- 把機器人拉進群組，依序協作，或用 `@名字` 指定誰做
-- **例行任務**：每天多個固定時間自動執行，可隨時開關
-- **每個機器人有自己的瀏覽器**（獨立 Chrome 設定檔：分頁、登入、Cookie 各自分開），最多 3 個同時工作互不干擾；聊天室裡可看它最後停在哪一頁、或叫電腦打開它的瀏覽器讓你登入
-- 多帳號雲端版，或下載桌面版（不用帳號、資料只在自己電腦）
-- 核准按鈕、檔案與圖片附件、分區資料與共用資料、Telegram / LINE 通知、工作紀錄
+## 快速開始（桌面版，推薦）
 
-## 架構
+1. 安裝 [Claude Code](https://code.claude.com)，在終端機輸入 `claude`，再輸入 `/login` 登入
+2. 安裝 [Google Chrome](https://www.google.com/chrome/)
+3. 從 [Releases](../../releases) 下載 `EBOT-Setup-x.y.z.exe` 並安裝
+4. 打開 E·BOT，照「設定指引」完成，選一個範本試跑
+
+不用註冊帳號，資料只存在你的電腦。第一次執行時 Windows 若顯示「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」（安裝檔未簽章）。
+
+## 能做什麼
+
+- **機器人**：每個機器人有自己的指定任務
+- **群組**：把機器人拉進群組依序協作，或用 `@名字` 指定誰做
+- **分區**：區隔不同門市或專案；同分區的機器人可以互相詢問
+- **例行任務**：每天固定時間自動執行，可隨時開關
+- **獨立瀏覽器**：每個機器人有自己的 Chrome（分頁、登入各自分開），最多 3 個同時工作；可看它最後停在哪一頁
+- **核准按鈕**：發訊息、付款這類動作，機器人會先等你按「核准」
+- **附件**：傳圖片、PDF、文字檔給機器人
+- **分區資料／共用資料**：寫一次，機器人都會讀
+- **通知**：需要你處理時，跳電腦通知，也可以送到 Telegram 或 LINE
+- **手機遙控**：設定 → 手機遠端，用網址加 8 碼配對碼連進來
+- **工作紀錄**：每次執行的結果與花費時間
+
+## 雲端版（多帳號，自己架）
+
+適合想用網址登入、多人各自使用的情況。網站只負責存資料與排隊，AI 仍在每個人自己的電腦上執行。
 
 ```
-手機 / 電腦瀏覽器 ──► Cloudflare Pages（網頁 + API）──► D1 資料庫
-                                   ▲
-                                   │ 每 5 秒領任務、回寫結果
-                     你電腦上的執行器 ebot-runner.mjs
-                                   │
-          claude -p ＋ 每個機器人專屬的 Playwright Chrome（你的 Claude 登入）
+手機 / 電腦瀏覽器 ─► Cloudflare Pages（網頁 + API）─► D1 資料庫
+                              ▲
+                              │ 每 5 秒領任務、回寫結果
+                    使用者電腦上的 ebot-runner.mjs
+                              │
+                    claude -p ＋ 每個機器人的專屬 Chrome
 ```
-
-網站只負責存資料與排隊；所有 AI 執行都發生在使用者自己的電腦，用使用者自己的 Claude 帳號。
-
-## 使用（已架好的站）
-
-1. 打開網站註冊帳號
-2. 「設定」→ 照步驟下載執行器、產生金鑰、執行
-3. 新建機器人或套用範本，開始對話
-
-執行器需求：Node 18+、[Claude Code](https://code.claude.com)（用 `/login` 登入 Pro/Max）、Google Chrome。瀏覽器工具用 [@playwright/mcp](https://github.com/microsoft/playwright-mcp)，執行器會自動透過 npx 取得。同時工作數量可在 `ebot-runner.json` 加 `"max": 3` 調整。
-
-## 自己架一份
 
 1. Fork 這個倉庫
-2. 建 D1 資料庫並建表：
+2. 建資料庫：
    ```
    npx wrangler d1 create ebot
    npx wrangler d1 execute ebot --remote --file schema.sql
    ```
 3. 把 `wrangler.toml` 的 `database_id` 換成你的
 4. Cloudflare → Workers 和 Pages → 建立 → Pages → 連接 Git，選你的 fork，其他保持預設
-5. 視需要調整 `wrangler.toml` 的 `TZ_OFFSET_MIN`（排程時區）與 `ALLOW_SIGNUP`（是否開放註冊）
+5. `wrangler.toml` 可調整 `TZ_OFFSET_MIN`（例行任務時區）與 `ALLOW_SIGNUP`（是否開放註冊）
 
-本機開發：`npx wrangler d1 execute ebot --local --file schema.sql && npx wrangler pages dev`
+使用者登入後，照網站上的「設定指引」下載執行器並連線（需要 Node 18+）。
+
+## 開發
+
+```
+# 雲端版
+npx wrangler d1 execute ebot --local --file schema.sql
+npx wrangler pages dev
+
+# 桌面版
+cd desktop
+npm install
+npm run serve      # 用 Node 直接跑，自動打開瀏覽器
+npm start          # Electron 視窗
+npm run dist       # 打包 Windows 安裝檔（Linux 需要 wine64 + wine32）
+```
+
+推送 `v*` 標籤，GitHub Actions 會在 Windows 上打包並附加到 Release。
+
+| 路徑 | 內容 |
+| --- | --- |
+| `public/index.html` | 網頁介面（雲端版與桌面版共用） |
+| `functions/api/[[path]].js` | API（雲端版與桌面版共用） |
+| `public/ebot-runner.mjs` | 執行器：領任務、呼叫 Claude Code、管理每個機器人的瀏覽器 |
+| `desktop/` | 桌面版：本機 SQLite、Electron 視窗、手機遠端 |
+| `schema.sql` | 資料表 |
 
 ## 安全
 
-- 密碼以 PBKDF2 雜湊儲存；登入與執行器金鑰都只存 SHA-256 雜湊
-- 執行器金鑰只能領自己帳號的任務；重新產生會讓舊金鑰失效
-- 機器人預設不會替你發訊息、付款、刪資料，會先請你確認
-- 執行器只允許瀏覽器、網路查詢與 `work/` 資料夾內的讀寫工具
+- 機器人預設不替你發訊息、付款、刪資料，會先請你核准
+- 執行器只允許瀏覽器、網路查詢，以及機器人自己資料夾內的讀寫
+- 雲端版密碼以 PBKDF2 儲存，登入與執行器金鑰只存雜湊
+- 桌面版只接受本機連線；手機遠端需要配對碼，猜錯 10 次自動換碼
 
 ## 授權
 
 MIT
-
-## 桌面版（下載安裝，不用帳號）
-
-`desktop/` 是 Windows 安裝版：網頁、資料庫、執行器全部在自己電腦上，不用註冊、不用金鑰，資料不經過雲端。
-
-- 下載：GitHub Releases 的 `EBOT-Setup-x.y.z.exe`
-- 需要：[Claude Code](https://code.claude.com)（安裝後在終端機執行 `claude`、輸入 `/login`）、Google Chrome。不需要另外裝 Node。
-- 手機遙控：設定 → 手機遠端，會產生網址與 8 碼配對碼（Cloudflare 快速通道，網址每次不同）
-- 縮到右下角常駐，可設定開機自動啟動；機器人需要你處理時會跳電腦通知
-- 未簽章的安裝檔第一次執行時，Windows 會顯示「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」
-
-開發：
-```
-cd desktop
-npm install
-npm run serve      # 用 Node 直接跑（不開視窗，自動打開瀏覽器）
-npm start          # Electron 視窗
-npm run dist       # 打包 Windows 安裝檔（Linux 需安裝 wine64 + wine32）
-```
-推送 `v*` 標籤時，GitHub Actions 會在 Windows 上自動打包並附加到 Release。

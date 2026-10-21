@@ -1,7 +1,7 @@
 {
   "name": "ebot-desktop",
   "productName": "E·BOT",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "用自己的 Claude Code 指揮多個 AI 機器人",
   "author": "歪計劃 YZ PROJECT STUDIO",
   "license": "MIT",

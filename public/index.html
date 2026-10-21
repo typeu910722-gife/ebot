@@ -11,7 +11,7 @@
 <title>E·BOT 機器人</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500&display=swap">
 <style>
-/* E·ROOM dark-gold. Desktop: rail + chat pane. Phone: list ⇄ chat. */
+/* Dark-gold theme. Desktop: rail + chat pane. Phone: list ⇄ chat. */
 :root{
   --bg:#12110e; --panel:#1f1c17; --panel2:#27231c; --ink:#efe8da; --mute:#9b927f; --faint:#5f584c;
   --gold:#c9a96a; --gold2:#e4cb93; --line:rgba(201,169,106,.22); --line2:rgba(239,232,218,.08);
@@ -137,6 +137,20 @@ form.in textarea{flex:1;min-width:0;background:var(--panel);border:1px solid var
 .acts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
 .acts .no{background:none;border:1px solid var(--line2);border-radius:10px;padding:9px 16px;color:var(--mute)}
 .acts .del{margin-right:auto;background:none;border:1px solid rgba(224,138,109,.4);border-radius:10px;padding:9px 14px;color:var(--prio)}
+.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tplc{display:grid;gap:2px;text-align:left;border:1px solid var(--line2);background:var(--bg);border-radius:12px;padding:10px 12px}
+.tplc:hover{border-color:var(--line)}
+.tplc b{font-weight:500;font-size:14px;color:var(--gold2)}
+.tplc small{font-size:12px;color:var(--mute)}
+.steps{display:grid;gap:4px;counter-reset:st}
+.step{display:grid;grid-template-columns:28px 1fr;gap:4px 12px;padding:12px 0;border-top:1px solid var(--line2)}
+.step .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:1px solid var(--line);color:var(--gold2);font-family:var(--serif)}
+.step.ok .n{background:var(--done);border-color:var(--done);color:#12110e}
+.step.bad .n{border-color:var(--prio);color:var(--prio)}
+.step b{font-family:var(--tc);font-weight:500;font-size:15px}
+.step .bd{grid-column:2;display:grid;gap:8px;font-size:13px;color:var(--mute);line-height:1.7;min-width:0}
+.step .bd p{margin:0}
+.guidecard{display:grid;gap:12px;justify-items:center;max-width:340px}
 .tpl{display:flex;gap:6px;flex-wrap:wrap}
 .tpl button{border:1px solid var(--line2);background:none;border-radius:99px;padding:4px 10px;font-size:12px;color:var(--mute);letter-spacing:0}
 .bw{display:grid;gap:8px;border-top:1px solid var(--line2);padding-top:12px}
@@ -206,7 +220,7 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
     <nav class="list" id="list"></nav>
   </aside>
   <section class="pane">
-    <div class="blank" id="blank">左邊選一個機器人或群組開始對話</div>
+    <div class="blank" id="blank"></div>
     <div class="ph" id="ph" hidden><button class="back" id="back" aria-label="返回">‹</button><div class="av" id="pav"></div>
       <div class="t"><b id="pname"></b><small id="psub"></small></div><button class="ghost" id="browser">瀏覽器</button><button class="ghost" id="edit">任務設定</button></div>
     <div class="task" id="task" hidden></div>
@@ -241,7 +255,7 @@ $('ls').onclick=()=>{signup=!signup;$('lt').textContent=$('lb').textContent=sign
 $('lf').onsubmit=async e=>{e.preventDefault();$('le').textContent='';$('lb').disabled=true;
   try{const d=CFG.pair?await api('pair','POST',{code:$('lp').value}):await api(signup?'signup':'login','POST',{name:$('ln').value,pw:$('lp').value});
     TOKEN=d.token;try{localStorage.setItem('ebot_token',TOKEN)}catch(e){}
-    $('lp').value='';start(signup)}
+    $('lp').value='';start()}
   catch(err){$('le').textContent=err.message}finally{$('lb').disabled=false}};
 function logout(silent){ if(!silent&&TOKEN)api('logout','POST').catch(()=>{});
   TOKEN=null;try{localStorage.removeItem('ebot_token')}catch(e){}
@@ -296,6 +310,7 @@ function render(scroll){
   $('list').innerHTML=h;
   const c=cur&&conv(cur);
   ['ph','task','msgs','f','note'].forEach(k=>$(k).hidden=!c);$('blank').hidden=!!c;
+  if(!c)$('blank').innerHTML=S.bots.length?'左邊選一個機器人或群組開始對話':`<div class="guidecard"><div>還沒有機器人。跟著設定指引，幾分鐘就能讓第一個機器人開始工作。</div><button class="btn" onclick="openGuide()">開始設定</button></div>`;
   if(!c){$('mention').innerHTML='';return}
   const g=isG(cur);
   $('pav').className='av'+(g?' grp':'');$('pav').textContent=g?c.members.length+'人':c.name[0];
@@ -358,7 +373,12 @@ $('f').onsubmit=async e=>{e.preventDefault();const v=$('msg').value.trim();
   if(!await sendMsg(v,files)){$('msg').value=v;pending=keep;renderAtt()}};
 
 /* ---------- sheets ---------- */
-const TPL=['讀 Booking 後台訂單','讀 LINE 官方帳號暱稱','更新 E·ROOM','寫入 Google 試算表','擬好訊息給我確認再發'];
+const TPL=['用瀏覽器打開網站後台','整理成清單或表格','寫入 Google 試算表','擬好訊息給我確認再發','做完回報重點'];
+const TEMPLATES=[{k:'assistant',n:'一般助理',d:'一個機器人，什麼都可以問'},{k:'research',n:'研究小組',d:'查資料 → 整理摘要'},
+  {k:'shop',n:'門市小幫手',d:'訂單、客服回覆、日報'},{k:'lodging',n:'民宿入住流程',d:'訂房、打掃清單、入住訊息'}];
+const tplHtml=()=>`<div class="tpls">${TEMPLATES.map(t=>`<button type="button" class="tplc" data-t="${t.k}"><b>${t.n}</b><small>${t.d}</small></button>`).join('')}</div>`;
+function bindTpl(root,after){root.querySelectorAll('[data-t]').forEach(b=>b.onclick=async()=>{b.disabled=true;
+  try{await api('template','POST',{name:b.dataset.t});b.querySelector('small').textContent='已加入 ✓';await refresh();after&&after()}catch(e){b.disabled=false}})}
 function closeSheet(){$('veil').hidden=true;$('veil').innerHTML='';rtEdit=null}
 $('veil').onclick=e=>{if(e.target.id==='veil')closeSheet()};
 function sheet(kind,edit){
@@ -425,7 +445,7 @@ function folderMenu(anchor,fid){
 function folderSheet(fid,moveId){const f=fid&&S.folders.find(x=>x.id===fid);
   $('veil').innerHTML=`<form class="sheet" id="ff"><h2>${f?'重新命名分區':'建立分區'}</h2>
   <p>分區用來區隔不同門市或專案。同一個分區的機器人可以互相詢問、協作；不同分區互不干擾。</p>
-  <label class="field">分區名稱<input id="fn" required maxlength="20" value="${f?esc(f.name):''}" placeholder="例如：貳宿、貳洋樓"></label>
+  <label class="field">分區名稱<input id="fn" required maxlength="20" value="${f?esc(f.name):''}" placeholder="例如：台南店、高雄店"></label>
   <label class="field">分區資料（這個分區的機器人都會讀）<textarea id="fnotes" maxlength="20000" placeholder="例如：房號清單、門鎖密碼規則、停車說明、入住訊息範本、試算表連結">${f?esc(f.notes||''):''}</textarea></label>
   <div class="errmsg" id="fe"></div><div class="acts"><button type="button" class="no" id="sx">取消</button><button class="btn">${f?'儲存':'建立'}</button></div></form>`;
   $('veil').hidden=false;$('fn').focus();$('sx').onclick=closeSheet;
@@ -456,7 +476,7 @@ function renderRoutines(){const box=$('rt');if(!box)return;const list=S.routines
     try{if(rtEdit==='new')await api('routines','POST',{...body,conv:cur});else await api('routines/'+rtEdit,'PUT',body);
       rtEdit=null;await refresh();renderRoutines()}catch(err){f.querySelector('.errmsg').textContent=err.message}};
 }
-function rForm(r){return `<div class="rform"><label class="field">名稱<input name="rn" maxlength="40" value="${r?esc(r.name):''}" placeholder="例如：eroom 登入檢查"></label>
+function rForm(r){return `<div class="rform"><label class="field">名稱<input name="rn" maxlength="40" value="${r?esc(r.name):''}" placeholder="例如：早上整理訂單"></label>
   <div class="field">每天的時間<div class="times">${(r?r.times:['08:00']).map(t=>`<input type="time" value="${t}">`).join('')}<button type="button" data-add>＋ 時間</button></div></div>
   <label class="field">要做什麼（選填，空白就執行指定任務）<textarea name="rp" maxlength="2000" style="min-height:70px">${r?esc(r.prompt||''):''}</textarea></label>
   <div class="errmsg"></div>
@@ -491,6 +511,7 @@ curl.exe -o ebot-runner.mjs ${site}/ebot-runner.mjs</pre>
   <div class="row2"><button class="btn" id="gen">產生執行器金鑰</button><span style="font-size:12px;color:var(--faint)">會讓舊金鑰失效</span></div>
   <pre class="code" id="cmd" hidden></pre>`;
   $('veil').innerHTML=`<div class="sheet"><h2>設定</h2><p>${CFG.local?'本機':'帳號：'+esc(S.me)}　·　執行器：${S.runnerOnline?'<span class="p-ok">在線</span>':'離線'}</p>
+  <div class="row2"><button class="ghost" id="guideBtn">設定指引</button></div>
   ${runnerHtml}
   <h3>共用資料</h3>
   <label class="field">所有機器人都會讀的固定資訊<textarea id="gNotes" maxlength="20000" placeholder="例如：公司名稱、常用網站、聯絡方式、做事原則">${esc(st.notes)}</textarea></label>
@@ -505,19 +526,19 @@ curl.exe -o ebot-runner.mjs ${site}/ebot-runner.mjs</pre>
   <h3>工作紀錄</h3>
   <div class="row2"><button class="ghost" id="logsBtn">查看最近 100 筆</button></div>
   <h3>範本</h3>
-  <div class="row2"><button class="ghost" data-t="assistant">＋ 一般助理</button><button class="ghost" data-t="guesthouse">＋ 旅館每日入住流程</button></div>
+  ${tplHtml()}
   <div class="acts">${CFG.local?'':'<button class="del" id="lo">登出</button>'}<button class="btn" id="sx">關閉</button></div></div>`;
   $('veil').hidden=false;$('sx').onclick=closeSheet;
   if($('lo'))$('lo').onclick=()=>{closeSheet();logout()};
   if($('gen'))$('gen').onclick=async()=>{const d=await api('runner-token','POST');$('cmd').hidden=false;$('cmd').textContent=`node ebot-runner.mjs ${site} ${d.token}`};
-  $('veil').querySelectorAll('[data-t]').forEach(b=>b.onclick=async()=>{b.disabled=true;await api('template','POST',{name:b.dataset.t});b.textContent='已加入 ✓';refresh()});
+  bindTpl($('veil'));
   $('nAll').onclick=()=>$('nAll').classList.toggle('on');
   const say=t=>$('sMsg').textContent=t;
   const saveS=()=>api('settings','PUT',{notes:$('gNotes').value,notifyAll:$('nAll').classList.contains('on'),tg:{token:$('tgTok').value,chat:$('tgChat').value},line:{token:$('lnTok').value,to:$('lnTo').value}});
   $('sSave').onclick=async()=>{try{await saveS();say('已儲存 ✓')}catch(e){say(e.message)}};
   $('nTest').onclick=async()=>{try{await saveS();const r=await api('notify/test','POST');say('已送出：'+r.sent.join('、'))}catch(e){say(e.message)}};
   $('tgDet').onclick=async()=>{try{await saveS();const r=await api('notify/detect','POST');$('tgChat').value=r.chat;say('找到 Chat ID ✓')}catch(e){say(e.message)}};
-  $('logsBtn').onclick=openLogs;
+  $('logsBtn').onclick=openLogs;$('guideBtn').onclick=openGuide;
   if(CFG.local){
     $('dLogin').onclick=()=>api('desktop/login-claude','POST').catch(e=>alertSheet('無法開啟',e.message));
     $('dFolder').onclick=()=>api('desktop/open-folder','POST').catch(()=>{});
@@ -540,9 +561,52 @@ async function openLogs(){
   <div class="acts"><button class="no" id="lb2">返回設定</button><button class="btn" id="sx">關閉</button></div></div>`;
   $('veil').hidden=false;$('sx').onclick=closeSheet;$('lb2').onclick=()=>openSettings()}
 
+/* ---------- setup guide ---------- */
+let testState='';
+async function openGuide(){
+  let ds=null;if(CFG.local){try{ds=await api('desktop/status')}catch(e){}}
+  const site=location.origin,hasBot=S.bots.length>0;
+  const st=(ok,bad)=>ok?'ok':bad?'bad':'';
+  const steps=[];
+  if(CFG.local){
+    steps.push({cls:st(ds?.claude?.ok,!ds?.claude?.ok),t:'安裝 Claude Code',b:ds?.claude?.ok?`<p>已安裝（${esc(ds.claude.version)}）。</p>`:
+      `<p>E·BOT 用你電腦上的 Claude Code 工作，需要 Claude Pro 或 Max 方案。照官網說明安裝，裝好後按「重新檢查」。</p><div class="row2"><a class="btn" href="https://code.claude.com" target="_blank" rel="noopener">打開 Claude Code 官網</a><button class="ghost" data-recheck>重新檢查</button></div>`});
+    steps.push({cls:'',t:'登入 Claude',b:`<p>按下面的按鈕會開一個黑色視窗，在裡面輸入 <code>/login</code>，選「Claude 訂閱帳號」並在瀏覽器完成登入，然後關掉那個視窗。只要做一次。</p><div class="row2"><button class="ghost" id="gLogin">開啟登入視窗</button></div>`});
+    steps.push({cls:st(ds?.chrome,ds&&!ds.chrome),t:'安裝 Google Chrome',b:ds?.chrome?'<p>已安裝。每個機器人會用自己獨立的 Chrome 視窗工作。</p>':'<p>機器人用 Chrome 操作網站。請安裝後按「重新檢查」。</p><div class="row2"><a class="btn" href="https://www.google.com/chrome/" target="_blank" rel="noopener">下載 Chrome</a><button class="ghost" data-recheck>重新檢查</button></div>'});
+  }else{
+    steps.push({cls:'',t:'在電腦安裝 Claude Code 並登入',b:`<p>機器人在你自己的電腦上用 Claude Code 工作（需要 Claude Pro 或 Max 方案）。另外需要 Node 18 以上和 Google Chrome。</p><p>裝好後在終端機輸入 <code>claude</code>，再輸入 <code>/login</code> 登入。</p><div class="row2"><a class="ghost" href="https://code.claude.com" target="_blank" rel="noopener">Claude Code 官網</a><a class="ghost" href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a></div>`});
+    steps.push({cls:st(S.runnerOnline),t:'連接執行器',b:S.runnerOnline?'<p>電腦已連線。</p>':`<p>在 PowerShell（Mac 用終端機）執行：</p><pre class="code">mkdir ebot; cd ebot
+curl.exe -o ebot-runner.mjs ${site}/ebot-runner.mjs</pre><p>再按下面產生金鑰，複製出現的指令執行。視窗開著，機器人就會工作。</p><div class="row2"><button class="btn" id="gGen">產生金鑰與指令</button></div><pre class="code" id="gCmd" hidden></pre>`});
+  }
+  steps.push({cls:st(hasBot),t:'建立機器人',b:hasBot?`<p>已有 ${S.bots.length} 個機器人。可以再加範本，或用左邊「＋ 機器人」自己建。</p>${tplHtml()}`:`<p>選一個範本開始，之後都能改名、改任務。也可以關掉指引，用左邊「＋ 機器人」自己建立。</p>${tplHtml()}`});
+  steps.push({cls:testState==='ok'?'ok':testState&&testState!=='run'?'bad':'',t:'試跑一次',b:`<p>傳一句話給第一個機器人，確認整條流程能動。第一次可能要等一分鐘。</p><div class="row2"><button class="btn" id="gTest" ${hasBot?'':'disabled'}>${testState==='run'?'等待回覆中…':'開始測試'}</button></div><div id="gRes">${testState==='ok'?'<p class="p-ok">成功，機器人回覆了。之後在「任務設定」可以加例行任務，讓它每天自動做事。</p>':testState&&testState!=='run'?`<p class="errmsg">${esc(testState)}</p>`:''}</div>`});
+  $('veil').innerHTML=`<div class="sheet"><h2>設定指引</h2><p>照順序完成，打勾代表已經就緒。</p>
+  <div class="steps">${steps.map((x,i)=>`<div class="step ${x.cls}"><span class="n">${x.cls==='ok'?'✓':x.cls==='bad'?'!':i+1}</span><b>${x.t}</b><div class="bd">${x.b}</div></div>`).join('')}</div>
+  <div class="acts"><button class="btn" id="sx">${steps.every(x=>x.cls==='ok')?'完成':'先關閉'}</button></div></div>`;
+  $('veil').hidden=false;
+  $('sx').onclick=()=>{closeSheet();try{localStorage.setItem('ebot_guided','1')}catch(e){}};
+  $('veil').querySelectorAll('[data-recheck]').forEach(b=>b.onclick=openGuide);
+  if($('gLogin'))$('gLogin').onclick=()=>api('desktop/login-claude','POST').catch(e=>alertSheet('無法開啟',e.message));
+  if($('gGen'))$('gGen').onclick=async()=>{const d=await api('runner-token','POST');$('gCmd').hidden=false;$('gCmd').textContent=`node ebot-runner.mjs ${site} ${d.token}`};
+  bindTpl($('veil'),openGuide);
+  $('gTest').onclick=runTest;
+}
+async function runTest(){
+  const b=S.bots[0];if(!b)return;testState='run';openGuide();
+  const before=S.msgs.length?S.msgs[S.msgs.length-1].id:0;
+  try{await api('messages','POST',{conv:b.id,text:'這是設定測試，請只回覆：OK'})}catch(e){testState=e.message;return openGuide()}
+  const t0=Date.now();
+  while(Date.now()-t0<180000){await new Promise(r=>setTimeout(r,3000));await refresh();
+    const m=S.msgs.find(x=>x.id>before&&x.conv===b.id&&x.by===b.id);
+    if(m){testState=/^⚠/.test(m.text)?m.text.slice(0,300):'ok';break}}
+  if(testState==='run')testState=S.runnerOnline?'三分鐘內沒有回覆，請看執行器視窗有沒有錯誤訊息。':'電腦還沒連線，請先完成上面的步驟。';
+  if(!$('veil').hidden&&$('gRes'))openGuide();
+}
+
 /* ---------- boot ---------- */
 let CFG={};
-function start(isNew){$('login').hidden=true;$('app').hidden=false;lastId=0;refresh().then(()=>{if(isNew)openSettings()})}
+function start(){$('login').hidden=true;$('app').hidden=false;lastId=0;
+  refresh().then(()=>{let g=null;try{g=localStorage.getItem('ebot_guided')}catch(e){}if(!S.bots.length&&!g)openGuide()})}
 (async()=>{try{CFG=await (await fetch('/api/config')).json()}catch(e){}
   if(CFG.pair){$('ln').closest('label').hidden=true;$('ln').required=false;$('lp').previousSibling.textContent='配對碼';$('lp').minLength=4;$('lp').autocomplete='one-time-code';
     $('lf').querySelector('p').textContent='輸入電腦上 E·BOT「設定 → 手機遠端」顯示的配對碼。';$('ls').hidden=true}
