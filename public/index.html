@@ -321,7 +321,7 @@ function render(scroll){
   $('pav').className='av'+(g?' grp':'');$('pav').textContent=g?c.members.length+'人':c.name[0];
   $('pname').textContent=c.name;
   const fn=S.folders.find(f=>f.id===c.folder)?.name,rn=S.routines.filter(r=>r.conv===cur&&r.enabled).length;
-  $('psub').textContent=(fn?fn+' · ':'')+(g?c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'):'機器人')+(rn?` · ${rn} 個例行任務`:'');
+  $('psub').textContent=(fn?fn+' · ':'')+(g?c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'):(ENG[c.engine]||ENG.claude).s)+(rn?` · ${rn} 個例行任務`:'');
   $('task').innerHTML='<em>'+(g?'協作規則':'指定任務')+'</em>'+esc(c.task);
   $('mention').innerHTML=g?c.members.map(id=>bot(id)?`<button data-at="${esc(bot(id).name)}">@${esc(bot(id).name)}</button>`:'').join(''):'';
   const box=$('msgs'),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;
@@ -378,6 +378,9 @@ $('f').onsubmit=async e=>{e.preventDefault();const v=$('msg').value.trim();
   if(!await sendMsg(v,files)){$('msg').value=v;pending=keep;renderAtt()}};
 
 /* ---------- sheets ---------- */
+const ENG={claude:{n:'Claude（Claude Code）',s:'Claude',site:'https://code.claude.com',login:'在終端機輸入 claude，再輸入 /login，選 Claude 訂閱帳號（Pro / Max）'},
+  codex:{n:'ChatGPT（Codex CLI）',s:'ChatGPT',site:'https://developers.openai.com/codex/cli',login:'在終端機輸入 codex，選「Sign in with ChatGPT」（Plus / Pro 等方案）'},
+  gemini:{n:'Gemini（Gemini CLI）',s:'Gemini',site:'https://github.com/google-gemini/gemini-cli',login:'在終端機輸入 gemini，選用 Google 帳號登入'}};
 const TPL=['用瀏覽器打開網站後台','整理成清單或表格','寫入 Google 試算表','擬好訊息給我確認再發','做完回報重點'];
 const TEMPLATES=[{k:'assistant',n:'一般助理',d:'一個機器人，什麼都可以問'},{k:'research',n:'研究小組',d:'查資料 → 整理摘要'},
   {k:'shop',n:'門市小幫手',d:'訂單、客服回覆、日報'},{k:'lodging',n:'民宿入住流程',d:'訂房、打掃清單、入住訊息'}];
@@ -394,6 +397,8 @@ function sheet(kind,edit){
   ${g?`<div class="field">成員（依執行順序）<div class="picks">${S.bots.map(b=>`<label class="pick"><input type="checkbox" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm">${init(b.name)}</span>${esc(b.name)}</label>`).join('')}</div></div>`:''}
   <label class="field">${g?'協作規則':'指定任務'}<textarea id="st" required maxlength="4000" placeholder="${g?'誰先做、做完交給誰':'要做什麼、去哪個網站、結果怎麼回報'}">${c?esc(c.task):''}</textarea></label>
   ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
+  ${g?'':`<label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.n}</option>`).join('')}</select></label>
+  <p style="margin-top:-6px">每台執行的電腦需要安裝並登入對應的工具，見「設定指引」。</p>`}
   <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
   ${edit?`<div class="field">例行任務<div class="rt" id="rt"></div></div>`:'<p>建立後可以在「任務設定」加入例行任務（每天固定時間自動執行）。</p>'}
   <div class="errmsg" id="se"></div>
@@ -406,6 +411,7 @@ function sheet(kind,edit){
     else{d.dataset.sure=1;d.textContent='再按一次確認刪除'}};
   $('sf').onsubmit=async e=>{e.preventDefault();
     const body={name:$('sn').value,task:$('st').value,folder:$('sf_f').value||null};
+    if(!g)body.engine=$('sf_e').value;
     if(g)body.members=[...$('veil').querySelectorAll('.picks input:checked')].map(i=>i.value);
     try{const r=await api(edit?(g?'groups/':'bots/')+cur:(g?'groups':'bots'),edit?'PUT':'POST',body);
       if(!edit)cur=r.id;closeSheet();await refresh();$('app').classList.add('chat')}
@@ -583,6 +589,9 @@ async function openGuide(){
     steps.push({cls:st(S.runnerOnline),t:'連接執行器',b:S.runnerOnline?'<p>電腦已連線。</p>':`<p>在 PowerShell（Mac 用終端機）執行：</p><pre class="code">mkdir octa; cd octa
 curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre><p>再按下面產生金鑰，複製出現的指令執行。視窗開著，機器人就會工作。</p><div class="row2"><button class="btn" id="gGen">產生金鑰與指令</button></div><pre class="code" id="gCmd" hidden></pre>`});
   }
+  const used=[...new Set(S.bots.map(b=>b.engine||'claude'))].filter(e=>e!=='claude');
+  steps.push({cls:'',t:'（選用）加入 ChatGPT 或 Gemini',b:`<p>機器人預設用 Claude。也可以在「任務設定 → AI 引擎」改用 ChatGPT 或 Gemini，前提是執行的電腦裝好並登入對應工具：</p>
+    <div class="kv">${['codex','gemini'].map(k=>`<span>${ENG[k].s}</span><b>${CFG.local?(ds?.engines?.[k]?.ok?'<span class="p-ok">已安裝</span> ':'<span style="color:var(--faint)">未安裝</span> '):''}<a href="${ENG[k].site}" target="_blank" rel="noopener">安裝說明</a>　${ENG[k].login}${used.includes(k)&&CFG.local&&!ds?.engines?.[k]?.ok?'　<span class="p-pr">有機器人在用</span>':''}</b>`).join('')}</div>`});
   steps.push({cls:st(hasBot),t:'建立機器人',b:hasBot?`<p>已有 ${S.bots.length} 個機器人。可以再加範本，或用左邊「＋ 機器人」自己建。</p>${tplHtml()}`:`<p>選一個範本開始，之後都能改名、改任務。也可以關掉指引，用左邊「＋ 機器人」自己建立。</p>${tplHtml()}`});
   steps.push({cls:testState==='ok'?'ok':testState&&testState!=='run'?'bad':'',t:'試跑一次',b:`<p>傳一句話給第一個機器人，確認整條流程能動。第一次可能要等一分鐘。</p><div class="row2"><button class="btn" id="gTest" ${hasBot?'':'disabled'}>${testState==='run'?'等待回覆中…':'開始測試'}</button></div><div id="gRes">${testState==='ok'?'<p class="p-ok">成功，機器人回覆了。之後在「任務設定」可以加例行任務，讓它每天自動做事。</p>':testState&&testState!=='run'?`<p class="errmsg">${esc(testState)}</p>`:''}</div>`});
   $('veil').innerHTML=`<div class="sheet"><h2>設定指引</h2><p>照順序完成，打勾代表已經就緒。</p>

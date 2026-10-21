@@ -54,7 +54,7 @@ async function addJob(db, userId, conv, chain, prompt, depth = 0) {
 }
 async function loadAll(db, userId) {
   const [b, g, f, r] = await db.batch([
-    db.prepare('SELECT id,name,task,folder,shot_ts,page FROM bots WHERE user_id=? ORDER BY created').bind(userId),
+    db.prepare('SELECT id,name,task,folder,engine,shot_ts,page FROM bots WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,name,task,members,folder FROM groups_ WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,name,notes FROM folders WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,conv,name,prompt,times,enabled FROM routines WHERE user_id=? ORDER BY created').bind(userId)
@@ -90,6 +90,8 @@ async function sendNotify(env, st, text) {
   return out;
 }
 const needsYou = t => /✅待確認|需要使用者|^⚠/m.test(t);
+const ENGINES = ['claude', 'codex', 'gemini'];
+const engineOk = e => (ENGINES.includes(e) ? e : 'claude');
 const folderOk = (folders, id) => (id && folders.some(f => f.id === id) ? id : null);
 
 // Templates offered in the app
@@ -212,7 +214,7 @@ export async function onRequest({ request: req, env, params }) {
           job: {
             id: job.id, kind: job.kind, url: job.url, prompt: job.prompt,
             canAsk: job.depth < MAX_ASK_DEPTH,
-            bot: { id: bot.id, name: bot.name, task: bot.task, page: bot.page },
+            bot: { id: bot.id, name: bot.name, task: bot.task, page: bot.page, engine: bot.engine || 'claude' },
             folder: folders.find(f => f.id === bot.folder)?.name || null,
             folderNotes: folders.find(f => f.id === bot.folder)?.notes || '',
             notes: st.notes || '',
@@ -343,7 +345,7 @@ export async function onRequest({ request: req, env, params }) {
       const { folders, bots } = await loadAll(db, U);
       if (bots.some(b => b.name === name)) return err('已經有同名的機器人，名字要不同才能用 @ 叫它');
       const id = uid();
-      await db.prepare('INSERT INTO bots (id,user_id,name,task,folder,created) VALUES (?,?,?,?,?,?)').bind(id, U, name, task, folderOk(folders, body.folder), now()).run();
+      await db.prepare('INSERT INTO bots (id,user_id,name,task,folder,engine,created) VALUES (?,?,?,?,?,?,?)').bind(id, U, name, task, folderOk(folders, body.folder), engineOk(body.engine), now()).run();
       await addMsg(db, U, id, 'sys', '機器人已建立');
       return J({ id });
     }
@@ -354,7 +356,7 @@ export async function onRequest({ request: req, env, params }) {
         if (!name || !task) return err('名稱和任務都要填');
         const { folders, bots } = await loadAll(db, U);
         if (bots.some(b => b.name === name && b.id !== id)) return err('已經有同名的機器人');
-        await db.prepare('UPDATE bots SET name=?,task=?,folder=? WHERE id=? AND user_id=?').bind(name, task, folderOk(folders, body.folder), id, U).run();
+        await db.prepare('UPDATE bots SET name=?,task=?,folder=?,engine=? WHERE id=? AND user_id=?').bind(name, task, folderOk(folders, body.folder), engineOk(body.engine), id, U).run();
         return J({ ok: true });
       }
       if (m === 'DELETE') {

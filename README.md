@@ -1,10 +1,16 @@
 # OCTA｜奧克塔
 
-用聊天介面指揮多個 AI 機器人。機器人在**你自己的電腦**上用 **Claude Code** 工作，用的是你自己的 Claude 方案（Pro / Max），不用另外付 API 費用。
+用聊天介面指揮多個 AI 機器人。機器人在**你自己的電腦**上工作，用的是你自己的訂閱方案，不用另外付 API 費用。每個機器人可以選：
+
+| AI 引擎 | 需要安裝的工具 | 登入方式 |
+| --- | --- | --- |
+| Claude | [Claude Code](https://code.claude.com) | `claude` → `/login`（Pro / Max） |
+| ChatGPT | [Codex CLI](https://developers.openai.com/codex/cli) | `codex` → Sign in with ChatGPT |
+| Gemini | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `gemini` → Google 帳號 |
 
 ## 快速開始（桌面版，推薦）
 
-1. 安裝 [Claude Code](https://code.claude.com)，在終端機輸入 `claude`，再輸入 `/login` 登入
+1. 安裝至少一個 AI 工具並登入（見上表，預設用 Claude）
 2. 安裝 [Google Chrome](https://www.google.com/chrome/)
 3. 從 [Releases](../../releases) 下載 `OCTA-Setup-x.y.z.exe` 並安裝
 4. 打開 OCTA，照「設定指引」完成，選一個範本試跑
@@ -13,7 +19,7 @@
 
 ## 能做什麼
 
-- **機器人**：每個機器人有自己的指定任務
+- **機器人**：每個機器人有自己的指定任務，並可選 Claude、ChatGPT 或 Gemini
 - **群組**：把機器人拉進群組依序協作，或用 `@名字` 指定誰做
 - **分區**：區隔不同門市或專案；同分區的機器人可以互相詢問
 - **例行任務**：每天固定時間自動執行，可隨時開關

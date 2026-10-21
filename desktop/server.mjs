@@ -71,7 +71,7 @@ async function openDb(file) {
   return d1;
 }
 // Columns added after a release go here so existing installs upgrade in place.
-const MIGRATIONS = [];
+const MIGRATIONS = ["ALTER TABLE bots ADD COLUMN engine TEXT NOT NULL DEFAULT 'claude'"];
 
 // ---------- helpers ----------
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
@@ -218,11 +218,12 @@ export async function startServer(opts = {}) {
     const p = new URL(req.url, 'http://x').pathname.slice('/api/desktop/'.length);
     const body = req.method === 'POST' ? await readJson(req) : {};
     if (p === 'status') {
-      const c = spawnSync('claude', ['--version'], { shell: WIN, encoding: 'utf8', timeout: 15000, windowsHide: true });
+      const ver = bin => { const c = spawnSync(bin, ['--version'], { shell: WIN, encoding: 'utf8', timeout: 15000, windowsHide: true }); return { ok: c.status === 0, version: (c.stdout || '').trim().split(/\s/).find(x => /\d/.test(x)) || '' }; };
       const { findChrome } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
+      const engines = { claude: ver('claude'), codex: ver('codex'), gemini: ver('gemini') };
       return json(res, {
         version: APP_VERSION,
-        claude: { ok: c.status === 0, version: (c.stdout || '').trim().split(/\s/)[0] },
+        claude: engines.claude, engines,
         chrome: !!findChrome(),
         autostart: !!hooks.getAutostart(),
         remote: remote.on ? { on: true, url: remote.url, code: remote.code, qr: await qr(remote.url) } : { on: false }

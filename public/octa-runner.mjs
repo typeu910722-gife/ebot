@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { dirname, join, extname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const VERSION = '4';
+export const VERSION = '5';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const POLL_MS = 5000;
@@ -44,7 +44,10 @@ function botDir(id) {
     ? { command: cfg.nodeBin || process.execPath, args: [cfg.pwCli, ...pwArgs], env: cfg.nodeEnv || {} }   // bundled (desktop app)
     : WIN ? { command: 'cmd', args: ['/c', 'npx', '-y', PW_MCP, ...pwArgs] } : { command: 'npx', args: ['-y', PW_MCP, ...pwArgs] };
   writeFileSync(join(dir, 'mcp.json'), JSON.stringify({ mcpServers: { browser: server } }, null, 2));
-  return { dir, profile };
+  // Gemini CLI reads MCP servers from the workspace's .gemini/settings.json
+  mkdirSync(join(dir, '.gemini'), { recursive: true });
+  writeFileSync(join(dir, '.gemini', 'settings.json'), JSON.stringify({ mcpServers: { browser: { ...server, timeout: 60000, trust: true } } }, null, 2));
+  return { dir, profile, server };
 }
 export function findChrome() {
   if (cfg.chrome && existsSync(cfg.chrome)) return cfg.chrome;
@@ -103,33 +106,58 @@ function buildPrompt(job) {
     '',
     '對話紀錄（舊到新）：'
   );
-  for (const h of job.history) lines.push(`【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可用 Read 讀取：${h.paths.join('、')}）` : ''));
+  for (const h of job.history) lines.push(`【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   lines.push('', '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
 
-function runClaude(prompt, dir) {
+export const ENGINES = {
+  claude: { label: 'Claude Code', bin: 'claude', site: 'https://code.claude.com' },
+  codex: { label: 'Codex CLI（ChatGPT）', bin: 'codex', site: 'https://developers.openai.com/codex/cli' },
+  gemini: { label: 'Gemini CLI', bin: 'gemini', site: 'https://github.com/google-gemini/gemini-cli' }
+};
+function spawnCli(bin, args, dir, input) {
   return new Promise(resolve => {
-    const args = ['-p', '--output-format', 'text', '--mcp-config', join(dir, 'mcp.json'), '--strict-mcp-config',
-      '--allowedTools', 'mcp__browser,WebFetch,WebSearch,Read,Write,Edit,Glob,Grep'];
-    const child = spawn('claude', WIN ? args.map(q) : args, { cwd: dir, shell: WIN, windowsHide: true });
-    let out = '', errOut = '';
-    const timer = setTimeout(() => { child.kill(); errOut += '\n執行超過 15 分鐘，已中止。'; }, JOB_TIMEOUT_MS);
+    const child = spawn(bin, WIN ? args.map(q) : args, { cwd: dir, shell: WIN, windowsHide: true });
+    let out = '', err = '', killed = false;
+    const timer = setTimeout(() => { killed = true; child.kill(); }, JOB_TIMEOUT_MS);
     child.stdout.on('data', d => (out += d));
-    child.stderr.on('data', d => (errOut += d));
-    child.on('error', e => { clearTimeout(timer); resolve({ ok: false, text: '⚠ 無法啟動 Claude Code：' + e.message }); });
-    child.on('close', code => {
-      clearTimeout(timer);
-      if (code === 0 && out.trim()) resolve({ ok: true, text: out.trim() });
-      else resolve({ ok: false, text: '⚠ 執行失敗：' + (errOut.trim() || out.trim() || '結束碼 ' + code).slice(-1500) });
-    });
-    child.stdin.end(prompt);
+    child.stderr.on('data', d => (err += d));
+    child.on('error', e => { clearTimeout(timer); resolve({ code: -1, out, err: e.message, missing: e.code === 'ENOENT' }); });
+    child.on('close', code => { clearTimeout(timer); resolve({ code, out, err: err + (killed ? '\n執行超過 15 分鐘，已中止。' : ''), missing: WIN && code === 1 && /is not recognized|不是內部或外部命令/.test(err) }); });
+    child.stdin.end(input);
   });
+}
+const toml = v => (Array.isArray(v) ? '[' + v.map(x => JSON.stringify(String(x))).join(',') + ']' : JSON.stringify(String(v)));
+async function runEngine(engine, prompt, b) {
+  const { dir, server } = b;
+  let r, text;
+  if (engine === 'codex') {
+    const last = join(dir, '.codex-last.txt');
+    try { writeFileSync(last, ''); } catch { }
+    const c = ['approval_policy="never"', `mcp_servers.browser.command=${toml(server.command)}`, `mcp_servers.browser.args=${toml(server.args)}`,
+      'mcp_servers.browser.startup_timeout_sec=60', 'mcp_servers.browser.default_tools_approval_mode="approve"',
+      ...Object.entries(server.env || {}).map(([k, v]) => `mcp_servers.browser.env.${k}=${toml(v)}`)];
+    r = await spawnCli('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'workspace-write', '-C', dir, '-o', last, ...c.flatMap(x => ['-c', x]), '-'], dir, prompt);
+    try { text = readFileSync(last, 'utf8').trim(); } catch { }
+    text = text || r.out.trim();
+  } else if (engine === 'gemini') {
+    r = await spawnCli('gemini', ['-p', '請依照標準輸入中的完整指示執行，最後輸出要給使用者看的回覆。', '--yolo'], dir, prompt);
+    text = r.out.trim();
+  } else {
+    r = await spawnCli('claude', ['-p', '--output-format', 'text', '--mcp-config', join(dir, 'mcp.json'), '--strict-mcp-config',
+      '--allowedTools', 'mcp__browser,WebFetch,WebSearch,Read,Write,Edit,Glob,Grep'], dir, prompt);
+    text = r.out.trim();
+  }
+  const E = ENGINES[engine] || ENGINES.claude;
+  if (r.missing) return { ok: false, text: `⚠ 這台電腦沒有安裝 ${E.label}。請先安裝並登入（${E.site}），或在任務設定把這個機器人改用其他 AI。` };
+  if (r.code === 0 && text) return { ok: true, text };
+  return { ok: false, text: `⚠ ${E.label} 執行失敗：` + (r.err.trim() || r.out.trim() || '結束碼 ' + r.code).slice(-1500) };
 }
 
 // ---------- job handlers ----------
 async function chatJob(job) {
-  const { dir } = botDir(job.bot.id);
+  const b = botDir(job.bot.id), { dir } = b;
   for (const h of job.history) {   // attachments → files the bot can Read
     h.paths = [];
     for (const f of h.files || []) {
@@ -141,8 +169,8 @@ async function chatJob(job) {
     }
   }
   const start = Date.now() - 1000;
-  log(`▶ ${job.bot.name}${job.group ? ' @' + job.group.name : ''}：${job.prompt.slice(0, 40)}`);
-  const res = await runClaude(buildPrompt(job), dir);
+  log(`▶ ${job.bot.name}［${job.bot.engine || 'claude'}］${job.group ? ' @' + job.group.name : ''}：${job.prompt.slice(0, 40)}`);
+  const res = await runEngine(job.bot.engine || 'claude', buildPrompt(job), b);
   const shot = newestImage(dir, start);
   if (shot && shot.size < 1_100_000) {
     const ext = extname(shot.p).slice(1).toLowerCase();
