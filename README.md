@@ -1,4 +1,4 @@
-# E·BOT
+# OCTA｜奧克塔
 
 用聊天介面指揮多個 AI 機器人。機器人在**你自己的電腦**上用 **Claude Code** 工作，用的是你自己的 Claude 方案（Pro / Max），不用另外付 API 費用。
 
@@ -6,8 +6,8 @@
 
 1. 安裝 [Claude Code](https://code.claude.com)，在終端機輸入 `claude`，再輸入 `/login` 登入
 2. 安裝 [Google Chrome](https://www.google.com/chrome/)
-3. 從 [Releases](../../releases) 下載 `EBOT-Setup-x.y.z.exe` 並安裝
-4. 打開 E·BOT，照「設定指引」完成，選一個範本試跑
+3. 從 [Releases](../../releases) 下載 `OCTA-Setup-x.y.z.exe` 並安裝
+4. 打開 OCTA，照「設定指引」完成，選一個範本試跑
 
 不用註冊帳號，資料只存在你的電腦。第一次執行時 Windows 若顯示「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」（安裝檔未簽章）。
 

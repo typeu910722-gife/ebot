@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// E·BOT runner — runs on your own computer, uses YOUR Claude Code login (Pro/Max).
+// OCTA runner — runs on your own computer, uses YOUR Claude Code login (Pro/Max).
 // Each bot gets its own browser window with its own profile (separate logins, cookies, tabs),
 // so several bots can work at the same time without touching each other.
 //
@@ -74,7 +74,7 @@ const q = a => (WIN && /[\s"&|<>^]/.test(a) ? '"' + a.replace(/"/g, '\\"') + '"'
 // ---------- prompts ----------
 function buildPrompt(job) {
   const lines = [
-    `你是 E·BOT 裡的機器人「${job.bot.name}」，在使用者自己的電腦上執行。`,
+    `你是 OCTA（奧克塔）裡的機器人「${job.bot.name}」，在使用者自己的電腦上執行。`,
     `你的指定任務：${job.bot.task}`
   ];
   if (job.group) lines.push(
@@ -205,8 +205,8 @@ export function startRunner(opts) {
   stopped = false;
   mkdirSync(join(workDir, 'bots'), { recursive: true });
   if (!existsSync(join(workDir, 'CLAUDE.md')))
-    writeFileSync(join(workDir, 'CLAUDE.md'), '# 給機器人的背景資料\n\n這個檔案所有機器人都會讀。也可以直接在 E·BOT 的「設定 → 共用資料」和各分區資料裡填寫。\n');
-  log(`E·BOT 執行器 v${VERSION} 啟動，最多 ${MAX} 個機器人同時工作`);
+    writeFileSync(join(workDir, 'CLAUDE.md'), '# 給機器人的背景資料\n\n這個檔案所有機器人都會讀。也可以直接在 OCTA 的「設定 → 共用資料」和各分區資料裡填寫。\n');
+  log(`OCTA 執行器 v${VERSION} 啟動，最多 ${MAX} 個機器人同時工作`);
   if (!cfg.pwCli) {
     log('準備瀏覽器工具…');
     spawnSync(WIN ? 'cmd' : 'npx', WIN ? ['/c', 'npx', '-y', PW_MCP, '--version'] : ['-y', PW_MCP, '--version'], { stdio: 'ignore', timeout: 180000 });

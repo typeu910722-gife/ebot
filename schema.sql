@@ -1,4 +1,4 @@
--- E·BOT schema (Cloudflare D1)
+-- OCTA schema (Cloudflare D1)
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,

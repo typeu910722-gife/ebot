@@ -1,4 +1,4 @@
-# E·BOT 進度
+# OCTA 進度
 ## 雲端版（bot.yzprojecttw.com）
 - [x] 前端（E·ROOM 金黑風格）、多帳號、Pages Functions + D1
 - [x] 執行器 v4 `public/ebot-runner.mjs`：可匯入的 startRunner()、最多 3 個並行、每個機器人獨立 Chrome（Playwright MCP）、截圖、遠端開瀏覽器

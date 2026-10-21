@@ -1,4 +1,4 @@
-// E·BOT desktop server: the same web app and API as the cloud version, but on this computer.
+// OCTA desktop server: the same web app and API as the cloud version, but on this computer.
 // - Data lives in a local SQLite file (sql.js, no native build needed).
 // - No accounts: the app on this computer is trusted; phones pair with a one-time code.
 // - The runner is built in and talks to this server over loopback.
@@ -252,7 +252,7 @@ export async function startServer(opts = {}) {
 // standalone: node server.mjs
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const s = await startServer({ onNotify: t => console.log('🔔 ' + t) });
-  console.log(`E·BOT 已啟動：${s.url}　資料夾：${s.dataDir}`);
+  console.log(`OCTA 已啟動：${s.url}　資料夾：${s.dataDir}`);
   if (!process.argv.includes('--no-open')) openExternal(s.url);
   const bye = async () => { await s.close(); process.exit(0); };
   process.on('SIGINT', bye); process.on('SIGTERM', bye);

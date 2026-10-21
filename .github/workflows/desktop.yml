@@ -26,7 +26,7 @@ jobs:
         run: npm run dist
       - uses: actions/upload-artifact@v4
         with:
-          name: EBOT-Setup-windows
+          name: OCTA-Setup-windows
           path: desktop/dist/*.exe
       - name: Attach to GitHub release
         if: startsWith(github.ref, 'refs/tags/')

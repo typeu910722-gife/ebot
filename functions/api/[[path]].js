@@ -1,4 +1,4 @@
-// E·BOT API — Cloudflare Pages Function, single router.
+// OCTA API — Cloudflare Pages Function, single router.
 // Web app uses a "web" session token; the local runner uses a "runner" token.
 
 const J = (data, status = 200) =>
@@ -232,8 +232,8 @@ export async function onRequest({ request: req, env, params }) {
         if (job.kind === 'chat') {
           const st = await getSettings(db, U);
           const who = (await db.prepare('SELECT name FROM bots WHERE id=?').bind(job.bot_id).first())?.name || '機器人';
-          if (!ok || needsYou(text)) await sendNotify(env, st, `【E·BOT】${who} 需要你處理：\n${text.slice(0, 600)}`);
-          else if (st.notifyAll && !JSON.parse(job.chain).length) await sendNotify(env, st, `【E·BOT】${who} 完成：\n${text.slice(0, 600)}`);
+          if (!ok || needsYou(text)) await sendNotify(env, st, `【OCTA】${who} 需要你處理：\n${text.slice(0, 600)}`);
+          else if (st.notifyAll && !JSON.parse(job.chain).length) await sendNotify(env, st, `【OCTA】${who} 完成：\n${text.slice(0, 600)}`);
         }
         if (body.page) await db.prepare('UPDATE bots SET page=? WHERE id=? AND user_id=?').bind(clean(body.page, 500), job.bot_id, U).run();
         if (!ok || job.kind !== 'chat') return J({ ok: true });
@@ -480,7 +480,7 @@ export async function onRequest({ request: req, env, params }) {
       return J({ ok: true });
     }
     if (path === 'notify/test' && m === 'POST') {
-      const sent = await sendNotify(env, await getSettings(db, U), '【E·BOT】測試通知：設定成功 ✓');
+      const sent = await sendNotify(env, await getSettings(db, U), '【OCTA】測試通知：設定成功 ✓');
       return sent.length ? J({ sent }) : err('還沒有設定任何通知管道');
     }
     if (path === 'notify/detect' && m === 'POST') {   // find the Telegram chat id from the latest message sent to the bot
