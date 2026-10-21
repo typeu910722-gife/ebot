@@ -29,6 +29,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15p
 button{font:inherit;color:inherit;cursor:pointer}
 button:disabled{opacity:.5;cursor:default}
 button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.logo{width:40px;height:40px;border-radius:10px;flex:none}
+.logo-lg{width:72px;height:72px;border-radius:18px}
+.hl{display:flex;gap:10px;align-items:center;min-width:0}
 .brand{font-family:var(--serif);font-size:13px;letter-spacing:.3em;color:var(--gold);white-space:nowrap}
 .pill{font-size:11px;border-radius:99px;padding:1px 8px;border:1px solid currentColor;white-space:nowrap}
 .p-ok{color:var(--done)}.p-off{color:var(--faint)}.p-pr{color:var(--prio)}
@@ -203,7 +206,7 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
 
 <div class="login" id="login" hidden>
   <form id="lf">
-    <div class="brand">OCTA｜奧克塔</div>
+    <img src="/icon.png" alt="" class="logo-lg"><div class="brand">OCTA｜奧克塔</div>
     <h1 id="lt">登入</h1>
     <p>建立自己的機器人與群組，交給你電腦上的 Claude Code 執行。每個帳號只會用到自己的 Claude 方案。</p>
     <label class="field">帳號<input id="ln" autocomplete="username" required></label>
@@ -216,7 +219,7 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
 
 <div class="app" id="app" hidden>
   <aside class="rail">
-    <header><div><div class="brand">OCTA｜奧克塔</div><h1>機器人</h1></div>
+    <header><div class="hl"><img src="/icon.png" alt="" class="logo"><div><div class="brand">OCTA｜奧克塔</div><h1>機器人</h1></div></div>
       <div class="hr"><span class="pill p-off" id="online">電腦離線</span><button class="gear" id="settings">設定</button></div></header>
     <div class="new"><button id="nb">＋ 機器人</button><button id="ng">＋ 群組</button><button id="nf">＋ 分區</button></div>
     <nav class="list" id="list"></nav>
