@@ -10,6 +10,8 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
+<script src="/i18n-dict.js?v=1"></script>
+<script src="/i18n-core.js?v=1"></script>
 <link rel="apple-touch-icon" href="/icon.png?v=octopus">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500&display=swap">
 <style>
@@ -56,6 +58,7 @@ a.btn{text-decoration:none}
 .hsec details{border:1px solid var(--line2);border-radius:var(--r);padding:12px 16px;background:var(--panel)}
 .hsec summary{cursor:pointer;font-weight:500}
 .hsec details p{margin:10px 0 0;color:var(--mute);line-height:1.8;font-size:14px}
+.langsel{background:var(--panel);border:1px solid var(--line2);border-radius:99px;padding:5px 10px;color:var(--mute);font:inherit;font-size:12px}
 .hft{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:24px;color:var(--faint);font-size:12px}
 .hft a{color:var(--gold2)}
 .logo-lg{width:72px;height:72px;border-radius:18px}
@@ -152,7 +155,9 @@ select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padd
 .mention button{border:1px solid var(--line2);background:var(--panel);border-radius:99px;padding:4px 10px;font-size:12px;color:var(--mute)}
 .mention button:hover{color:var(--gold2);border-color:var(--line)}
 form.in{display:flex;gap:10px;border-top:1px solid var(--line2);padding:12px max(20px,env(safe-area-inset-right,0px)) 14px 20px}
-form.in textarea{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;color:var(--ink);font:inherit;resize:none;height:46px;max-height:140px}
+form.in textarea{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;color:var(--ink);font:inherit;resize:none;height:46px;max-height:140px;line-height:1.5;overflow-y:auto}
+form.in{align-items:flex-end}
+form.in .send,form.in .clip{height:46px}
 .send{border:0;background:var(--gold);color:#12110e;border-radius:var(--r);padding:0 18px;font-weight:500}
 .note{text-align:center;font-size:11px;color:var(--faint);padding-bottom:6px}
 .blank{flex:1;display:grid;place-items:center;color:var(--faint);font-family:var(--tc);padding:24px;text-align:center;line-height:1.8}
@@ -237,13 +242,41 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
   .msgs,.mention{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .task{margin-left:max(16px,env(safe-area-inset-left,0px));margin-right:16px}
 }
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+.ub{font-style:normal;flex:none;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--gold);color:#12110e;font-size:11px;font-weight:500;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.search{padding-bottom:10px}
+.search input{width:100%;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:8px 12px;color:var(--ink);font:inherit;font-size:13px}
+.search input:focus{border-color:var(--line);outline:none}
+.pane{position:relative}
+.pane.drop::after{content:"放開以附加檔案";position:absolute;inset:8px;border:2px dashed var(--gold);border-radius:16px;display:grid;place-items:center;background:rgba(18,17,14,.85);color:var(--gold2);font-family:var(--tc);z-index:5;pointer-events:none}
+.jump{position:absolute;left:50%;transform:translateX(-50%);bottom:140px;z-index:4;border:1px solid var(--line);background:var(--panel2);color:var(--gold2);border-radius:99px;padding:6px 14px;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.4);animation:pop .2s ease}
+.meta{font-size:11px;color:var(--faint);margin-top:3px;display:flex;gap:8px;align-items:center;min-height:16px;font-variant-numeric:tabular-nums}
+.m.me .meta{justify-content:flex-end}
+.cp{border:0;background:none;color:var(--faint);font-size:11px;padding:0;opacity:0;transition:opacity .15s}
+.m:hover .cp,.cp:focus-visible{opacity:1}
+@media (hover:none){.cp{opacity:.8}}
+.m.tmp .bub{opacity:.65}
+.ts{margin-left:8px;color:var(--faint);font-size:10px;letter-spacing:0}
+.m{animation:rise .22s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}}
+@keyframes pop{from{opacity:0;transform:translate(-50%,6px)}}
+.veil{animation:fadein .16s ease}
+.veil .sheet{animation:sheetin .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes fadein{from{opacity:0}}
+@keyframes sheetin{from{opacity:0;transform:translateY(14px) scale(.98)}}
+.menu{animation:menuin .14s ease}
+@keyframes menuin{from{opacity:0;transform:translateY(-4px)}}
+.item{transition:background .15s}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;z-index:40;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:99px;padding:9px 18px;font-size:13px;transition:opacity .2s,transform .2s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:760px){.app.chat .pane{animation:slidein .22s cubic-bezier(.2,.8,.2,1)}.app:not(.chat) .rail{animation:fadein .18s ease}}
+@keyframes slidein{from{transform:translateX(24px);opacity:.4}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 
 <div class="home" id="home" hidden>
-  <header class="hhd"><div class="hl"><img src="/icon.png?v=octopus" alt="" class="logo"><div class="brand">OCTA｜奧克塔</div></div><button class="ghost" id="hLogin">登入網頁版</button></header>
+  <header class="hhd"><div class="hl"><img src="/icon.png?v=octopus" alt="" class="logo"><div class="brand" data-u>OCTA｜奧克塔</div></div><div class="row2"><span id="hLang"></span><button class="ghost" id="hLogin">登入網頁版</button></div></header>
   <section class="hero">
     <img src="/icon.png?v=octopus" alt="OCTA 章魚標誌" class="logo-xl">
     <h1>讓一群 AI 小幫手<br>替你把日常工作做完</h1>
@@ -296,6 +329,7 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
     <button class="btn" id="lb">登入</button>
     <button type="button" class="link" id="ls">還沒有帳號？註冊</button>
     <button type="button" class="link" id="lHome">← 回首頁</button>
+    <div id="lLang" style="justify-self:center"></div>
   </form>
 </div>
 
@@ -304,14 +338,16 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
     <header><div class="hl"><img src="/icon.png?v=octopus" alt="" class="logo"><div><div class="brand">OCTA｜奧克塔</div><h1>機器人</h1></div></div>
       <div class="hr"><span class="pill p-off" id="online">電腦離線</span><button class="gear" id="settings">設定</button></div></header>
     <div class="new"><button id="nb">＋ 機器人</button><button id="ng">＋ 群組</button><button id="nf">＋ 分區</button></div>
+    <div class="search"><input id="q" type="search" placeholder="搜尋機器人（Ctrl+K）" autocomplete="off"></div>
     <nav class="list" id="list"></nav>
   </aside>
-  <section class="pane">
+  <section class="pane" id="pane">
     <div class="blank" id="blank"></div>
     <div class="ph" id="ph" hidden><button class="back" id="back" aria-label="返回">‹</button><div class="av" id="pav"></div>
-      <div class="t"><b id="pname"></b><small id="psub"></small></div><button class="ghost" id="browser">瀏覽器</button><button class="ghost" id="edit">任務設定</button></div>
+      <div class="t"><b id="pname" data-u></b><small id="psub"></small></div><button class="ghost" id="browser">瀏覽器</button><button class="ghost" id="edit">任務設定</button></div>
     <div class="task" id="task" hidden></div>
     <div class="msgs" id="msgs" aria-live="polite" hidden></div>
+    <button type="button" class="jump" id="jump" hidden>↓ 新訊息</button>
     <div class="mention" id="mention"></div>
     <div class="att" id="att"></div>
     <form class="in" id="f" hidden><button type="button" class="clip" id="clip" aria-label="附加檔案">＋</button><input type="file" id="fileIn" multiple accept="image/*,.pdf,.txt,.csv,.md,.json,.xlsx,.docx" hidden><textarea id="msg" rows="1" placeholder="輸入指示，群組可用 @ 指定機器人"></textarea><button class="send">送出</button></form>
@@ -357,13 +393,16 @@ function logout(silent){ if(!silent&&TOKEN)api('logout','POST').catch(()=>{});
 async function refresh(){
   try{const d=await api('state'+(lastId?'?after='+lastId:''));
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines});
+    S.msgs=S.msgs.filter(m=>!m.tmp);
     if(lastId)S.msgs.push(...d.msgs);else S.msgs=d.msgs;
     if(d.msgs.length)lastId=d.msgs[d.msgs.length-1].id;
     if(cur&&!conv(cur))cur=null;
-    render(d.msgs.length>0);
+    S.loaded=true;
+    render(false);
   }catch(e){}
-  clearTimeout(poller);poller=setTimeout(refresh,document.hidden?15000:3000);
+  clearTimeout(poller);poller=setTimeout(refresh,document.hidden?20000:(S.busy.length||Date.now()-lastSend<20000)?1500:4000);
 }
+let lastSend=0;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TOKEN)refresh()});
 const bot=id=>S.bots.find(b=>b.id===id);
 const conv=id=>bot(id)||S.groups.find(g=>g.id===id);
@@ -371,6 +410,11 @@ const isG=id=>id&&id.startsWith('g-');
 const init=n=>esc((n||'?').slice(0,1));
 const nameOf=by=>by==='me'?'你':by==='sys'?'系統':(bot(by)?.name||'已刪除');
 const convMsgs=id=>S.msgs.filter(m=>m.conv===id);
+let SEEN={};try{SEEN=JSON.parse(localStorage.getItem('octa_seen')||'{}')}catch(e){}
+const unread=id=>convMsgs(id).filter(m=>!m.tmp&&m.by!=='me'&&m.by!=='sys'&&m.id>(SEEN[id]||0)).length;
+function markSeen(id){const ms=convMsgs(id).filter(m=>!m.tmp);if(!ms.length)return;const top=ms[ms.length-1].id;if((SEEN[id]||0)>=top)return;SEEN[id]=top;try{localStorage.setItem('octa_seen',JSON.stringify(SEEN))}catch(e){}}
+const setHTML=(el,h)=>{if(el._h!==h){el._h=h;el.innerHTML=h;return true}return false};
+const hm=ts=>ts?new Date(ts).toLocaleTimeString(I18N.lang,{hour:'2-digit',minute:'2-digit'}):'';
 const busyIn=id=>S.busy.filter(b=>b.conv===id);
 function preview(id){const m=convMsgs(id).filter(x=>x.by!=='sys').slice(-1)[0];if(!m)return conv(id).task;
   return (m.by==='me'?'你：':isG(id)?nameOf(m.by)+'：':'')+m.text}
@@ -390,49 +434,74 @@ function fmt(t){return esc(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" targ
 function render(scroll){
   $('online').className='pill '+(S.runnerOnline?'p-ok':'p-off');$('online').textContent=S.runnerOnline?'電腦在線':'電腦離線';
   let h='';
-  if(!S.bots.length)h+=`<div class="empty">還沒有機器人。按「＋ 機器人」，或到「設定」套用範本。</div>`;
-  const gItem=g=>`<div class="iw"><button class="item ${cur===g.id?'on':''}" data-id="${g.id}"><span class="av grp">${g.members.length}人${busyIn(g.id).length?'<i class="dot"></i>':''}</span><span class="t"><b>${esc(g.name)}</b><small>${esc(preview(g.id))}</small></span></button><button class="more" data-more="${g.id}" aria-label="更多">⋯</button></div>`;
-  const bItem=b=>`<div class="iw"><button class="item ${cur===b.id?'on':''}" data-id="${b.id}"><span class="av">${init(b.name)}${S.busy.some(x=>x.bot_id===b.id&&x.status==='running')?'<i class="dot"></i>':''}</span><span class="t"><b>${esc(b.name)}</b><small>${esc(preview(b.id))}</small></span></button><button class="more" data-more="${b.id}" aria-label="更多">⋯</button></div>`;
-  const sect=(f,title)=>{const gs=S.groups.filter(g=>(g.folder||null)===f),bs=S.bots.filter(b=>(b.folder||null)===f);
-    if(!f&&!gs.length&&!bs.length)return '';
-    return `<div class="sec"><span>${esc(title)}</span>${f?`<button class="more" data-folder="${f}" aria-label="分區選項">⋯</button>`:''}</div>`+
+  if(!S.loaded)h+=`<div class="empty fade">載入中…</div>`;
+  else if(!S.bots.length)h+=`<div class="empty">還沒有機器人。按「＋ 機器人」，或到「設定」套用範本。</div>`;
+  const q=($('q')?.value||'').trim().toLowerCase(),hit=x=>!q||x.name.toLowerCase().includes(q)||(x.task||'').toLowerCase().includes(q);
+  const gItem=g=>`<div class="iw"><button class="item ${cur===g.id?'on':''}" data-id="${g.id}"><span class="av grp">${g.members.length}${busyIn(g.id).length?'<i class="dot"></i>':''}</span><span class="t" data-u><b>${esc(g.name)}</b><small>${esc(preview(g.id))}</small></span>${cur!==g.id&&unread(g.id)?`<i class="ub">${unread(g.id)}</i>`:''}</button><button class="more" data-more="${g.id}" aria-label="更多">⋯</button></div>`;
+  const bItem=b=>`<div class="iw"><button class="item ${cur===b.id?'on':''}" data-id="${b.id}"><span class="av" data-u>${init(b.name)}${S.busy.some(x=>x.bot_id===b.id&&x.status==='running')?'<i class="dot"></i>':''}</span><span class="t" data-u><b>${esc(b.name)}</b><small>${esc(preview(b.id))}</small></span>${cur!==b.id&&unread(b.id)?`<i class="ub">${unread(b.id)}</i>`:''}</button><button class="more" data-more="${b.id}" aria-label="更多">⋯</button></div>`;
+  const sect=(f,title)=>{const gs=S.groups.filter(g=>(g.folder||null)===f&&hit(g)),bs=S.bots.filter(b=>(b.folder||null)===f&&hit(b));
+    if((!f||q)&&!gs.length&&!bs.length)return '';
+    return `<div class="sec"><span${f?' data-u':''}>${esc(title)}</span>${f?`<button class="more" data-folder="${f}" aria-label="分區選項">⋯</button>`:''}</div>`+
       (gs.length||bs.length?gs.map(gItem).join('')+bs.map(bItem).join(''):'<div class="empty">空的分區。用機器人旁的 ⋯ 移進來。</div>')};
   S.folders.forEach(f=>h+=sect(f.id,f.name));
   h+=sect(null,S.folders.length?'未分區':'全部');
-  $('list').innerHTML=h;
+  if(q&&!h.includes('class="iw"'))h+=`<div class="empty">找不到「${esc(q)}」</div>`;
+  setHTML($('list'),h);
+  const tot=[...S.bots,...S.groups].reduce((a,x)=>a+(x.id===cur&&!document.hidden?0:unread(x.id)),0);document.title=(tot?`(${tot}) `:'')+'OCTA｜奧克塔';
   const c=cur&&conv(cur);
   ['ph','task','msgs','f','note'].forEach(k=>$(k).hidden=!c);$('blank').hidden=!!c;
-  if(!c)$('blank').innerHTML=S.bots.length?'左邊選一個機器人或群組開始對話':`<div class="guidecard"><div>還沒有機器人。跟著設定指引，幾分鐘就能讓第一個機器人開始工作。</div><button class="btn" onclick="openGuide()">開始設定</button></div>`;
+  if(!c)setHTML($('blank'),!S.loaded?'':S.bots.length?'左邊選一個機器人或群組開始對話':`<div class="guidecard"><div>還沒有機器人。跟著設定指引，幾分鐘就能讓第一個機器人開始工作。</div><button class="btn" onclick="openGuide()">開始設定</button></div>`);
   if(!c){$('mention').innerHTML='';return}
   const g=isG(cur);
-  $('pav').className='av'+(g?' grp':'');$('pav').textContent=g?c.members.length+'人':c.name[0];
+  $('pav').className='av'+(g?' grp':'');$('pav').textContent=g?c.members.length:c.name[0];$('pav').toggleAttribute('data-u',!g)
   $('pname').textContent=c.name;
   const fn=S.folders.find(f=>f.id===c.folder)?.name,rn=S.routines.filter(r=>r.conv===cur&&r.enabled).length;
-  $('psub').textContent=(fn?fn+' · ':'')+(g?c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'):(ENG[c.engine]||ENG.claude).n+(c.model?' '+c.model:''))+(rn?` · ${rn} 個例行任務`:'');
-  $('task').innerHTML='<em>'+(g?'協作規則':'指定任務')+'</em>'+esc(c.task);
-  $('mention').innerHTML=g?c.members.map(id=>bot(id)?`<button data-at="${esc(bot(id).name)}">@${esc(bot(id).name)}</button>`:'').join(''):'';
-  const box=$('msgs'),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;
+  $('psub').innerHTML=(fn?`<span data-u>${esc(fn)}</span> · `:'')+(g?`<span data-u>${esc(c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'))}</span>`:esc((ENG[c.engine]||ENG.claude).n)+(c.model?` <span data-u>${esc(c.model)}</span>`:''))+(rn?` · <span>${esc(I18N.t('例行任務'))} ${rn}</span>`:'');
+  setHTML($('task'),'<em>'+(g?'協作規則':'指定任務')+'</em><span data-u>'+esc(c.task)+'</span>');
+  $('mention').innerHTML=g?c.members.map(id=>bot(id)?`<button data-at="${esc(bot(id).name)}" data-u>@${esc(bot(id).name)}</button>`:'').join(''):'';
+  const box=$('msgs'),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<120;
+  const switched=box._conv!==cur;box._conv=cur;
   let mh=convMsgs(cur).map(m=>{
-    if(m.by==='sys')return `<div class="sys">${esc(m.text)}</div>`;
-    if(m.by==='me')return `<div class="m me"><div class="bx"><div class="bub">${fmt(m.text)}${filesHtml(m.files)}</div></div></div>`;
-    return `<div class="m"><span class="av sm">${init(nameOf(m.by))}</span><div class="bx">${g?`<div class="who">${esc(nameOf(m.by))}</div>`:''}<div class="bub">${fmt(m.text)}${filesHtml(m.files)}</div>${apprHtml(m)}</div></div>`}).join('');
+    if(m.by==='sys')return `<div class="sys">${esc(m.text)}<span class="ts">${hm(m.ts)}</span></div>`;
+    if(m.by==='me')return `<div class="m me${m.tmp?' tmp':''}"><div class="bx"><div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div><div class="meta">${m.tmp?'傳送中…':hm(m.ts)}</div></div></div>`;
+    return `<div class="m"><span class="av sm" data-u>${init(nameOf(m.by))}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div>${apprHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
   const bz=busyIn(cur);
   if(bz.length){const run=bz.find(b=>b.status==='running');
     mh+=`<div class="work"><span class="fade">${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器開著，關掉視窗後才會繼續':esc(nameOf(run.bot_id))+' 處理中…'):S.runnerOnline?'排隊中…':'等待電腦上線…'}</span><button id="stop">停止</button></div>`}
-  box.innerHTML=mh;loadThumbs(box);
-  if(scroll||atBottom)box.scrollTop=box.scrollHeight;
-  $('note').textContent=S.runnerOnline?'由你電腦上的 Claude Code 執行':'電腦離線：訊息會先排隊，執行器啟動後才會處理';
+  const changed=setHTML(box,mh);if(changed)loadThumbs(box);
+  if(switched||scroll){box.scrollTop=box.scrollHeight;$('jump').hidden=true}
+  else if(changed){if(atBottom)box.scrollTo({top:box.scrollHeight,behavior:'smooth'});else $('jump').hidden=false}
+  if(atBottom||switched||scroll){markSeen(cur)}
+  $('note').textContent=S.runnerOnline?(g?'由你電腦上的 AI 執行':`由你電腦上的 ${(ENG[c.engine]||ENG.claude).n} 執行`):'電腦離線：訊息會先排隊，電腦連上後才會處理';
 }
 
 /* ---------- events ---------- */
 $('list').onclick=e=>{
   const mo=e.target.closest('[data-more]');if(mo){e.stopPropagation();itemMenu(mo,mo.dataset.more);return}
   const fo=e.target.closest('[data-folder]');if(fo){e.stopPropagation();folderMenu(fo,fo.dataset.folder);return}
-  const it=e.target.closest('.item');if(!it)return;cur=it.dataset.id;try{localStorage.setItem('ebot_cur',cur)}catch(e){}
-  render(true);$('app').classList.add('chat')};
-$('back').onclick=()=>$('app').classList.remove('chat');
+  const it=e.target.closest('.item');if(!it)return;openConv(it.dataset.id)};
+function openConv(id){saveDraft();cur=id;try{localStorage.setItem('ebot_cur',cur)}catch(e){}
+  pending=[];renderAtt();loadDraft();render(true);$('app').classList.add('chat');
+  if(matchMedia('(min-width:761px)').matches)$('msg').focus()}
+const draftKey=()=>'octa_draft_'+cur;
+function saveDraft(){if(!cur)return;try{const v=$('msg').value;v?localStorage.setItem(draftKey(),v):localStorage.removeItem(draftKey())}catch(e){}}
+function loadDraft(){let v='';try{v=localStorage.getItem(draftKey())||''}catch(e){}$('msg').value=v;grow()}
+function grow(){const t=$('msg');t.style.height='auto';t.style.height=Math.min(t.scrollHeight,140)+'px'}
+$('msg').addEventListener('input',()=>{grow();clearTimeout(grow.t);grow.t=setTimeout(saveDraft,400)});
+$('q').addEventListener('input',()=>render(false));
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter'){const f=$('list').querySelector('.item');if(f){openConv(f.dataset.id);$('q').value='';render(false)}}if(e.key==='Escape'){$('q').value='';render(false);$('q').blur()}});
+$('jump').onclick=()=>{const b=$('msgs');b.scrollTo({top:b.scrollHeight,behavior:'smooth'});$('jump').hidden=true};
+$('msgs').addEventListener('scroll',()=>{const b=$('msgs');if(b.scrollHeight-b.scrollTop-b.clientHeight<60){$('jump').hidden=true;if(cur&&unread(cur)){markSeen(cur);render(false)}}},{passive:true});
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('app').classList.remove('chat');$('q').focus();$('q').select()}
+  if(e.key==='Escape'&&!$('veil').hidden&&!document.querySelector('.menu'))closeSheet()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cur)render(false)});
+function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.className='toast';document.body.appendChild(el)}
+  el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),1800)}
+$('back').onclick=()=>{saveDraft();$('app').classList.remove('chat')};
 $('mention').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=$('msg');i.value=(i.value+' @'+b.dataset.at+' ').trimStart();i.focus()};
-$('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).then(refresh);
+$('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).then(()=>{toast('已停止');refresh()});
+  const cp=e.target.closest('[data-copy-msg]');if(cp){const m=S.msgs.find(x=>String(x.id)===cp.dataset.copyMsg);if(m)navigator.clipboard?.writeText(m.text).then(()=>toast('已複製')).catch(()=>{});return}
   const im=e.target.closest('img[data-file]');if(im)openFile(im.dataset.file);
   const fc=e.target.closest('[data-open-file]');if(fc)openFile(fc.dataset.openFile);
   const ap=e.target.closest('[data-approve]'),rv=e.target.closest('[data-revise]');
@@ -449,20 +518,28 @@ const b64=blob=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(S
 async function shrink(file){const img=await createImageBitmap(file);const k=Math.min(1,1600/Math.max(img.width,img.height));
   const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
   return new Promise(ok=>c.toBlob(ok,'image/jpeg',.82))}
-$('fileIn').onchange=async()=>{for(const file of [...$('fileIn').files].slice(0,6-pending.length)){
+$('fileIn').onchange=()=>{addFiles([...$('fileIn').files]);$('fileIn').value=''};
+async function addFiles(list){for(const file of list.slice(0,Math.max(0,6-pending.length))){
     const item={name:file.name,up:true};pending.push(item);renderAtt();
     try{const isImg=/^image\//.test(file.type)&&file.type!=='image/gif';const blob=isImg?await shrink(file):file;
       if(blob.size>1_000_000)throw new Error(file.name+' 太大（上限 1MB）');
       const r=await api('files','POST',{name:isImg?file.name.replace(/\.\w+$/,'')+'.jpg':file.name,mime:isImg?'image/jpeg':(file.type||'application/octet-stream'),data:await b64(blob)});
       Object.assign(item,r,{up:false})}
     catch(err){pending.splice(pending.indexOf(item),1);$('note').textContent=err.message}
-    renderAtt()}
-  $('fileIn').value=''};
-async function sendMsg(v,files=[]){try{await api('messages','POST',{conv:cur,text:v,files});refresh();return true}catch(err){$('note').textContent=err.message;return false}}
+    renderAtt()}}
+async function sendMsg(v,files=[]){const c=cur,fs=pending.filter(f=>files.includes(f.id)).map(f=>({id:f.id,name:f.name,mime:f.mime}));
+  S.msgs.push({id:'tmp'+Date.now(),tmp:true,conv:c,by:'me',text:v||'（附件）',files:fs,ts:Date.now()});lastSend=Date.now();render(true);
+  try{await api('messages','POST',{conv:c,text:v,files});refresh();return true}
+  catch(err){S.msgs=S.msgs.filter(m=>!m.tmp);render(false);toast(err.message);return false}}
 $('f').onsubmit=async e=>{e.preventDefault();const v=$('msg').value.trim();
   if(pending.some(f=>f.up))return;const files=pending.map(f=>f.id);if(!v&&!files.length)return;
-  $('msg').value='';const keep=pending;pending=[];renderAtt();
-  if(!await sendMsg(v,files)){$('msg').value=v;pending=keep;renderAtt()}};
+  const keep=pending;$('msg').value='';grow();try{localStorage.removeItem(draftKey())}catch(e){}
+  const ok=await sendMsg(v,files);pending=ok?[]:keep;renderAtt();if(!ok){$('msg').value=v;grow()}};
+// paste or drop files straight into the chat
+$('msg').addEventListener('paste',e=>{const fs=[...(e.clipboardData?.files||[])];if(fs.length){e.preventDefault();addFiles(fs)}});
+$('pane').addEventListener('dragover',e=>{if(cur&&[...e.dataTransfer.types].includes('Files')){e.preventDefault();$('pane').classList.add('drop')}});
+$('pane').addEventListener('dragleave',e=>{if(e.target===$('pane'))$('pane').classList.remove('drop')});
+$('pane').addEventListener('drop',e=>{$('pane').classList.remove('drop');if(!cur)return;e.preventDefault();addFiles([...e.dataTransfer.files])});
 
 /* ---------- sheets ---------- */
 const ENG={
@@ -486,7 +563,7 @@ const TEMPLATES=[{k:'assistant',n:'一般助理',d:'一個機器人，什麼都�
   {k:'shop',n:'門市小幫手',d:'訂單、客服回覆、日報'},{k:'lodging',n:'民宿入住流程',d:'訂房、打掃清單、入住訊息'}];
 const tplHtml=()=>`<div class="tpls">${TEMPLATES.map(t=>`<button type="button" class="tplc" data-t="${t.k}"><b>${t.n}</b><small>${t.d}</small></button>`).join('')}</div>`;
 function bindTpl(root,after){root.querySelectorAll('[data-t]').forEach(b=>b.onclick=async()=>{b.disabled=true;
-  try{await api('template','POST',{name:b.dataset.t});b.querySelector('small').textContent='已加入 ✓';await refresh();after&&after()}catch(e){b.disabled=false}})}
+  try{await api('template','POST',{name:b.dataset.t,lang:I18N.lang});b.querySelector('small').textContent='已加入 ✓';await refresh();after&&after()}catch(e){b.disabled=false}})}
 function closeSheet(){$('veil').hidden=true;$('veil').innerHTML='';rtEdit=null}
 $('veil').onclick=e=>{if(e.target.id==='veil')closeSheet()};
 function sheet(kind,edit){
@@ -494,13 +571,13 @@ function sheet(kind,edit){
   if(g&&!S.bots.length){alertSheet('先建立機器人','群組需要至少一個機器人成員。');return}
   $('veil').innerHTML=`<form class="sheet" id="sf"><h2>${edit?'任務設定':g?'新群組':'新機器人'}</h2>
   <label class="field">名稱<input id="sn" required maxlength="20" value="${c?esc(c.name):''}" placeholder="${g?'例如：退房檢查':'例如：評論員'}"></label>
-  ${g?`<div class="field">成員（依執行順序）<div class="picks">${S.bots.map(b=>`<label class="pick"><input type="checkbox" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm">${init(b.name)}</span>${esc(b.name)}</label>`).join('')}</div></div>`:''}
+  ${g?`<div class="field">成員（依執行順序）<div class="picks">${S.bots.map(b=>`<label class="pick"><input type="checkbox" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm" data-u>${init(b.name)}</span><span data-u>${esc(b.name)}</span></label>`).join('')}</div></div>`:''}
   <label class="field">${g?'協作規則':'指定任務'}<textarea id="st" required maxlength="4000" placeholder="${g?'誰先做、做完交給誰':'要做什麼、去哪個網站、結果怎麼回報'}">${c?esc(c.task):''}</textarea></label>
   ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
   ${g?'':`<label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>
   <label class="field">模型（選填，空白用該工具的預設）<input id="sf_m" maxlength="80" value="${esc(c?.model||'')}"></label>
   <p style="margin-top:-6px" id="sf_hint"></p>`}
-  <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
+  <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option data-u value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
   ${edit?`<div class="field">例行任務<div class="rt" id="rt"></div></div>`:'<p>建立後可以在「任務設定」加入例行任務（每天固定時間自動執行）。</p>'}
   <div class="errmsg" id="se"></div>
   <div class="acts">${edit?'<button type="button" class="del" id="sd">刪除</button>':''}<button type="button" class="no" id="sx">取消</button><button class="btn">${edit?'儲存':'建立'}</button></div></form>`;
@@ -519,12 +596,12 @@ function sheet(kind,edit){
       if(!edit)cur=r.id;closeSheet();await refresh();$('app').classList.add('chat')}
     catch(err){$('se').textContent=err.message}}}
 function alertSheet(t,p){$('veil').innerHTML=`<div class="sheet"><h2>${esc(t)}</h2><p>${esc(p)}</p><div class="acts"><button class="btn" id="sx">知道了</button></div></div>`;$('veil').hidden=false;$('sx').onclick=closeSheet}
-const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?'剛剛':m<60?m+' 分鐘前':m<1440?Math.round(m/60)+' 小時前':Math.round(m/1440)+' 天前'};
+const ago=t=>{const m=Math.round((Date.now()-t)/60000),rt=new Intl.RelativeTimeFormat(I18N.lang,{numeric:'auto'});return m<60?rt.format(-m,'minute'):m<1440?rt.format(-Math.round(m/60),'hour'):rt.format(-Math.round(m/1440),'day')};
 $('browser').onclick=()=>{
   const c=conv(cur),ids=isG(cur)?c.members.filter(bot):[cur];
   $('veil').innerHTML=`<div class="sheet"><h2>機器人的瀏覽器</h2>
   <p>每個機器人在你電腦上有自己的瀏覽器（獨立的分頁、登入和 Cookie），可以同時工作、互不干擾。第一次用某個網站前，先在電腦上幫它登入一次，之後會記住。</p>
-  ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm">${init(b.name)}</span><b>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
+  ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm" data-u>${init(b.name)}</span><b data-u>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
     ${b.shot_ts?`<img class="shot" alt="${esc(b.name)} 最後的畫面" id="img_${id}"><div class="meta">截圖：${ago(b.shot_ts)}${b.page?' · '+esc(b.page):''}</div>`:`<div class="noshot">還沒有畫面。機器人用過瀏覽器後，這裡會顯示它最後停在哪一頁。</div>`}
     <form data-open="${id}"><input id="u_${id}" placeholder="要開的網址（選填）" value="${esc(b.page||'')}"><button class="btn">在電腦上開啟</button></form></div>`}).join('')}
   <div class="errmsg" id="be"></div>
@@ -569,11 +646,11 @@ function folderSheet(fid,moveId){const f=fid&&S.folders.find(x=>x.id===fid);
 $('nf').onclick=()=>folderSheet(null);
 
 /* ---------- routines (例行任務) ---------- */
-const hm12=t=>{const [h,m]=t.split(':').map(Number);return (h<12?'上午':'下午')+((h%12)||12)+':'+String(m).padStart(2,'0')};
-const timesText=ts=>'每天 '+ts.map(hm12).join('和');
+const hm12=t=>{const [h,m]=t.split(':').map(Number);return new Date(2000,0,1,h,m).toLocaleTimeString(I18N.lang,{hour:'numeric',minute:'2-digit'})};
+const timesText=ts=>I18N.t('每天')+' '+ts.map(hm12).join(I18N.lang==='en'?', ':'、');
 let rtEdit=null;
 function renderRoutines(){const box=$('rt');if(!box)return;const list=S.routines.filter(r=>r.conv===cur);
-  box.innerHTML=list.map(r=>rtEdit===r.id?rForm(r):`<div class="rrow" data-r="${r.id}" role="button" tabindex="0"><span class="t"><b>${esc(r.name)}</b><small>${timesText(r.times)}</small></span><button type="button" class="sw ${r.enabled?'on':''}" data-sw="${r.id}" aria-label="${r.enabled?'停用':'啟用'}" aria-pressed="${r.enabled}"></button></div>`).join('')
+  box.innerHTML=list.map(r=>rtEdit===r.id?rForm(r):`<div class="rrow" data-r="${r.id}" role="button" tabindex="0"><span class="t"><b data-u>${esc(r.name)}</b><small data-u>${timesText(r.times)}</small></span><button type="button" class="sw ${r.enabled?'on':''}" data-sw="${r.id}" aria-label="${r.enabled?'停用':'啟用'}" aria-pressed="${r.enabled}"></button></div>`).join('')
    +(rtEdit==='new'?rForm(null):`<button type="button" class="ghost" id="rtAdd" style="justify-self:start">＋ 例行任務</button>`);
   box.querySelectorAll('[data-sw]').forEach(b=>b.onclick=async e=>{e.stopPropagation();const r=S.routines.find(x=>x.id===b.dataset.sw);
     r.enabled=!r.enabled;renderRoutines();await api('routines/'+r.id,'PUT',{enabled:r.enabled}).catch(()=>{});refresh()});
@@ -616,7 +693,7 @@ async function openSettings(){
   <label class="toggle">手機遠端<button type="button" class="sw ${ds?.remote?.on?'on':''}" id="dRemote"></button></label>
   <div id="dRemoteInfo">${ds?.remote?.on?remoteInfo(ds.remote):''}</div>`:`
   <h3>連接你的電腦</h3>
-  <p>機器人由你電腦上的 Claude Code 執行，用的是你自己的 Claude 方案（Pro / Max）。需要：Node 18 以上、Claude Code（已用 /login 登入）、Google Chrome。每個機器人有自己獨立的 Chrome 視窗，最多 3 個同時工作。</p>
+  <p>機器人由你電腦上的 AI 工具執行，用的是你自己的帳號。需要 Node 18 以上與 Google Chrome。每個機器人有自己獨立的 Chrome 視窗，最多 3 個同時工作。</p>
   <p>1. 下載執行器到一個資料夾（例如 C:\\octa）：</p>
   <pre class="code">mkdir C:\\octa; cd C:\\octa
 curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
@@ -624,7 +701,7 @@ curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
   <div class="row2"><button class="btn" id="gen">產生執行器金鑰</button><span style="font-size:12px;color:var(--faint)">會讓舊金鑰失效</span></div>
   <pre class="code" id="cmd" hidden></pre>`;
   $('veil').innerHTML=`<div class="sheet"><h2>設定</h2><p>${CFG.local?'本機':'帳號：'+esc(S.me)}　·　執行器：${S.runnerOnline?'<span class="p-ok">在線</span>':'離線'}</p>
-  <div class="row2"><button class="ghost" id="guideBtn">設定指引</button><button class="ghost" id="aiBtn">AI 連線</button></div>
+  <div class="row2"><button class="ghost" id="guideBtn">設定指引</button><button class="ghost" id="aiBtn">AI 連線</button><span style="margin-left:auto">${I18N.select('sLang')}</span></div>
   ${runnerHtml}
   <h3>共用資料</h3>
   <label class="field">所有機器人都會讀的固定資訊<textarea id="gNotes" maxlength="20000" placeholder="例如：公司名稱、常用網站、聯絡方式、做事原則">${esc(st.notes)}</textarea></label>
@@ -651,7 +728,7 @@ curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre>
   $('sSave').onclick=async()=>{try{await saveS();say('已儲存 ✓')}catch(e){say(e.message)}};
   $('nTest').onclick=async()=>{try{await saveS();const r=await api('notify/test','POST');say('已送出：'+r.sent.join('、'))}catch(e){say(e.message)}};
   $('tgDet').onclick=async()=>{try{await saveS();const r=await api('notify/detect','POST');$('tgChat').value=r.chat;say('找到 Chat ID ✓')}catch(e){say(e.message)}};
-  $('logsBtn').onclick=openLogs;$('guideBtn').onclick=openGuide;$('aiBtn').onclick=()=>openAI();
+  $('logsBtn').onclick=openLogs;$('guideBtn').onclick=openGuide;$('sLang').onchange=e=>setLang(e.target.value);$('aiBtn').onclick=()=>openAI();
   if(CFG.local){
     $('dLogin').onclick=()=>api('desktop/login-claude','POST').catch(e=>alertSheet('無法開啟',e.message));
     $('dFolder').onclick=()=>api('desktop/open-folder','POST').catch(()=>{});
@@ -667,10 +744,10 @@ function remoteInfo(r){return `<div class="kv"><span>網址</span><b style="over
   <p>網址每次開啟都會不同。配對碼只給信任的人。</p>`}
 async function openLogs(){
   let d={logs:[]};try{d=await api('logs')}catch(e){}
-  const t=x=>x?new Date(x).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-  const dur=l=>l.finished&&l.started?Math.max(1,Math.round((l.finished-l.started)/1000))+' 秒':'';
+  const t=x=>x?new Date(x).toLocaleString(I18N.lang,{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  const dur=l=>l.finished&&l.started?new Intl.NumberFormat(I18N.lang,{style:'unit',unit:'second',unitDisplay:'short'}).format(Math.max(1,Math.round((l.finished-l.started)/1000))):'';
   const stc={done:['p-ok','完成'],error:['p-pr','失敗'],running:['','執行中'],pending:['p-off','排隊']};
-  $('veil').innerHTML=`<div class="sheet"><h2>工作紀錄</h2><div class="logs">${d.logs.length?d.logs.map(l=>`<div class="log"><span class="pill st ${stc[l.status]?.[0]||''}">${stc[l.status]?.[1]||l.status}</span><b style="font-weight:500">${esc(l.bot)}${l.kind==='open'?'（開瀏覽器）':''}</b><span style="font-size:12px;color:var(--faint)">${t(l.created)} ${dur(l)}</span><small>${esc(l.convName)}：${esc(l.prompt)}</small></div>`).join(''):'<p>還沒有紀錄</p>'}</div>
+  $('veil').innerHTML=`<div class="sheet"><h2>工作紀錄</h2><div class="logs">${d.logs.length?d.logs.map(l=>`<div class="log"><span class="pill st ${stc[l.status]?.[0]||''}">${stc[l.status]?.[1]||l.status}</span><b style="font-weight:500"><span data-u>${esc(l.kind==='test'?(ENG[l.url]?.n||l.url):l.bot)}</span>${l.kind==='open'?'（開瀏覽器）':l.kind==='test'?'（連線測試）':''}</b><span style="font-size:12px;color:var(--faint)">${t(l.created)} ${dur(l)}</span><small data-u>${esc(l.convName)}${l.convName?'：':''}${esc(l.prompt)}</small></div>`).join(''):'<p>還沒有紀錄</p>'}</div>
   <div class="acts"><button class="no" id="lb2">返回設定</button><button class="btn" id="sx">關閉</button></div></div>`;
   $('veil').hidden=false;$('sx').onclick=closeSheet;$('lb2').onclick=()=>openSettings()}
 
@@ -752,11 +829,16 @@ async function runTest(){
   if(!$('veil').hidden&&$('gRes'))openGuide();
 }
 
+/* ---------- language ---------- */
+function setLang(l){I18N.set(l);if(TOKEN||CFG.local)api('settings','PUT',{lang:l}).catch(()=>{});mountLang()}
+function mountLang(){for(const id of ['hLang','lLang']){const el=$(id);if(el){el.innerHTML=I18N.select(id+'Sel');$(id+'Sel').onchange=e=>setLang(e.target.value)}}}
+window.addEventListener('octa-lang',()=>{if(S.loaded)render(false)});
+
 /* ---------- boot ---------- */
 let CFG={};
 function start(){$('login').hidden=true;$('home').hidden=true;$('app').hidden=false;lastId=0;
   refresh().then(()=>{let g=null;try{g=localStorage.getItem('ebot_guided')}catch(e){}if(!S.bots.length&&!g)openGuide()})}
-(async()=>{try{CFG=await (await fetch('/api/config')).json()}catch(e){}
+(async()=>{mountLang();try{CFG=await (await fetch('/api/config')).json()}catch(e){}
   if(CFG.pair){$('ln').closest('label').hidden=true;$('ln').required=false;$('lp').previousSibling.textContent='配對碼';$('lp').minLength=4;$('lp').autocomplete='one-time-code';
     $('lf').querySelector('p').textContent='輸入電腦上 OCTA「設定 → 手機遠端」顯示的配對碼。';$('ls').hidden=true}
   if(CFG.local||TOKEN)start();else if(CFG.pair)showLogin();else showHome()})();

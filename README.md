@@ -34,6 +34,7 @@
 - **通知**：需要你處理時，跳電腦通知，也可以送到 Telegram 或 LINE
 - **手機遙控**：設定 → 手機遠端，用網址加 8 碼配對碼連進來
 - **工作紀錄**：每次執行的結果與花費時間
+- **多語介面**：繁體中文、English、简体中文、日本語（機器人也會用你選的語言回覆）
 
 ## 雲端版（多帳號，自己架）
 
@@ -84,6 +85,7 @@ npm run dist       # 打包 Windows 安裝檔（Linux 需要 wine64 + wine32）
 | `public/octa-runner.mjs` | 執行器：領任務、呼叫 Claude Code、管理每個機器人的瀏覽器 |
 | `desktop/` | 桌面版：本機 SQLite、Electron 視窗、手機遠端 |
 | `schema.sql` | 資料表 |
+| `public/i18n-core.js`、`i18n/` | 多語介面：在 `i18n/strings.py` 加翻譯，執行 `python3 i18n/build.py` 產生字典 |
 
 ## 安全
 

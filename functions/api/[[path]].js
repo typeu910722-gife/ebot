@@ -94,39 +94,408 @@ const ENGINES = ['claude', 'codex', 'gemini', 'copilot', 'cursor', 'qwen', 'open
 const engineOk = e => (ENGINES.includes(e) ? e : 'claude');
 const folderOk = (folders, id) => (id && folders.some(f => f.id === id) ? id : null);
 
-// Templates offered in the app
-const TEMPLATES = {
-  assistant: {
-    folder: null,
-    bots: [{ k: 'a', name: '助理', task: '回答我的問題。需要時用瀏覽器查資料，或操作我已登入的網站。做完用幾句話回報重點。' }],
-    groups: []
+// Templates offered in the app, per interface language (generated from i18n/templates.py)
+const TEMPLATES_I18N = {
+ "zh-TW": {
+  "assistant": {
+   "folder": null,
+   "bots": [
+    [
+     "a",
+     "助理",
+     "回答我的問題。需要時用瀏覽器查資料，或操作我已登入的網站。做完用幾句話回報重點。"
+    ]
+   ],
+   "groups": []
   },
-  research: {
-    folder: '研究',
-    bots: [
-      { k: 'r1', name: '查資料員', task: '依我的問題上網找資料，至少比對兩個來源，附上網址。' },
-      { k: 'r2', name: '整理員', task: '把查資料員找到的內容整理成重點摘要或表格，標出不確定的地方。' }
+  "research": {
+   "folder": "研究",
+   "bots": [
+    [
+     "r1",
+     "查資料員",
+     "依我的問題上網找資料，至少比對兩個來源，附上網址。"
     ],
-    groups: [{ name: '研究小組', task: '查資料員先找資料，整理員再整理成摘要。', members: ['r1', 'r2'] }]
+    [
+     "r2",
+     "整理員",
+     "把查資料員找到的內容整理成重點摘要或表格，標出不確定的地方。"
+    ]
+   ],
+   "groups": [
+    [
+     "研究小組",
+     "查資料員先找資料，整理員再整理成摘要。",
+     [
+      "r1",
+      "r2"
+     ]
+    ]
+   ]
   },
-  shop: {
-    folder: '門市',
-    bots: [
-      { k: 's1', name: '訂單員', task: '打開分區資料裡寫的訂單後台，整理今天的新訂單：品項、數量、客人、取貨或出貨時間。' },
-      { k: 's2', name: '客服員', task: '依訂單員的資料，擬好要回覆客人的訊息，列出來給我確認。我說「發送」前不要發出。' },
-      { k: 's3', name: '回報員', task: '把今天的訂單和待處理事項整理成一則簡短日報。' }
+  "shop": {
+   "folder": "門市",
+   "bots": [
+    [
+     "s1",
+     "訂單員",
+     "打開分區資料裡寫的訂單後台，整理今天的新訂單：品項、數量、客人、取貨或出貨時間。"
     ],
-    groups: [{ name: '每日門市流程', task: '訂單員整理訂單 → 客服員擬回覆 → 回報員寫日報。', members: ['s1', 's2', 's3'] }]
+    [
+     "s2",
+     "客服員",
+     "依訂單員的資料，擬好要回覆客人的訊息，列出來給我確認。我說「發送」前不要發出。"
+    ],
+    [
+     "s3",
+     "回報員",
+     "把今天的訂單和待處理事項整理成一則簡短日報。"
+    ]
+   ],
+   "groups": [
+    [
+     "每日門市流程",
+     "訂單員整理訂單 → 客服員擬回覆 → 回報員寫日報。",
+     [
+      "s1",
+      "s2",
+      "s3"
+     ]
+    ]
+   ]
   },
-  lodging: {
-    folder: '民宿',
-    bots: [
-      { k: 'l1', name: '訂房員', task: '打開分區資料裡寫的訂房平台後台，整理今天與明天的入住、退房：房號、客人、晚數。' },
-      { k: 'l2', name: '房務員', task: '依訂房員的資料，算出今天要打掃的房間，列成清單；分區資料有房務看板網址時就更新上去。' },
-      { k: 'l3', name: '迎賓員', task: '依今天入住名單，用分區資料裡的入住說明擬好每位客人的訊息，列出來給我確認。我說「發送」前不要發出。' }
+  "lodging": {
+   "folder": "民宿",
+   "bots": [
+    [
+     "l1",
+     "訂房員",
+     "打開分區資料裡寫的訂房平台後台，整理今天與明天的入住、退房：房號、客人、晚數。"
     ],
-    groups: [{ name: '每日入住流程', task: '訂房員整理訂房 → 房務員排打掃 → 迎賓員擬入住訊息給我確認。', members: ['l1', 'l2', 'l3'] }]
+    [
+     "l2",
+     "房務員",
+     "依訂房員的資料，算出今天要打掃的房間，列成清單；分區資料有房務看板網址時就更新上去。"
+    ],
+    [
+     "l3",
+     "迎賓員",
+     "依今天入住名單，用分區資料裡的入住說明擬好每位客人的訊息，列出來給我確認。我說「發送」前不要發出。"
+    ]
+   ],
+   "groups": [
+    [
+     "每日入住流程",
+     "訂房員整理訂房 → 房務員排打掃 → 迎賓員擬入住訊息給我確認。",
+     [
+      "l1",
+      "l2",
+      "l3"
+     ]
+    ]
+   ]
   }
+ },
+ "en": {
+  "assistant": {
+   "folder": null,
+   "bots": [
+    [
+     "a",
+     "Assistant",
+     "Answer my questions. Use the browser to look things up or work on sites I am signed into when needed. Report the key points in a few sentences when done."
+    ]
+   ],
+   "groups": []
+  },
+  "research": {
+   "folder": "Research",
+   "bots": [
+    [
+     "r1",
+     "Researcher",
+     "Search the web for my question, compare at least two sources, and include links."
+    ],
+    [
+     "r2",
+     "Summarizer",
+     "Turn what the Researcher found into a short summary or table and flag anything uncertain."
+    ]
+   ],
+   "groups": [
+    [
+     "Research team",
+     "The Researcher finds sources first, then the Summarizer writes the summary.",
+     [
+      "r1",
+      "r2"
+     ]
+    ]
+   ]
+  },
+  "shop": {
+   "folder": "Shop",
+   "bots": [
+    [
+     "s1",
+     "Order clerk",
+     "Open the order dashboard listed in the folder notes and list today’s new orders: items, quantities, customers, pickup or shipping times."
+    ],
+    [
+     "s2",
+     "Support",
+     "Using the Order clerk’s list, draft replies to customers and show them to me for approval. Do not send anything until I say “send”."
+    ],
+    [
+     "s3",
+     "Reporter",
+     "Write a short daily report of today’s orders and open items."
+    ]
+   ],
+   "groups": [
+    [
+     "Daily shop routine",
+     "Order clerk lists orders → Support drafts replies → Reporter writes the daily report.",
+     [
+      "s1",
+      "s2",
+      "s3"
+     ]
+    ]
+   ]
+  },
+  "lodging": {
+   "folder": "Guesthouse",
+   "bots": [
+    [
+     "l1",
+     "Bookings",
+     "Open the booking platform dashboard listed in the folder notes and list today’s and tomorrow’s check-ins and check-outs: room, guest, nights."
+    ],
+    [
+     "l2",
+     "Housekeeping",
+     "From the Bookings list, work out which rooms need cleaning today; update the housekeeping board if the folder notes list one."
+    ],
+    [
+     "l3",
+     "Welcome",
+     "For today’s arrivals, draft each guest’s message using the check-in instructions in the folder notes and show them to me for approval. Do not send anything until I say “send”."
+    ]
+   ],
+   "groups": [
+    [
+     "Daily check-in routine",
+     "Bookings lists arrivals → Housekeeping plans cleaning → Welcome drafts check-in messages for my approval.",
+     [
+      "l1",
+      "l2",
+      "l3"
+     ]
+    ]
+   ]
+  }
+ },
+ "ja": {
+  "assistant": {
+   "folder": null,
+   "bots": [
+    [
+     "a",
+     "アシスタント",
+     "私の質問に答えてください。必要に応じてブラウザで調べたり、ログイン済みのサイトを操作したりして、終わったら要点を数文で報告してください。"
+    ]
+   ],
+   "groups": []
+  },
+  "research": {
+   "folder": "リサーチ",
+   "bots": [
+    [
+     "r1",
+     "調査係",
+     "質問についてウェブで調べ、2 つ以上の情報源を比較し、URL を添えてください。"
+    ],
+    [
+     "r2",
+     "まとめ係",
+     "調査係が見つけた内容を要点や表にまとめ、不確かな点を明記してください。"
+    ]
+   ],
+   "groups": [
+    [
+     "リサーチチーム",
+     "調査係が先に調べ、まとめ係が要約します。",
+     [
+      "r1",
+      "r2"
+     ]
+    ]
+   ]
+  },
+  "shop": {
+   "folder": "店舗",
+   "bots": [
+    [
+     "s1",
+     "注文係",
+     "フォルダのメモに書かれた注文管理画面を開き、今日の新規注文（品目・数量・お客様・受け取りや発送の時間）をまとめてください。"
+    ],
+    [
+     "s2",
+     "カスタマー係",
+     "注文係の情報をもとにお客様への返信を下書きし、確認のため私に見せてください。「送信」と言うまで送らないでください。"
+    ],
+    [
+     "s3",
+     "レポート係",
+     "今日の注文と未対応の事項を短い日報にまとめてください。"
+    ]
+   ],
+   "groups": [
+    [
+     "毎日の店舗業務",
+     "注文係が注文を整理 → カスタマー係が返信を下書き → レポート係が日報を作成。",
+     [
+      "s1",
+      "s2",
+      "s3"
+     ]
+    ]
+   ]
+  },
+  "lodging": {
+   "folder": "民宿",
+   "bots": [
+    [
+     "l1",
+     "予約係",
+     "フォルダのメモに書かれた予約サイトの管理画面を開き、今日と明日のチェックイン・チェックアウト（部屋番号・お客様・泊数）をまとめてください。"
+    ],
+    [
+     "l2",
+     "清掃係",
+     "予約係の情報から今日清掃する部屋をリストにし、フォルダのメモに清掃ボードの URL があれば更新してください。"
+    ],
+    [
+     "l3",
+     "お迎え係",
+     "今日到着するお客様ごとに、フォルダのメモのチェックイン案内を使ってメッセージを下書きし、確認のため私に見せてください。「送信」と言うまで送らないでください。"
+    ]
+   ],
+   "groups": [
+    [
+     "毎日のチェックイン業務",
+     "予約係が予約を整理 → 清掃係が清掃を計画 → お迎え係がチェックイン案内を下書きして私に確認。",
+     [
+      "l1",
+      "l2",
+      "l3"
+     ]
+    ]
+   ]
+  }
+ },
+ "zh-CN": {
+  "assistant": {
+   "folder": null,
+   "bots": [
+    [
+     "a",
+     "助理",
+     "回答我的问题。需要时用浏览器查数据，或操作我已登录的网站。做完用几句话回报重点。"
+    ]
+   ],
+   "groups": []
+  },
+  "research": {
+   "folder": "研究",
+   "bots": [
+    [
+     "r1",
+     "查数据员",
+     "依我的问题上网找数据，至少比对两个来源，附上网址。"
+    ],
+    [
+     "r2",
+     "整理员",
+     "把查数据员找到的内容整理成重点摘要或表格，标出不确定的地方。"
+    ]
+   ],
+   "groups": [
+    [
+     "研究小组",
+     "查数据员先找数据，整理员再整理成摘要。",
+     [
+      "r1",
+      "r2"
+     ]
+    ]
+   ]
+  },
+  "shop": {
+   "folder": "门市",
+   "bots": [
+    [
+     "s1",
+     "订单员",
+     "打开分区数据里写的订单后台，整理今天的新订单：品项、数量、客人、取货或出货时间。"
+    ],
+    [
+     "s2",
+     "客服员",
+     "依订单员的数据，拟好要回复客人的消息，列出来给我确认。我说「发送」前不要发出。"
+    ],
+    [
+     "s3",
+     "回报员",
+     "把今天的订单和待处理事项整理成一则简短日报。"
+    ]
+   ],
+   "groups": [
+    [
+     "每日门市流程",
+     "订单员整理订单 → 客服员拟回复 → 回报员写日报。",
+     [
+      "s1",
+      "s2",
+      "s3"
+     ]
+    ]
+   ]
+  },
+  "lodging": {
+   "folder": "民宿",
+   "bots": [
+    [
+     "l1",
+     "订房员",
+     "打开分区数据里写的订房平台后台，整理今天与明天的入住、退房：房号、客人、晚数。"
+    ],
+    [
+     "l2",
+     "房务员",
+     "依订房员的数据，算出今天要打扫的房间，列成清单；分区数据有房务看板网址时就更新上去。"
+    ],
+    [
+     "l3",
+     "迎宾员",
+     "依今天入住名单，用分区数据里的入住说明拟好每位客人的消息，列出来给我确认。我说「发送」前不要发出。"
+    ]
+   ],
+   "groups": [
+    [
+     "每日入住流程",
+     "订房员整理订房 → 房务员排打扫 → 迎宾员拟入住消息给我确认。",
+     [
+      "l1",
+      "l2",
+      "l3"
+     ]
+    ]
+   ]
+  }
+ }
 };
 
 export async function onRequest({ request: req, env, params }) {
@@ -221,6 +590,7 @@ export async function onRequest({ request: req, env, params }) {
             folder: folders.find(f => f.id === bot.folder)?.name || null,
             folderNotes: folders.find(f => f.id === bot.folder)?.notes || '',
             notes: st.notes || '',
+            lang: st.lang || 'zh-TW',
             colleagues: bots.filter(b => b.id !== bot.id && (b.folder || null) === (bot.folder || null)).map(b => ({ name: b.name, task: b.task })),
             group: group ? { name: group.name, task: group.task, members: group.members.map(name) } : null,
             history: hist.map(h => ({ who: name(h.by_), text: h.text, files: h.files ? JSON.parse(h.files) : [] }))
@@ -294,8 +664,10 @@ export async function onRequest({ request: req, env, params }) {
       return J({ me: me.name, local: me.kind === 'local', engines: u?.engines ? JSON.parse(u.engines) : null, runnerOnline: env.runnerOnline ? env.runnerOnline() : now() - (u?.runner_seen || 0) < 60000, ...all, msgs, busy });
     }
     if (path === 'template' && m === 'POST') {
-      const t = TEMPLATES[body.name];
-      if (!t) return err('沒有這個範本');
+      const lang = TEMPLATES_I18N[body.lang] ? body.lang : ((await getSettings(db, U)).lang || 'zh-TW');
+      const raw = (TEMPLATES_I18N[lang] || TEMPLATES_I18N['zh-TW'])[body.name];
+      if (!raw) return err('沒有這個範本');
+      const t = { folder: raw.folder, bots: raw.bots.map(([k, name, task]) => ({ k, name, task })), groups: raw.groups.map(([name, task, members]) => ({ name, task, members })) };
       let folder = null;
       if (t.folder) {
         folder = (await db.prepare('SELECT id FROM folders WHERE user_id=? AND name=?').bind(U, t.folder).first())?.id;
@@ -486,6 +858,7 @@ export async function onRequest({ request: req, env, params }) {
       const st = await getSettings(db, U);
       if (body.notes !== undefined) st.notes = clean(body.notes, 20000);
       if (body.notifyAll !== undefined) st.notifyAll = !!body.notifyAll;
+      if (['zh-TW', 'zh-CN', 'en', 'ja'].includes(body.lang)) st.lang = body.lang;
       for (const k of ['tg', 'line']) if (body[k]) {
         const cur = st[k] || {};
         const tok = clean(body[k].token, 300);
