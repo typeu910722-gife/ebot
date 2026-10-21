@@ -19,7 +19,7 @@
 3. 下載 [OCTA-Setup.exe](https://github.com/typeu910722-gife/octa/releases/latest/download/OCTA-Setup.exe) 並安裝（或到 [octa.yzprojecttw.com](https://octa.yzprojecttw.com) 首頁按下載）
 4. 打開 OCTA，照「設定指引」完成，選一個範本試跑
 
-不用註冊帳號，資料只存在你的電腦。第一次執行時 Windows 若顯示「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」（安裝檔未簽章）。
+打開後登入 OCTA 帳號，電腦版和網頁版（octa.yzprojecttw.com）的機器人、對話會同步，手機也能隨時指揮；這台電腦會自動負責執行。不想註冊也可以選「離線模式」，資料只存在這台電腦。第一次執行時 Windows 若顯示「Windows 已保護您的電腦」，按「其他資訊 → 仍要執行」（安裝檔未簽章）。
 
 ## 能做什麼
 

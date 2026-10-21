@@ -8,7 +8,7 @@ import http from 'node:http';
 import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, createWriteStream, chmodSync } from 'node:fs';
 import { join, dirname, extname, normalize } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn, spawnSync, execFile } from 'node:child_process';
 import { randomInt } from 'node:crypto';
 import { createRequire } from 'node:module';
 import os from 'node:os';
@@ -36,7 +36,7 @@ async function openDb(file) {
     writeFileSync(tmp, Buffer.from(db.export()));
     renameSync(tmp, file);
   };
-  const dirty = () => { if (!timer) timer = setTimeout(save, 400); };
+  const dirty = () => { if (!timer) timer = setTimeout(save, 3000); };   // saving rewrites the whole file, so batch writes
   const norm = a => a.map(v => (v === undefined ? null : typeof v === 'boolean' ? +v : v));
   class Stmt {
     constructor(sql) { this.sql = sql; this.args = []; }
@@ -248,14 +248,25 @@ export async function startServer(opts = {}) {
     setAutostart: () => { throw new Error('只有安裝版支援開機自動啟動'); },
     ...opts.hooks
   };
+  // which AI tools are installed; checked in parallel without blocking, cached for a minute
+  let engCache = null, engAt = 0, engJob = null;
+  async function engineStatus(fresh) {
+    if (!fresh && engCache && Date.now() - engAt < 60000) return engCache;
+    if (engJob) return engJob;
+    const { ENGINES } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
+    const ver = bin => new Promise(ok => execFile(bin, ['--version'], { shell: WIN, timeout: 15000, windowsHide: true, encoding: 'utf8' },
+      (err, out) => ok({ ok: !err, version: (out || '').trim().split(/\s/).find(x => /\d/.test(x)) || '' })));
+    engJob = Promise.all(Object.entries(ENGINES).map(async ([k, e]) => [k, await ver(e.bin)]))
+      .then(r => { engCache = Object.fromEntries(r); engAt = Date.now(); return engCache; }).finally(() => (engJob = null));
+    return engJob;
+  }
+  engineStatus().catch(() => { });   // warm the cache in the background
   async function desktopApi(req, res) {
     const p = new URL(req.url, 'http://x').pathname.slice('/api/desktop/'.length);
     const body = req.method === 'POST' ? await readJson(req) : {};
     if (p === 'status') {
-      const ver = bin => { const c = spawnSync(bin, ['--version'], { shell: WIN, encoding: 'utf8', timeout: 15000, windowsHide: true }); return { ok: c.status === 0, version: (c.stdout || '').trim().split(/\s/).find(x => /\d/.test(x)) || '' }; };
+      const engines = await engineStatus(!!body.fresh || new URL(req.url, 'http://x').searchParams.has('fresh'));
       const { findChrome } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
-      const { ENGINES } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
-      const engines = Object.fromEntries(Object.entries(ENGINES).map(([k, e]) => [k, ver(e.bin)]));
       return json(res, {
         version: APP_VERSION,
         claude: engines.claude, engines,
@@ -274,14 +285,23 @@ export async function startServer(opts = {}) {
     json(res, { error: '找不到' }, 404);
   }
 
+  // call the desktop API from the Electron main process (the cloud page reaches it through the preload bridge)
+  async function callDesktop(p, body) {
+    const r = await fetch(`http://127.0.0.1:${localPort}/api/desktop/${p}`, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
+    return d;
+  }
+
   // built-in runner
   const { startRunner } = await import(pathToFileURL(join(WEB, 'octa-runner.mjs')).href);
   let bundled = {};
   try { bundled = { pwCli: join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'), nodeBin: process.execPath }; } catch { }
-  const runner = startRunner({ url: `http://127.0.0.1:${localPort}`, token: '', home: dataDir, ...bundled, ...opts.runnerOpts });
+  // the desktop app runs the runner itself when signed in to the cloud; local mode runs it here
+  const runner = opts.runner === false ? { stop() { } } : startRunner({ url: `http://127.0.0.1:${localPort}`, token: '', home: dataDir, ...bundled, ...opts.runnerOpts });
 
   return {
-    url: `http://127.0.0.1:${localPort}`, dataDir,
+    url: `http://127.0.0.1:${localPort}`, dataDir, webDir: WEB, desktopApi: (p, body) => callDesktop(p, body),
     async close() { runner.stop(); remote.proc?.kill(); db.save(); local.close(); remoteSrv.close(); }
   };
 }

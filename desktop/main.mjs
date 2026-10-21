@@ -1,102 +1,188 @@
-// OCTA desktop (Electron): window + tray around the local server.
-import { app, BrowserWindow, Tray, Menu, Notification, shell, nativeImage, dialog } from 'electron';
+// OCTA desktop (Electron).
+// Signed in: the window shows the OCTA website (same account as the web version, everything syncs)
+// and this computer runs that account's bots. Offline mode: everything stays on this computer.
+import { app, BrowserWindow, Tray, Menu, Notification, shell, nativeImage, dialog, ipcMain } from 'electron';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { existsSync, appendFileSync, mkdirSync } from 'node:fs';
+import { existsSync, appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import { startServer } from './server.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const unpacked = p => p.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
+const CLOUD = (process.env.OCTA_CLOUD || 'https://octa.yzprojecttw.com').replace(/\/+$/, '');
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }   // already running: the first copy shows its window
 app.setAppUserModelId('tw.yzproject.octa');
 
-let win = null, tray = null, server = null, quitting = false;
+let win = null, tray = null, server = null, quitting = false, runner = null, runnerFor = '';
 const LOGIN_ARGS = ['--hidden'];
 const hiddenStart = process.argv.includes('--hidden') || app.getLoginItemSettings({ args: LOGIN_ARGS }).wasOpenedAtLogin;
+const icon = () => nativeImage.createFromPath(join(here, 'icon.png'));
 
-// anything that goes wrong at startup is written to octa-error.log and shown, instead of failing silently
+// keep data from installs made before the rename
+const oldDir = join(app.getPath('appData'), 'E·BOT');
+const dataDir = existsSync(join(oldDir, 'ebot.sqlite')) && !existsSync(join(app.getPath('userData'), 'ebot.sqlite')) ? oldDir : app.getPath('userData');
+const cfgFile = join(dataDir, 'desktop.json');
+const readCfg = () => { try { return JSON.parse(readFileSync(cfgFile, 'utf8')); } catch { return {}; } };
+const writeCfg = c => { try { mkdirSync(dataDir, { recursive: true }); writeFileSync(cfgFile, JSON.stringify(c, null, 2)); } catch { } };
+let cfg = readCfg();
+
+// anything that goes wrong is written to octa-error.log and shown, instead of failing silently
 function logError(where, e) {
   const line = `[${new Date().toISOString()}] ${where}: ${e?.stack || e}\n`;
-  try { mkdirSync(app.getPath('userData'), { recursive: true }); appendFileSync(join(app.getPath('userData'), 'octa-error.log'), line); } catch { }
+  try { mkdirSync(dataDir, { recursive: true }); appendFileSync(join(dataDir, 'octa-error.log'), line); } catch { }
   return line;
 }
 process.on('uncaughtException', e => logError('uncaught', e));
 process.on('unhandledRejection', e => logError('unhandled', e));
-const icon = () => nativeImage.createFromPath(join(here, 'icon.png'));
 
+// ---------- window ----------
+const progress = (p, t) => win?.webContents.executeJavaScript(`window.setP&&setP(${p},${JSON.stringify(t || '')})`).catch(() => { });
+const failSplash = t => win?.webContents.executeJavaScript(`window.fail&&fail(${JSON.stringify(t)})`).catch(() => { });
+
+function createWindow() {
+  win = new BrowserWindow({
+    width: 1180, height: 800, minWidth: 380, minHeight: 520, backgroundColor: '#12110e', title: 'OCTA｜奧克塔', icon: icon(), show: false,
+    autoHideMenuBar: true,
+    webPreferences: { contextIsolation: true, sandbox: true, preload: join(here, 'preload.cjs'), backgroundThrottling: false }
+  });
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('blob:')) return { action: 'allow' };
+    shell.openExternal(url); return { action: 'deny' };
+  });
+  win.webContents.on('will-navigate', (e, url) => {   // stay inside OCTA; other links open in the browser
+    if (!url.startsWith(CLOUD) && !(server && url.startsWith(server.url)) && !url.startsWith('file:')) { e.preventDefault(); shell.openExternal(url); }
+  });
+  win.webContents.on('did-fail-load', (_e, code, desc, url, isMain) => {
+    if (!isMain || code === -3) return;   // -3: navigation replaced by another one
+    logError('load', `${code} ${desc} ${url}`);
+    if (url.startsWith(CLOUD)) showSplash().then(() => failSplash('連不上 OCTA 雲端（' + desc + '）。請檢查網路後重試，或先用離線模式。'));
+  });
+  win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
+  win.on('closed', () => (win = null));
+  win.once('ready-to-show', () => { if (!hiddenStart) { win.show(); win.focus(); } });
+}
 function showWindow() {
-  if (!win) {
-    win = new BrowserWindow({
-      width: 1180, height: 800, minWidth: 380, minHeight: 520, backgroundColor: '#12110e', title: 'OCTA｜奧克塔', icon: icon(), show: false,
-      autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true }
-    });
-    win.loadURL(server.url);
-    win.webContents.setWindowOpenHandler(({ url }) => {
-      if (url.startsWith('blob:') || url.startsWith(server.url)) return { action: 'allow' };
-      shell.openExternal(url); return { action: 'deny' };
-    });
-    win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
-    win.on('closed', () => (win = null));
-    win.once('ready-to-show', () => { win.show(); win.focus(); });
-    win.webContents.on('did-fail-load', (_e, code, desc) => logError('load', `${code} ${desc}`));
-    return;
-  }
+  if (!win) { createWindow(); loadMain(); }
   if (win.isMinimized()) win.restore();
   win.show(); win.focus();
 }
+const showSplash = () => win.loadFile(join(here, 'splash.html'));
 
+async function loadMain() {
+  if (cfg.mode === 'local') { await win.loadURL(server.url); return; }
+  progress(70, '連線到 OCTA 雲端…');
+  try { await win.loadURL(CLOUD); }
+  catch (e) { if (!String(e).includes('ERR_ABORTED')) logError('cloud', e); }
+}
+
+// ---------- runner ----------
+async function bundledRunnerOpts() {
+  const pwCli = unpacked(join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'));
+  return {
+    home: dataDir, pwCli, nodeBin: process.execPath, nodeEnv: { ELECTRON_RUN_AS_NODE: '1' },
+    log: (...a) => console.log(new Date().toLocaleTimeString(), ...a),
+    onFatal: m => { logError('runner', m); stopRunner(); cfg.runnerToken = ''; writeCfg(cfg); },
+    onDone: (job, res) => {   // desktop notification when a bot needs you or fails
+      if (res.ok && !/✅待確認|需要使用者/.test(res.text)) return;
+      const n = new Notification({ title: `OCTA · ${job.bot.name}`, body: res.text.replace(/\s+/g, ' ').slice(0, 200), icon: icon() });
+      n.on('click', showWindow); n.show();
+    }
+  };
+}
+function stopRunner() { runner?.stop(); runner = null; runnerFor = ''; }
+async function startRunnerFor(url, token) {
+  if (runner && runnerFor === url + token) return;
+  stopRunner();
+  const { startRunner } = await import(pathToFileURL(join(server.webDir, 'octa-runner.mjs')).href);
+  runner = startRunner({ url, token, ...(await bundledRunnerOpts()) });
+  runnerFor = url + token;
+}
+
+// only OCTA's own pages may use the bridge
+const trusted = e => { const u = e.senderFrame?.url || ''; return u.startsWith(CLOUD + '/') || u === CLOUD || (server && u.startsWith(server.url)) || u.startsWith('file:'); };
+const handle = (ch, fn) => ipcMain.handle(ch, (e, ...a) => { if (!trusted(e)) throw new Error('not allowed'); return fn(e, ...a); });
+handle('octa:version', () => app.getVersion());
+handle('octa:desk', (_e, p, body) => server.desktopApi(String(p), body));
+handle('octa:connect', async (_e, webToken) => {   // the page signed in: run this account's bots on this computer
+  if (!webToken || cfg.mode === 'local') return { ok: false };
+  if (!cfg.runnerToken || cfg.runnerAccount !== webToken.slice(-12)) {
+    const r = await fetch(CLOUD + '/api/runner-token', {
+      method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + webToken },
+      body: JSON.stringify({ label: 'desktop:' + os.hostname() })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
+    cfg = { ...cfg, runnerToken: d.token, runnerAccount: webToken.slice(-12) };
+    writeCfg(cfg);
+  }
+  await startRunnerFor(CLOUD, cfg.runnerToken);
+  return { ok: true };
+});
+handle('octa:disconnect', () => { stopRunner(); cfg = { ...cfg, runnerToken: '', runnerAccount: '' }; writeCfg(cfg); return { ok: true }; });
+handle('octa:offline', async () => {
+  cfg = { ...cfg, mode: 'local' }; writeCfg(cfg);
+  stopRunner(); await startRunnerFor(server.url, '');
+  await win.loadURL(server.url); return { ok: true };
+});
+handle('octa:cloud', async () => {
+  cfg = { ...cfg, mode: 'cloud' }; writeCfg(cfg);
+  stopRunner(); await showSplash(); progress(60, '重新連線…'); await loadMain(); return { ok: true };
+});
+
+// ---------- app ----------
 app.on('second-instance', () => {
   if (server) return showWindow();
-  // still starting (or stuck): let the user restart instead of nothing happening
   const r = dialog.showMessageBoxSync({ type: 'info', title: 'OCTA', message: 'OCTA 還在啟動中。', detail: '如果一直沒有出現，按「重新啟動」。', buttons: ['重新啟動', '再等一下'], defaultId: 0, cancelId: 1 });
   if (r === 0) { app.relaunch(); app.exit(0); }
 });
 app.on('before-quit', () => (quitting = true));
 app.on('window-all-closed', e => e.preventDefault());   // keep running in the tray
 
-// keep data from installs made before the rename
-const oldDir = join(app.getPath('appData'), 'E·BOT');
-const dataDir = existsSync(join(oldDir, 'ebot.sqlite')) && !existsSync(join(app.getPath('userData'), 'ebot.sqlite')) ? oldDir : app.getPath('userData');
-
 app.whenReady().then(start).catch(e => {
   const msg = logError('start', e);
-  dialog.showErrorBox('OCTA 無法啟動', `${e?.message || e}\n\n詳細紀錄：${join(app.getPath('userData'), 'octa-error.log')}\n\n${msg.slice(0, 1500)}`);
+  dialog.showErrorBox('OCTA 無法啟動', `${e?.message || e}\n\n詳細紀錄：${join(dataDir, 'octa-error.log')}\n\n${msg.slice(0, 1500)}`);
   app.exit(1);
 });
 
 async function start() {
-  const slow = setTimeout(() => {   // startup should take a few seconds; tell the user if it doesn't
-    const r = dialog.showMessageBoxSync({ type: 'warning', title: 'OCTA', message: 'OCTA 啟動比平常久。', detail: `可以再等一下，或按「重新啟動」。\n紀錄檔：${join(app.getPath('userData'), 'octa-error.log')}`, buttons: ['重新啟動', '再等一下'], defaultId: 1, cancelId: 1 });
+  createWindow();
+  await showSplash();   // the YZ progress bar shows right away while things load
+  progress(10, '啟動 OCTA…');
+  const slow = setTimeout(() => {
+    const r = dialog.showMessageBoxSync({ type: 'warning', title: 'OCTA', message: 'OCTA 啟動比平常久。', detail: `可以再等一下，或按「重新啟動」。\n紀錄檔：${join(dataDir, 'octa-error.log')}`, buttons: ['重新啟動', '再等一下'], defaultId: 1, cancelId: 1 });
     if (r === 0) { app.relaunch(); app.exit(0); }
   }, 45000);
-  const pwCli = unpacked(join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'));
-  logError('start', 'v' + app.getVersion() + ' starting, data ' + dataDir);
+
+  progress(25, '準備本機服務…');
   server = await startServer({
     dataDir,
+    runner: false,   // started below for whichever mode is in use
     onNotify: text => new Notification({ title: 'OCTA', body: text.replace(/^【OCTA】/, '').slice(0, 240), icon: icon() }).on('click', showWindow).show(),
     hooks: {
       openFolder: () => shell.openPath(dataDir),
-      // Windows only reports the entry when asked with the same args it was registered with
-      getAutostart: () => app.getLoginItemSettings({ args: LOGIN_ARGS }).openAtLogin,
+      getAutostart: () => app.getLoginItemSettings({ args: LOGIN_ARGS }).openAtLogin,   // Windows needs the same args to find the entry
       setAutostart: on => app.setLoginItemSettings({ openAtLogin: on, args: LOGIN_ARGS, path: process.execPath })
-    },
-    // run the bundled Playwright MCP with Electron's own Node, so users don't need Node installed
-    runnerOpts: { pwCli, nodeBin: process.execPath, nodeEnv: { ELECTRON_RUN_AS_NODE: '1' } }
+    }
   });
-
+  progress(50, '準備機器人…');
+  if (cfg.mode === 'local') await startRunnerFor(server.url, '');
+  else if (cfg.runnerToken) await startRunnerFor(CLOUD, cfg.runnerToken);   // keep working before the page finishes loading
   clearTimeout(slow);
+
   tray = new Tray(icon().resize({ width: 16, height: 16 }));
   tray.setToolTip('OCTA｜奧克塔');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '開啟 OCTA', click: showWindow },
     { label: '打開資料夾', click: () => shell.openPath(dataDir) },
     { type: 'separator' },
-    { label: '結束（機器人會停止工作）', click: async () => { quitting = true; await server.close(); app.quit(); } }
+    { label: '結束（機器人會停止工作）', click: async () => { quitting = true; stopRunner(); await server.close(); app.quit(); } }
   ]));
   tray.on('click', showWindow);
-  if (!hiddenStart) showWindow();
-  else new Notification({ title: 'OCTA', body: '已在背景啟動，點右下角章魚圖示打開。', icon: icon() }).on('click', showWindow).show();
+
+  await loadMain();
+  if (hiddenStart) new Notification({ title: 'OCTA', body: '已在背景啟動，點右下角章魚圖示打開。', icon: icon() }).on('click', showWindow).show();
 }

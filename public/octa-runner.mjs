@@ -9,7 +9,7 @@
 // The desktop app imports startRunner() instead.
 // Requires: Node 18+, Claude Code (`claude` logged in with /login), Google Chrome.
 
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn, spawnSync, execFile } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, extname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -138,22 +138,25 @@ function decode(chunks) {
   return utf;
 }
 const installed = {};
-function has(bin, fresh) {   // a missing command can't be told apart from a failing one after the fact, so check first
+// async on purpose: a blocking check freezes the desktop app's window
+export function has(bin, fresh) {   // a missing command can't be told apart from a failing one after the fact, so check first
   const c = installed[bin];
-  if (!fresh && c && (c.ok || Date.now() - c.t < 60000)) return c.ok;
-  const r = spawnSync(WIN ? 'where' : 'which', [bin], { windowsHide: true });
-  installed[bin] = { ok: r.status === 0, t: Date.now() };
-  return r.status === 0;
+  if (!fresh && c && (c.ok || Date.now() - c.t < 60000)) return Promise.resolve(c.ok);
+  return new Promise(ok => execFile(WIN ? 'where' : 'which', [bin], { windowsHide: true, timeout: 10000 }, err => {
+    installed[bin] = { ok: !err, t: Date.now() };
+    ok(!err);
+  }));
 }
 let lastReport = 0;
-const engineReport = () => {   // tell the app which AI tools this computer has, about once a minute
+const engineReport = async () => {   // tell the app which AI tools this computer has, about once a minute
   if (Date.now() - lastReport < 60000) return undefined;
   lastReport = Date.now();
-  return Object.fromEntries(Object.entries(ENGINES).map(([k, e]) => [k, has(e.bin, true)]));
+  const keys = Object.keys(ENGINES), oks = await Promise.all(keys.map(k => has(ENGINES[k].bin, true)));
+  return Object.fromEntries(keys.map((k, i) => [k, oks[i]]));
 };
-function spawnCli(bin, args, dir, input) {
+async function spawnCli(bin, args, dir, input) {
+  if (!(await has(bin))) return { code: -1, out: '', err: '', missing: true };
   return new Promise(resolve => {
-    if (!has(bin)) return resolve({ code: -1, out: '', err: '', missing: true });
     const child = spawn(bin, WIN ? args.map(q) : args, { cwd: dir, shell: WIN, windowsHide: true });
     const out = [], err = [];
     let killed = false;
@@ -224,6 +227,7 @@ async function chatJob(job) {
   const page = (res.text.match(/📍\s*目前頁面[:：]\s*(\S+)/) || [])[1];
   await api('runner/done', { id: job.id, ok: res.ok, text: res.text, page });
   log(`${res.ok ? '✓' : '✗'} ${job.bot.name}`);
+  try { cfg.onDone?.(job, res); } catch { }
 }
 
 async function testJob(job) {
@@ -259,7 +263,7 @@ async function tick() {
   ticking = true;
   try {
     while (active < MAX && !stopped) {
-      const { job } = await api('runner/next', { engines: engineReport() });
+      const { job } = await api('runner/next', { engines: await engineReport() });
       failures = 0;
       if (!job) break;
       active++;

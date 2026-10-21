@@ -915,8 +915,10 @@ export async function onRequest({ request: req, env, params }) {
       return J({ ok: true });
     }
     if (path === 'runner-token' && m === 'POST') {
-      await db.prepare("DELETE FROM sessions WHERE user_id=? AND kind='runner'").bind(U).run();
-      return J({ token: await newSession(db, U, 'runner', 'runner') });
+      // each computer keeps its own key; making a new one only replaces the key with the same label
+      const label = clean(body.label, 60) || 'runner';
+      await db.prepare("DELETE FROM sessions WHERE user_id=? AND kind='runner' AND IFNULL(label,'runner')=?").bind(U, label).run();
+      return J({ token: await newSession(db, U, 'runner', label) });
     }
     return err('找不到這個 API', 404);
   } catch (e) {

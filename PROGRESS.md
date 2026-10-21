@@ -25,6 +25,11 @@
 - [x] 多語：i18n-core.js 以字典翻譯畫面文字（[data-u] 使用者內容不翻）；en / ja 手寫、zh-CN 由 OpenCC 轉換；範本依語言建立；機器人依語言回覆（settings.lang）
 - [x] 執行器 v8（回覆語言）
 - [x] 機器人頭貼可選 Emoji（bots.avatar；24 個常用 + 自訂；範本附預設頭貼）
+## 桌面版 2（帳號同步、效能）
+- [x] 桌面版預設登入雲端帳號：視窗載入 octa.yzprojecttw.com，preload 橋接（octaDesktop），登入後自動取得本機專屬執行器金鑰（label desktop:主機名）並在主程序執行；可切換離線模式（本機 SQLite）
+- [x] runner-token 依 label 分開，不會把其他電腦的金鑰作廢
+- [x] 效能：AI 工具偵測改非同步並快取（原本 spawnSync 會卡住整個程式）、本機資料庫存檔改 3 秒批次
+- [x] YZ 進度條：啟動畫面（splash）、網頁載入遮罩、操作中頂部進度條，重要操作期間鎖住畫面
 ## 待辦
 - [x] 公版清理：範本改通用（助理、研究、門市、民宿），移除個人化字樣；加入「設定指引」（無機器人時自動開啟，可試跑）；README 重寫
 - [x] 倉庫已公開；Release v1.5.0 自動發布 OCTA-Setup.exe（固定網址 releases/latest/download/OCTA-Setup.exe）

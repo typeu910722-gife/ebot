@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>OCTA</title>
+<style>
+:root{--bg:#12110e;--ink:#efe8da;--mute:#9b927f;--faint:#5f584c;--gold:#c9a96a;--gold2:#e4cb93;--line:rgba(201,169,106,.22)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;-webkit-user-select:none;user-select:none;overflow:hidden}
+.wrap{height:100%;display:grid;place-items:center}
+.box{display:grid;justify-items:center;gap:18px;width:min(360px,80vw)}
+img{width:96px;height:96px;border-radius:22px;animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.04);filter:drop-shadow(0 0 14px rgba(228,203,147,.35))}}
+.brand{font-family:"Cormorant Garamond",Georgia,serif;letter-spacing:.35em;color:var(--gold);font-size:13px}
+.yz{width:100%;display:grid;gap:8px}
+.track{position:relative;height:6px;border-radius:99px;background:rgba(239,232,218,.08);overflow:hidden}
+.fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:99px;background:linear-gradient(90deg,#8d7344,var(--gold),var(--gold2));transition:width .35s ease}
+.fill::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:shine 1.4s linear infinite}
+@keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.row{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+.yzm{font-family:Georgia,serif;font-weight:700;color:var(--gold2);letter-spacing:.08em}
+.err{display:none;text-align:center;font-size:13px;color:#e08a6d;line-height:1.7}
+.btns{display:none;gap:8px}
+button{font:inherit;border-radius:10px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:none;color:var(--gold2)}
+button.p{background:var(--gold);color:#12110e;border:0}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head>
+<body><div class="wrap"><div class="box">
+  <img src="icon.png" alt="">
+  <div class="brand">OCTA｜奧克塔</div>
+  <div class="yz"><div class="track"><div class="fill" id="fill"></div></div>
+    <div class="row"><span id="msg">準備中…</span><span><span class="yzm">YZ</span> <span id="pct">0%</span></span></div></div>
+  <div class="err" id="err"></div>
+  <div class="btns" id="btns"><button class="p" id="retry">重試</button><button id="offline">先用離線模式</button></div>
+</div></div>
+<script>
+// main process calls setP(percent, text) and fail(text)
+function setP(p,t){document.getElementById('fill').style.width=p+'%';document.getElementById('pct').textContent=Math.round(p)+'%';if(t)document.getElementById('msg').textContent=t}
+function fail(t){document.getElementById('err').style.display='block';document.getElementById('err').textContent=t;document.getElementById('btns').style.display='flex'}
+document.getElementById('retry').onclick=()=>window.octaDesktop.useCloud();
+document.getElementById('offline').onclick=()=>window.octaDesktop.useOffline();
+</script></body></html>
