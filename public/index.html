@@ -11,7 +11,7 @@
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
 <script src="/i18n-dict.js?v=5"></script>
-<script src="/i18n-core.js?v=2"></script>
+<script src="/i18n-core.js?v=3"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500&display=swap">
@@ -571,6 +571,7 @@ async function refresh(){
     const prevTop=S.loaded?topBotId():null;
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
       last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{}});
+    if(d.lang&&!I18N.chosen()&&d.lang!==I18N.lang)I18N.set(d.lang);   // the language saved with the account
     if(cur&&!conv(cur))cur=null;
     if(cur)await loadMsgs(cur,'new');
     if(prevTop!==null)notifyNew(prevTop);
