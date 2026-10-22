@@ -206,9 +206,13 @@ async function start() {
       getExtToken: () => cfg.extToken || '',
       setExtToken: t => { cfg = { ...cfg, extToken: t }; writeCfg(cfg); },
       getAutostart: () => app.getLoginItemSettings({ args: LOGIN_ARGS }).openAtLogin,   // Windows needs the same args to find the entry
-      setAutostart: on => app.setLoginItemSettings({ openAtLogin: on, args: LOGIN_ARGS, path: process.execPath })
+      setAutostart: on => { app.setLoginItemSettings({ openAtLogin: on, args: LOGIN_ARGS, path: process.execPath }); cfg = { ...cfg, autostartChosen: true }; writeCfg(cfg); }
     }
   });
+  // start with Windows by default (after installing or updating), unless the user turned it off themselves
+  if (app.isPackaged && !cfg.autostartChosen && !app.getLoginItemSettings({ args: LOGIN_ARGS }).openAtLogin) {
+    try { app.setLoginItemSettings({ openAtLogin: true, args: LOGIN_ARGS, path: process.execPath }); } catch (e) { logError('autostart', e); }
+  }
   progress(50, '準備機器人…');
   if (cfg.mode === 'local') await startRunnerFor(server.url, '');
   else if (cfg.runnerToken) await startRunnerFor(CLOUD, cfg.runnerToken);   // keep working before the page finishes loading

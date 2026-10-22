@@ -1,5 +1,18 @@
 [
  {
+  "v": "2.0.4",
+  "date": "2026-10-22",
+  "notes": [
+   "安裝或更新後預設開機自動啟動（自己在設定關掉過的會尊重你的選擇）"
+  ],
+  "notes_en": [
+   "Starts with Windows by default after installing or updating (unless you turned it off yourself)"
+  ],
+  "notes_ja": [
+   "インストール・更新後は既定で Windows 起動時に自動起動（自分でオフにした場合はそのまま）"
+  ]
+ },
+ {
   "v": "2.0.3",
   "date": "2026-10-22",
   "notes": [
