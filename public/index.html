@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=9"></script>
+<script src="/i18n-dict.js?v=10"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -362,6 +362,7 @@ pre.notes{margin:0;white-space:pre-wrap;font:inherit;font-size:13px;color:var(--
 .more3{border:0;background:none;color:var(--gold2);font-size:12px;padding:4px 2px}
 .el{font-variant-numeric:tabular-nums;color:var(--gold2)}
 .tlearn{color:var(--faint)}
+.tk{color:var(--gold2);font-variant-numeric:tabular-nums}
 .prog{margin-left:8px;color:var(--mute)}
 .prog::before{content:'· '}
 .quick{display:flex;gap:6px;flex-wrap:wrap;padding:0 20px 6px}
@@ -573,7 +574,7 @@ async function refresh(){
   try{const d=await api('state');if(!S.loaded)boot.set(85,'整理畫面…');
     const prevTop=S.loaded?topBotId():null;
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
-      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120});
+      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120,tokens:d.tokens||{}});
     if(cur&&!conv(cur))cur=null;
     if(cur)await loadMsgs(cur,'new');
     if(prevTop!==null)notifyNew(prevTop);
@@ -617,6 +618,7 @@ function markSeen(id){const ids=[...convMsgs(id).filter(m=>!m.tmp).map(m=>m.id),
 const setHTML=(el,h)=>{if(el._h!==h){el._h=h;el.innerHTML=h;return true}return false};
 const hm=ts=>ts?new Date(ts).toLocaleTimeString(I18N.lang,{hour:'2-digit',minute:'2-digit'}):'';
 const busyIn=id=>S.busy.filter(b=>b.conv===id);
+const fmtTok=n=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+'M':n>=1e3?(n/1e3).toFixed(n>=1e4?0:1)+'K':String(n);
 const elapsed=t=>{const s=Math.max(0,Math.round((Date.now()-t)/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 setInterval(()=>document.querySelectorAll('.el[data-since]').forEach(e=>e.textContent=elapsed(+e.dataset.since)),1000);
 const lastOf=id=>S.last.find(x=>x.conv===id);
@@ -714,7 +716,10 @@ function render(scroll){
   $('pav').className='av'+(g?' grp':'');if(g)$('pav').textContent=c.members.length;else $('pav').innerHTML=avOf(c.id);$('pav').toggleAttribute('data-u',!g)
   $('pname').textContent=c.name;
   const fn=S.folders.find(f=>f.id===c.folder)?.name,rn=S.routines.filter(r=>r.conv===cur&&r.enabled).length;
-  $('psub').innerHTML=(fn?`<span data-u>${esc(fn)}</span> · `:'')+(g?`<span data-u>${esc(c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'))}</span>`:esc((ENG[c.engine]||ENG.claude).n)+(c.model?` <span data-u>${esc(c.model)}</span>`:''))+(rn?` · <span>${esc(I18N.t('例行任務'))} ${rn}</span>`:'');
+  const tkOf=ids=>ids.reduce((a,id)=>{const x=(S.tokens||{})[id];return x?{t:a.t+(x.t||0),n:a.n+x.n,known:a.known||x.t!=null}:a},{t:0,n:0,known:false});
+  const tk=tkOf(g?c.members:[c.id]);
+  const tkHtml=tk.n?` · <span class="tk" title="${esc(I18N.t('今天執行'))} ${tk.n} ${esc(I18N.t('次'))}">${tk.known?`${I18N.t('今天')} ${fmtTok(tk.t)} tokens`:`${I18N.t('今天')} ${tk.n} ${I18N.t('次')}`}</span>`:'';
+  $('psub').innerHTML=(fn?`<span data-u>${esc(fn)}</span> · `:'')+(g?`<span data-u>${esc(c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'))}</span>`:esc((ENG[c.engine]||ENG.claude).n)+(c.model?` <span data-u>${esc(c.model)}</span>`:''))+(rn?` · <span>${esc(I18N.t('例行任務'))} ${rn}</span>`:'')+tkHtml;
   const off=!S.runnerOnline&&!CFG.local;$('offb').hidden=!off;
   if(off)setHTML($('offb'),`<span>⚠ 主機電腦離線，訊息會先排隊，電腦連上後自動處理。</span><button type="button" class="ghost" onclick="openGuide()">怎麼連上？</button>`);
   setHTML($('task'),'<em>'+(g?'協作規則':'指定任務')+'</em>'+(c.task?'<span data-u>'+esc(c.task)+'</span>':'<span class="tlearn">還沒有指定任務：直接傳訊息告訴它要做什麼，它會自己整理並填進來。</span>'));

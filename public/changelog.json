@@ -6,18 +6,21 @@
    "建立機器人可以不先寫任務：直接傳訊息告訴它要做什麼，它會自己整理並自動填入「指定任務」，之後補充做法也會自動更新",
    "在對話裡說「每天幾點做什麼」，機器人會自動新增或更新例行任務",
    "機器人每次工作前會知道自己瀏覽器開著哪些分頁；問「你看到什麼」時會先去看再回答",
+   "對話上方顯示每個機器人今天消耗的 token（群組顯示成員合計；Claude、ChatGPT 有數字，其他 AI 顯示執行次數）",
    "安裝或更新後預設開機自動啟動（自己在設定關掉過的會尊重你的選擇）"
   ],
   "notes_en": [
    "Bots no longer need a task up front: tell it what to do in the chat and it writes and keeps its own task up to date",
    "Say “every day at … do …” in the chat and the bot creates or updates the routine itself",
    "Bots know which tabs their browser has open before each task, and look before answering “what do you see?”",
+   "The chat header shows the tokens each bot used today (groups show the members' total; Claude and ChatGPT report numbers, other AIs show run counts)",
    "Starts with Windows by default after installing or updating (unless you turned it off yourself)"
   ],
   "notes_ja": [
    "ボットは最初にタスクを書かなくて OK：チャットで伝えると自分でタスクにまとめ、追加の説明も自動で反映",
    "チャットで「毎日○時に…」と伝えると、ボットが定期タスクを自動で追加・更新",
    "ボットは作業前にブラウザで開いているタブを把握し、「何が見える？」には確認してから回答",
+   "チャット上部に各ボットの今日の使用トークンを表示（グループはメンバー合計。Claude と ChatGPT は数値、他の AI は実行回数）",
    "インストール・更新後は既定で Windows 起動時に自動起動（自分でオフにした場合はそのまま）"
   ]
  },

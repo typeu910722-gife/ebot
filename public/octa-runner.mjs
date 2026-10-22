@@ -344,6 +344,8 @@ async function spawnCli(bin, args, dir, input, opts = {}) {
     child.stdin.end(input);
   });
 }
+// tokens a run used: Claude reports them in its result; Codex prints "tokens used"
+const claudeTokens = u => (u ? (u.input_tokens || 0) + (u.output_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) : null);
 const toml = v => (Array.isArray(v) ? '[' + v.map(x => JSON.stringify(String(x))).join(',') + ']' : JSON.stringify(String(v)));
 // the model Ollama should use: the bot's, or the first one downloaded on this computer
 function ollamaModel(model) {
@@ -365,6 +367,7 @@ function describeTool(name, input = {}) {
   })[n] || (n.startsWith('browser_') ? '操作瀏覽器' : `使用 ${n}`);
 }
 async function runEngine(engine, prompt, b, model, live = {}) {
+  let tokens = null;
   const { dir, server } = b;
   const store = storeDir();
   const m = (flag) => (model ? [flag, model] : []);
@@ -415,14 +418,15 @@ async function runEngine(engine, prompt, b, model, live = {}) {
           }
         }
       });
-      if (result) { text = String(result.result || '').trim(); if (result.is_error && r.code === 0) r.code = 1; }
+      if (result) { text = String(result.result || '').trim(); if (result.is_error && r.code === 0) r.code = 1; tokens = claudeTokens(result.usage); }
       else if (r.out && r.out.trim().startsWith('{')) text = '';   // stream with no result: fall back to the error output
     }
   }
   text = (text || r.out || '').replace(/\x1b\[[0-9;]*m/g, '').trim();
   const E = ENGINES[engine] || ENGINES.claude;
   if (r.missing) return { ok: false, text: `⚠ 這台電腦沒有安裝 ${E.label}。請到「AI 連線」安裝並登入（${E.site}），或在任務設定把這個機器人改用其他 AI。` };
-  if (r.code === 0 && text) return { ok: true, text };
+  if (tokens == null) { const tm = String((r.err || '') + (r.out || '')).match(/tokens used[:\s]*([\d,]+)/i); if (tm) tokens = +tm[1].replace(/,/g, ''); }
+  if (r.code === 0 && text) return { ok: true, text, tokens };
   return { ok: false, text: `⚠ ${E.label} 執行失敗：` + ((r.err || '').trim() || (r.out || '').trim() || '結束碼 ' + r.code).slice(-1500) };
 }
 
@@ -476,7 +480,7 @@ async function chatJob(job) {
     if (live) { if (live.url && !/^(about:|chrome:)/.test(live.url)) page = live.url; if (live.jpeg) await saveShot(live.jpeg, '.jpeg'); }
     else { const shot = newestImage(dir, start); if (shot) await saveShot(readFileSync(shot.p), extname(shot.p).toLowerCase()); }
   } catch (e) { log('截圖儲存失敗：' + e.message); }
-  await api('runner/done', { id: job.id, ok: res.ok, text: res.text, page, files: res.ok ? newFiles(join(here, '輸出'), start) : [] });
+  await api('runner/done', { id: job.id, ok: res.ok, text: res.text, page, tokens: res.tokens ?? null, files: res.ok ? newFiles(join(here, '輸出'), start) : [] });
   log(`${res.ok ? '✓' : '✗'} ${job.bot.name}`);
   if (['claude', 'codex'].includes(job.bot.engine || 'claude')) lastUsage = 0;   // refresh how much is left
   try { cfg.onDone?.(job, res); } catch { }
@@ -513,7 +517,7 @@ function startSession(job, b) {
         if (c.type === 'tool_use') s.turn.progress?.(describeTool(c.name, c.input));
         else if (c.type === 'text' && c.text?.trim()) s.turn.progress?.('整理回覆中');
       }
-      if (e.type === 'result') { const t = s.turn; s.turn = null; t.done({ ok: !e.is_error && !!String(e.result || '').trim(), text: String(e.result || '').trim() || '⚠ Claude Code 沒有回覆內容' }); }
+      if (e.type === 'result') { const t = s.turn; s.turn = null; t.done({ ok: !e.is_error && !!String(e.result || '').trim(), text: String(e.result || '').trim() || '⚠ Claude Code 沒有回覆內容', tokens: claudeTokens(e.usage) }); }
     }
   });
   child.stderr.on('data', d => { s.err.push(d); if (s.err.length > 50) s.err.shift(); });

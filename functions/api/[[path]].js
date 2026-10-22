@@ -140,12 +140,12 @@ const MIGRATIONS = [
   'CREATE INDEX IF NOT EXISTS file_user ON files(user_id, loc)', 'CREATE INDEX IF NOT EXISTS ses_user ON sessions(user_id, kind)', 'CREATE INDEX IF NOT EXISTS msg_conv ON messages(user_id, conv, id)',
   'CREATE TABLE IF NOT EXISTS chunks (file_id TEXT NOT NULL, n INTEGER NOT NULL, data TEXT NOT NULL, ts INTEGER NOT NULL, PRIMARY KEY (file_id, n))',
   'CREATE TABLE IF NOT EXISTS logins (k TEXT PRIMARY KEY, fails INTEGER NOT NULL, until INTEGER NOT NULL)',
-  'ALTER TABLE jobs ADD COLUMN progress TEXT'
+  'ALTER TABLE jobs ADD COLUMN progress TEXT', 'ALTER TABLE jobs ADD COLUMN tokens INTEGER'
 ];
 let schemaOk = false;
 async function ensureSchema(db) {
   if (schemaOk) return;
-  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress FROM jobs LIMIT 0').all(); schemaOk = true; return; } catch { }
+  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress, tokens FROM jobs LIMIT 0').all(); schemaOk = true; return; } catch { }
   for (const sql of MIGRATIONS) { try { await db.prepare(sql).run(); } catch { } }
   schemaOk = true;
 }
@@ -883,7 +883,8 @@ async function route({ request: req, env, params }) {
             return '';
           }).trim() || '（已設定例行任務）';
         }
-        await db.prepare('UPDATE jobs SET status=?, finished=? WHERE id=?').bind(good ? 'done' : 'error', now(), job.id).run();
+        const tk = Number.isFinite(+body.tokens) && body.tokens !== null ? Math.max(0, Math.round(+body.tokens)) : null;
+        await db.prepare('UPDATE jobs SET status=?, finished=?, tokens=? WHERE id=?').bind(good ? 'done' : 'error', now(), tk, job.id).run();
         // files the bot made in its 輸出 folder become attachments of the reply
         const outs = [];
         for (const f of (Array.isArray(body.files) ? body.files : []).slice(0, 8)) {
@@ -982,7 +983,9 @@ async function route({ request: req, env, params }) {
       const last = { results: lasts.flatMap(r => r.results) };
       const h = env.isLocal ? null : await hostInfo(db, U);
       const st = await getSettings(db, U);
-      return J({
+      const { date } = localNow(env), dayStart = Date.parse(date + 'T00:00:00Z') - (+env.TZ_OFFSET_MIN || 0) * 60000;
+      const tok = (await db.prepare('SELECT bot_id, SUM(tokens) AS t, COUNT(*) AS n FROM jobs WHERE user_id=? AND created>=? AND kind=\'chat\' GROUP BY bot_id').bind(U, dayStart).all()).results;
+      return J({ tokens: Object.fromEntries(tok.map(r => [r.bot_id, { t: r.t, n: r.n }])),
         me: me.name, local: me.kind === 'local', rev: rev.results[0]?.rev ?? 0,
         engines: h ? h.engines : JSON.parse((await db.prepare('SELECT engines FROM users WHERE id=?').bind(U).first())?.engines || 'null'),
         runnerOnline: env.runnerOnline ? env.runnerOnline() : h.online,

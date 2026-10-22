@@ -92,7 +92,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   depth INTEGER NOT NULL DEFAULT 0, -- bot-to-bot question hops
   finished INTEGER,
   result TEXT,                   -- for kind='test' (AI connection test)
-  progress TEXT                  -- what the bot is doing right now (shown while it works)
+  progress TEXT,                 -- what the bot is doing right now (shown while it works)
+  tokens INTEGER                 -- tokens the run used (when the AI reports it)
 );
 CREATE INDEX IF NOT EXISTS job_user ON jobs(user_id, status, id);
 CREATE TABLE IF NOT EXISTS shots (   -- latest browser screenshot per bot
