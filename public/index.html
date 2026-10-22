@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=16"></script>
+<script src="/i18n-dict.js?v=17"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -891,8 +891,8 @@ const ENG={
     win:'irm https://claude.ai/install.ps1 | iex',mac:'curl -fsSL https://claude.ai/install.sh | bash',login:'claude',hint:'出現畫面後輸入 /login，選 Claude 訂閱帳號',m:'例如 sonnet、opus'},
   codex:{n:'ChatGPT',full:'ChatGPT（Codex CLI）',good:'企劃規劃、邏輯推理、資料分析、創意與圖片生成',who:'有 ChatGPT Plus／Pro 等方案',cost:'用你的 ChatGPT 訂閱',site:'https://developers.openai.com/codex/cli',quota:'plan',
     npm:'@openai/codex',login:'codex login',hint:'瀏覽器會打開，用 ChatGPT 帳號登入',m:'例如 gpt-5.5'},
-  gemini:{n:'Gemini',full:'Gemini（Gemini CLI）',tag:'免費額度',good:'Google 服務整合、長文件分析、多模態理解、資料研究',who:'有 Google 帳號就能用',cost:'個人 Google 帳號有每日免費額度',site:'https://github.com/google-gemini/gemini-cli',quota:'count',limit:'個人帳號每天約 1000 次',
-    npm:'@google/gemini-cli',login:'gemini',hint:'選 Login with Google，登入後輸入 /quit 離開',m:'例如 gemini-3-pro'},
+  gemini:{n:'Gemini',full:'Gemini（Antigravity CLI）',tag:'免費額度',good:'Google 服務整合、長文件分析、多模態理解、資料研究',who:'有 Google 帳號就能用',cost:'免費 Google 帳號也能用，AI Pro／Ultra 額度更多',site:'https://antigravity.google/docs/cli',quota:'count',limit:'在 agy 裡輸入 /usage 可查剩餘量',
+    win:'irm https://antigravity.google/cli/install.ps1 | iex',mac:'curl -fsSL https://antigravity.google/cli/install.sh | bash',login:'agy',hint:'瀏覽器會打開，用 Google 帳號登入，完成後輸入 /quit 離開',m:'例如 gemini-3.8-flash-medium'},
   copilot:{n:'GitHub Copilot',full:'GitHub Copilot（GPT／Claude／Gemini）',good:'程式碼補全、日常編碼、程式碼審查、測試輔助',who:'有 GitHub Copilot 訂閱',cost:'一個訂閱可選多家模型',site:'https://github.com/github/copilot-cli',quota:'count',
     npm:'@github/copilot',login:'copilot',hint:'出現畫面後輸入 /login，用 GitHub 帳號登入',m:'例如 gpt-5.5、claude-sonnet-4.6'},
   cursor:{n:'Cursor',full:'Cursor（Cursor CLI）',good:'多檔案修改、程式重構、專案除錯、AI Agent 開發',who:'有 Cursor 訂閱',cost:'用你的 Cursor 訂閱',site:'https://cursor.com/cli',quota:'count',
@@ -906,7 +906,7 @@ const ENG={
   opencode:{n:'Ollama',full:'Ollama 本機模型（免費）',tag:'免費',good:'本機部署開源模型、私有化 AI、中文處理、程式開發',who:'想用免費的開源模型，資料不離開電腦',cost:'免費，在你的電腦上執行（需要較好的顯示卡或 16GB 以上記憶體）',site:'https://ollama.com',quota:'local',
     npm:'opencode-ai',pre:'winget install -e --id Ollama.Ollama',login:'ollama pull qwen3',hint:'會先安裝 Ollama，再下載 qwen3 模型（約 5 GB）',m:'例如 qwen3、gemma3、llama3.1（空白就用電腦上第一個模型）'}};
 // model menu: fixed lists for AIs that can't list their models; the host computer reports the rest
-const MODELS={claude:['sonnet','opus','haiku'],codex:['gpt-5-codex','gpt-5.5','gpt-5.4','gpt-5.4-mini'],gemini:['gemini-3-pro-preview','gemini-3-flash-preview','gemini-2.5-pro','gemini-2.5-flash'],
+const MODELS={claude:['sonnet','opus','haiku'],codex:['gpt-5-codex','gpt-5.5','gpt-5.4','gpt-5.4-mini'],gemini:[],
   grok:[],grokbot:[],copilot:[],cursor:[],qwen:['qwen3-coder-plus'],opencode:[]};
 const modelsFor=k=>[...new Set([...(MODELS[k]||[]),...((S.models||{})[k]||[])])];
 const engState=k=>S.engines?(S.engines[k]?'ok':'no'):'unknown';
@@ -1359,7 +1359,7 @@ async function openAI(focus){
     const steps=desk?`<div class="row2"><button class="btn" data-install="${k}">${stt==='ok'?'重新安裝':'一鍵安裝並登入'}</button><button class="ghost" data-test="${k}" ${online?'':'disabled'}>測試</button>${imp}</div>
       <p>${stt==='ok'?'已安裝。如果測試失敗，按「重新登入」。':'會打開一個黑色視窗自動安裝，接著：'+esc(e.hint)+'。'}${e.npm?' 這個工具需要先裝 <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a>。':''}</p>`
      :`<div class="row2"><button class="btn" data-rinstall="${k}" ${online?'':'disabled'}>${stt==='ok'?'在主機電腦重新安裝':'在主機電腦一鍵安裝'}</button><button class="ghost" data-test="${k}" ${online?'':'disabled'}>測試</button>${imp}</div>
-      <p>${online?'主機電腦會自動打開安裝視窗並安裝，裝好這裡會變成「已連接」。登入步驟要在主機電腦上完成：'+esc(e.hint)+'。':'主機電腦連上 OCTA 後才能安裝和測試。'}</p><p class="fade" data-rmsg="${k}">${esc(rmsgs[k]||'')}</p>
+      <p>${online?`主機電腦會自動打開安裝視窗並安裝，裝好這裡會變成「已連接」。登入步驟要在主機電腦上完成：<span>${esc(e.hint)}</span>`:'主機電腦連上 OCTA 後才能安裝和測試。'}</p><p class="fade" data-rmsg="${k}">${esc(rmsgs[k]||'')}</p>
       <details class="manual"><summary>改成手動安裝</summary><ol class="ol">${pre}<li>安裝（PowerShell）：<pre class="code">${esc(aiInstallCmd(e,'win'))}</pre>${e.npm?'':`<small>Mac：<code>${esc(aiInstallCmd(e,'mac'))}</code></small>`}</li>
       <li>${e.pre?'下載模型':'登入'}：輸入 <code>${esc(e.login)}</code>，${esc(e.hint)}</li>
       <li>回到這裡按「測試」</li></ol></details>`;

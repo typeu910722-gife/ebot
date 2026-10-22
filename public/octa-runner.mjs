@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '12.5';
+export const VERSION = '12.6';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -108,6 +108,7 @@ function botDir(id, mode = 'own', port = 0) {
   // the same browser server, in each CLI's own config format
   const put = (f, o) => { mkdirSync(dirname(join(dir, f)), { recursive: true }); writeFileSync(join(dir, f), JSON.stringify(o, null, 2)); };
   put('.gemini/settings.json', { mcpServers: { browser: { ...server, timeout: 60000, trust: true } } });
+  put('.agents/mcp_config.json', { mcpServers: { browser: { ...server } } });   // Antigravity CLI (agy)
   put('.qwen/settings.json', { mcpServers: { browser: { ...server, timeout: 60000, trust: true } } });
   put('.cursor/mcp.json', { mcpServers: { browser: server } });
   put('.mcp.json', { mcpServers: { browser: server } });   // Grok CLI reads the project .mcp.json
@@ -208,7 +209,7 @@ function buildPrompt(job, here) {
 }
 
 // what the bot runs on and how much of the plan is left, for the prompt
-const PLAN_NOTE = { grokbot: 'Grok Bot 方案（在 xAI 雲端電腦上工作，用量看 Grok Bot App 的 Usage）', grok: 'Grok（xAI）帳號（官方沒有提供剩餘量查詢）', gemini: '個人 Google 帳號的免費額度約每天 1000 次（Google 沒有提供剩餘量查詢）', copilot: 'GitHub Copilot 訂閱（GitHub 沒有提供剩餘量查詢）', cursor: 'Cursor 訂閱（Cursor 沒有提供剩餘量查詢）', qwen: 'Qwen 帳號（官方沒有提供剩餘量查詢）', opencode: '電腦本機的 Ollama 模型，免費、沒有流量限制' };
+const PLAN_NOTE = { grokbot: 'Grok Bot 方案（在 xAI 雲端電腦上工作，用量看 Grok Bot App 的 Usage）', grok: 'Grok（xAI）帳號（官方沒有提供剩餘量查詢）', gemini: 'Google 帳號的 Antigravity 額度（免費帳號也能用；在 agy 裡輸入 /usage 可查剩餘量）', copilot: 'GitHub Copilot 訂閱（GitHub 沒有提供剩餘量查詢）', cursor: 'Cursor 訂閱（Cursor 沒有提供剩餘量查詢）', qwen: 'Qwen 帳號（官方沒有提供剩餘量查詢）', opencode: '電腦本機的 Ollama 模型，免費、沒有流量限制' };
 // the tabs open in the bot's browser right now (the user may have just opened or signed in to one)
 function tabsNow(job) {
   const t = job.bot.tabs;
@@ -238,7 +239,10 @@ export const ENGINES = {
     install: { win: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://claude.ai/install.ps1 | iex"', mac: 'curl -fsSL https://claude.ai/install.sh | bash' },
     paths: { win: '%USERPROFILE%\\.local\\bin', mac: '$HOME/.local/bin' } },
   codex: { label: 'Codex CLI（ChatGPT）', bin: 'codex', site: 'https://developers.openai.com/codex/cli', npm: '@openai/codex', login: 'codex login', loginHint: '瀏覽器會打開，用 ChatGPT 帳號登入' },
-  gemini: { label: 'Gemini CLI', bin: 'gemini', site: 'https://github.com/google-gemini/gemini-cli', npm: '@google/gemini-cli', login: 'gemini', loginHint: '選「Login with Google」，登入後輸入 /quit 離開' },
+  // Google moved personal accounts from Gemini CLI to the Antigravity CLI (agy) in June 2026; the key stays 'gemini' so existing bots keep working
+  gemini: { label: 'Antigravity CLI（Gemini）', bin: 'agy', site: 'https://antigravity.google/docs/cli', login: 'agy', loginHint: '瀏覽器會打開，用 Google 帳號登入（免費帳號也可以），完成後輸入 /quit 離開',
+    install: { win: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://antigravity.google/cli/install.ps1 | iex"', mac: 'curl -fsSL https://antigravity.google/cli/install.sh | bash' },
+    paths: { win: '%USERPROFILE%\\.local\\bin', mac: '$HOME/.local/bin' } },
   copilot: { label: 'GitHub Copilot CLI', bin: 'copilot', site: 'https://github.com/github/copilot-cli', npm: '@github/copilot', login: 'copilot', loginHint: '視窗出現後輸入 /login，用 GitHub 帳號登入' },
   cursor: { label: 'Cursor CLI', bin: 'agent', site: 'https://cursor.com/cli', login: 'agent login', loginHint: '瀏覽器會打開，用 Cursor 帳號登入',
     install: { win: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm \'https://cursor.com/install?win32=true\' | iex"', mac: 'curl https://cursor.com/install -fsS | bash' },
@@ -367,6 +371,10 @@ async function modelReport() {   // every 30 minutes
     const t = (await runText('agent', ['--list-models'])).replace(/\x1b\[[0-9;]*m/g, '');
     out.cursor = [...new Set(t.split('\n').map(l => (l.match(/^\s*(?:[-*•]\s*)?([a-z0-9][\w.\-]{2,40})(?:\s|$)/i) || [])[1]).filter(x => x && /\d|-/.test(x)))].slice(0, 30);
   }
+  if (await has('agy')) {
+    const t = (await runText('agy', ['models'])).replace(/\x1b\[[0-9;]*m/g, '');
+    out.gemini = [...new Set(t.split('\n').map(l => (l.match(/\b(gemini-[\w.\-]+)/i) || [])[1]).filter(Boolean))].slice(0, 30);
+  }
   if (await has('gbot')) { try { out.grokbot = (await grokBots()).map(b => b.name).slice(0, 40); } catch { } }
   if (await has('copilot')) {
     const t = await runText('copilot', ['--help']);
@@ -451,7 +459,7 @@ async function runEngine(engine, prompt, b, model, live = {}) {
       try { text = readFileSync(last, 'utf8').trim(); } catch { }
       break;
     }
-    case 'gemini': r = await spawnCli('gemini', ['-p', STDIN_INSTR, '--yolo', '--include-directories', store, ...m('-m')], dir, prompt); break;
+    case 'gemini': r = await spawnCli('agy', ['-p', FILE_INSTR, '--dangerously-skip-permissions', '--output-format', 'text', '--print-timeout', '15m', '--add-dir', store, ...m('--model')], dir, ''); break;
     case 'qwen': r = await spawnCli('qwen', ['--yolo', '--include-directories', store, ...m('-m'), '-p', STDIN_INSTR], dir, prompt); break;
     case 'copilot': r = await spawnCli('copilot', ['-p', FILE_INSTR, '-s', '--allow-all-tools', '--allow-all-paths', '--no-color',
       '--additional-mcp-config', '@' + join(dir, 'copilot-mcp.json'), ...m('--model')], dir, ''); break;

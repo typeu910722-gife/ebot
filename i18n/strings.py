@@ -921,3 +921,11 @@ T.update({
  '主機電腦的 OCTA 版本太舊，請先更新到 v2.2.4 以上': ('OCTA on the host computer is too old — update it to v2.2.4 or later', 'ホストパソコンの OCTA が古いため、v2.2.4 以降に更新してください'),
 })
 P.extend([(r'^已在主機電腦「(.+)」打開 (.+) 的安裝視窗。$', 'Opened the $2 install window on the host computer “$1”.', 'ホストパソコン「$1」で $2 のインストール画面を開きました。')])
+
+T.update({
+ 'Gemini（Antigravity CLI）': ('Gemini (Antigravity CLI)', 'Gemini（Antigravity CLI）'),
+ '免費 Google 帳號也能用，AI Pro／Ultra 額度更多': ('Works with a free Google account; AI Pro / Ultra get more', '無料の Google アカウントでも利用可。AI Pro／Ultra は上限が多め'),
+ '在 agy 裡輸入 /usage 可查剩餘量': ('Type /usage in agy to see what’s left', 'agy で /usage と入力すると残量を確認できます'),
+ '瀏覽器會打開，用 Google 帳號登入，完成後輸入 /quit 離開': ('a browser opens — sign in with your Google account, then type /quit', 'ブラウザが開くので Google アカウントでログインし、/quit で終了'),
+ '例如 gemini-3.8-flash-medium': ('e.g. gemini-3.8-flash-medium', '例：gemini-3.8-flash-medium'),
+})

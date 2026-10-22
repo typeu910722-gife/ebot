@@ -1,5 +1,21 @@
 [
  {
+  "v": "2.2.7",
+  "date": "2026-10-22",
+  "notes": [
+   "Gemini 改用 Google 的 Antigravity CLI（agy）：Google 已停止個人帳號登入舊的 Gemini CLI。到「AI 連線 → Gemini」重新按一鍵安裝並登入即可，原本用 Gemini 的機器人不用改設定",
+   "Gemini 的模型選單改成讀取你帳號實際可用的模型"
+  ],
+  "notes_en": [
+   "Gemini now uses Google’s Antigravity CLI (agy): Google stopped personal sign-in for the old Gemini CLI. Press Install & sign in under AI connections → Gemini again; bots already using Gemini need no changes",
+   "Gemini’s model menu now lists the models your account can actually use"
+  ],
+  "notes_ja": [
+   "Gemini は Google の Antigravity CLI（agy）に切り替え：旧 Gemini CLI は個人アカウントでログインできなくなりました。「AI 接続 → Gemini」で再度インストールしてログインしてください。Gemini を使うボットの設定変更は不要",
+   "Gemini のモデル一覧はアカウントで使えるモデルを読み込みます"
+  ]
+ },
+ {
   "v": "2.2.6",
   "date": "2026-10-22",
   "notes": [
