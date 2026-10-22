@@ -1,5 +1,36 @@
 [
  {
+  "v": "2.1.0",
+  "date": "2026-10-22",
+  "notes": [
+   "對照 Grok Bot 補齊：記憶（📌 機器人會記住你的偏好和規則，任務設定裡可以刪）",
+   "技能（🧩 做順的流程存成技能），輸入 / 叫出指令選單：瀏覽器、停止、截圖、任務設定、清空對話、技能、常用指令",
+   "核准多了「拒絕」；需要你核准或登入的對話，清單上會標「待你處理」",
+   "機器人可以置頂、個別關閉通知",
+   "AI 模型改成選單（不用自己打字）；Cursor、Copilot、Ollama 會讀取主機電腦上實際可用的模型",
+   "語音輸入（支援的瀏覽器會出現 🎙）；快捷鍵 Ctrl+, 開設定、Alt+N 新增機器人",
+   "首頁、登入、設定指引和空白畫面的說明文字全面改寫，改成用聊天交代工作的方式"
+  ],
+  "notes_en": [
+   "Grok Bot parity: memory (📌 bots remember your preferences and rules; manage them in bot settings)",
+   "Skills (🧩 save a workflow) and a / command menu: browser, stop, screenshot, settings, clear chat, skills, saved instructions",
+   "Approvals gain “Deny”; chats waiting for your approval or sign-in show “Needs you” in the list",
+   "Pin bots and mute a bot's notifications",
+   "AI model is now a menu (no typing); Cursor, Copilot and Ollama list the models actually available on the host",
+   "Voice input (🎙 in supported browsers); shortcuts Ctrl+, for settings and Alt+N for a new bot",
+   "Rewritten home page, sign-in, setup guide and empty-state text around giving bots work by chat"
+  ],
+  "notes_ja": [
+   "Grok Bot 相当の機能：記憶（📌 好みやルールを覚え、タスク設定で削除可能）",
+   "スキル（🧩 手順を保存）と / コマンドメニュー：ブラウザ・停止・スクリーンショット・タスク設定・履歴消去・スキル・よく使う指示",
+   "承認に「拒否」を追加。承認やログイン待ちのチャットは一覧に「要対応」を表示",
+   "ボットのピン留めと個別の通知オフ",
+   "AI モデルをメニュー化（入力不要）。Cursor・Copilot・Ollama はホストで実際に使えるモデルを表示",
+   "音声入力（対応ブラウザで 🎙）。ショートカット：Ctrl+, で設定、Alt+N で新規ボット",
+   "ホーム・ログイン・設定ガイド・空の画面の説明をチャットで仕事を任せる形に全面改訂"
+  ]
+ },
+ {
   "v": "2.0.4",
   "date": "2026-10-22",
   "notes": [

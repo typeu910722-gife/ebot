@@ -175,6 +175,7 @@ async function hostInfo(db, userId) {
     hostLabel: host ? (host.label || 'runner') : null,
     online: !!host && now() - (host.seen || 0) < HOST_ONLINE_MS,
     engines: info?.engines || (u?.engines ? JSON.parse(u.engines) : null),
+    models: info?.models || null,
     runners
   };
 }
@@ -797,7 +798,8 @@ async function route({ request: req, env, params }) {
       const label = me.label || 'runner';
       // heartbeat and computer info, written only every few minutes or when something changed
       if (me.kind === 'runner' && (path === 'runner/next' || path === 'runner/hello')) {
-        const info = { engines: body.engines && typeof body.engines === 'object' ? Object.fromEntries(ENGINES.map(k => [k, !!body.engines[k]])) : undefined, version: clean(body.version, 20) || undefined, app: clean(body.app, 20) || undefined, store: clean(body.store, 300) || undefined, usage: body.usage && typeof body.usage === 'object' && JSON.stringify(body.usage).length < 3000 ? body.usage : undefined };
+        const info = { engines: body.engines && typeof body.engines === 'object' ? Object.fromEntries(ENGINES.map(k => [k, !!body.engines[k]])) : undefined, version: clean(body.version, 20) || undefined, app: clean(body.app, 20) || undefined, store: clean(body.store, 300) || undefined, usage: body.usage && typeof body.usage === 'object' && JSON.stringify(body.usage).length < 3000 ? body.usage : undefined,
+          models: body.models && typeof body.models === 'object' && JSON.stringify(body.models).length < 6000 ? body.models : undefined };
         const old = me.info ? JSON.parse(me.info) : {};
         const merged = { ...old, ...Object.fromEntries(Object.entries(info).filter(([, v]) => v !== undefined)) };
         if (now() - (me.seen || 0) > 4 * MIN || JSON.stringify(merged) !== JSON.stringify(old))
@@ -805,7 +807,7 @@ async function route({ request: req, env, params }) {
       }
       if (me.kind === 'local' && body.engines && typeof body.engines === 'object')
         await db.prepare('UPDATE users SET engines=? WHERE id=?').bind(JSON.stringify(Object.fromEntries(ENGINES.map(k => [k, !!body.engines[k]]))), U).run();
-      if (me.kind === 'local' && body.usage && typeof body.usage === 'object') { const st = await getSettings(db, U); st._usage = body.usage; await putSettings(db, U, st); }
+      if (me.kind === 'local' && ((body.usage && typeof body.usage === 'object') || (body.models && typeof body.models === 'object'))) { const st = await getSettings(db, U); if (body.usage) st._usage = body.usage; if (body.models) st._models = body.models; await putSettings(db, U, st); }
       if (path === 'runner/hello') return J({ user: U, name: me.name, label });
       if (path === 'runner/bye' && m === 'POST') { if (me.kind === 'runner') await db.prepare('UPDATE sessions SET seen=0 WHERE token=?').bind(me.token).run(); return J({ ok: true }); }
 
@@ -888,6 +890,15 @@ async function route({ request: req, env, params }) {
           learned = clean(tm[1], 4000);
           text = clean(text.replace(tm[0], ''), 20000) || '（已更新指定任務）';
         }
+        // 📌記住：… — a lasting fact or preference the bot should keep (its memory)
+        const remember = [];
+        // 🧩技能：名稱 … 🧩結束 — a workflow saved to rerun later (shown in the / menu)
+        const skillsNew = [];
+        if (good && job.kind === 'chat') {
+          text = text.replace(/^\s*📌\s*記住[:：]\s*(.+)$/gm, (_, t) => { const v = clean(t, 300); if (v) remember.push(v); return ''; });
+          text = text.replace(/🧩\s*技能[:：]\s*([^\n]+)\n([\s\S]*?)🧩\s*結束/g, (_, n, st2) => { const name = clean(n, 40), steps = clean(st2, 3000); if (name && steps) skillsNew.push({ name, steps }); return ''; });
+          text = text.trim() || '（已記下）';
+        }
         // ⏰例行任務：名稱｜08:00,13:30｜要做的事 — the bot sets up a daily routine the user asked for
         const plans = [];
         if (good && job.kind === 'chat') {
@@ -909,6 +920,14 @@ async function route({ request: req, env, params }) {
           outs.push({ id, name, mime });
         }
         await addMsg(db, U, job.conv, job.bot_id, text, outs);
+        if (remember.length || skillsNew.length) {
+          const st = await getSettings(db, U);
+          if (remember.length) { st.memory = st.memory || {}; st.memory[job.bot_id] = [...new Set([...(st.memory[job.bot_id] || []), ...remember])].slice(-40); }
+          if (skillsNew.length) { st.skills = st.skills || {}; const cur = (st.skills[job.bot_id] || []).filter(x => !skillsNew.some(n => n.name === x.name)); st.skills[job.bot_id] = [...cur, ...skillsNew].slice(-20); }
+          await putSettings(db, U, st);
+          if (remember.length) await addMsg(db, U, job.conv, 'sys', `已記住：${remember.join('；').slice(0, 200)}`);
+          for (const k of skillsNew) await addMsg(db, U, job.conv, 'sys', `已存成技能「${k.name}」，輸入 / 就能叫它`);
+        }
         for (const r of plans.slice(0, 5)) {
           const { date, hm } = localNow(env);
           const fired = JSON.stringify(Object.fromEntries(r.times.filter(t => !isEvery(t) && t <= hm).map(t => [t, date])));   // times already past today start tomorrow
@@ -1003,7 +1022,7 @@ async function route({ request: req, env, params }) {
         me: me.name, local: me.kind === 'local', rev: rev.results[0]?.rev ?? 0,
         engines: h ? h.engines : JSON.parse((await db.prepare('SELECT engines FROM users WHERE id=?').bind(U).first())?.engines || 'null'),
         runnerOnline: env.runnerOnline ? env.runnerOnline() : h.online,
-        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {}, warm: WARM.includes(+st.warm) ? +st.warm : 120,
+        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {}, pins: st.pins || [], mute: st.mute || {}, memory: st.memory || {}, skills: st.skills || {}, warm: WARM.includes(+st.warm) ? +st.warm : 120, models: h ? h.models : st._models || null,
         ...all, last: last.results, ur: ur.results.map(r => [r.conv, r.id]), busy: busy.results
       });
     }
@@ -1236,6 +1255,20 @@ async function route({ request: req, env, params }) {
       if (['cloud', 'pc'].includes(body.sched)) st.sched = body.sched;
       if (body.warm !== undefined && WARM.includes(+body.warm)) st.warm = +body.warm;
       if (['zh-TW', 'zh-CN', 'en', 'ja'].includes(body.lang)) st.lang = body.lang;
+      // per-bot extras kept with the account: 置頂, notifications, memory (📌), skills (🧩)
+      if (Array.isArray(body.pins)) { st.pins = body.pins.map(x => clean(x, 64)).filter(Boolean).slice(0, 50); await putSettings(db, U, st); await bump(db, U); return J({ ok: true }); }
+      if (body.mute && typeof body.mute === 'object') { st.mute = st.mute || {}; const id = clean(body.mute.bot, 64); if (body.mute.on) st.mute[id] = 1; else delete st.mute[id]; await putSettings(db, U, st); await bump(db, U); return J({ ok: true }); }
+      if (body.memory && typeof body.memory === 'object') {
+        st.memory = st.memory || {}; const id = clean(body.memory.bot, 64), list = (Array.isArray(body.memory.list) ? body.memory.list : []).map(x => clean(x, 300)).filter(Boolean).slice(-40);
+        if (list.length) st.memory[id] = list; else delete st.memory[id];
+        await putSettings(db, U, st); await bump(db, U); return J({ ok: true });
+      }
+      if (body.skills && typeof body.skills === 'object') {
+        st.skills = st.skills || {}; const id = clean(body.skills.bot, 64);
+        const list = (Array.isArray(body.skills.list) ? body.skills.list : []).map(x => ({ name: clean(x?.name, 40), steps: clean(x?.steps, 3000) })).filter(x => x.name && x.steps).slice(0, 20);
+        if (list.length) st.skills[id] = list; else delete st.skills[id];
+        await putSettings(db, U, st); await bump(db, U); return J({ ok: true });
+      }
       if (body.allow && typeof body.allow === 'object') {   // 一律允許: things a bot may do without asking each time
         const bid = clean(body.allow.bot, 64), list = (Array.isArray(body.allow.list) ? body.allow.list : []).map(x => clean(x, 120)).filter(Boolean).slice(0, 20);
         st.allow = st.allow || {};
@@ -1423,7 +1456,7 @@ async function jobPayload(env, db, U, job) {
   const dayStart = Date.parse(date + 'T00:00:00Z') - (+env.TZ_OFFSET_MIN || 0) * 60000;
   const usageToday = (await db.prepare("SELECT COUNT(*) AS n FROM jobs j JOIN bots b ON b.id=j.bot_id WHERE j.user_id=? AND j.kind='chat' AND j.created>=? AND IFNULL(b.engine,'claude')=?").bind(U, dayStart, bot.engine || 'claude').first())?.n ?? null;
   return {
-    id: job.id, kind: job.kind, url: job.url, prompt: job.prompt, usageToday, warm: WARM.includes(+st.warm) ? +st.warm : 120, allowed: (st.allow || {})[bot.id] || [],
+    id: job.id, kind: job.kind, url: job.url, prompt: job.prompt, usageToday, warm: WARM.includes(+st.warm) ? +st.warm : 120, allowed: (st.allow || {})[bot.id] || [], memory: (st.memory || {})[bot.id] || [], skills: (st.skills || {})[bot.id] || [],
     routines: (await db.prepare('SELECT name,times,enabled FROM routines WHERE user_id=? AND conv=?').bind(U, job.conv).all()).results.map(r => ({ name: r.name, times: JSON.parse(r.times), enabled: !!r.enabled })),
     canAsk: job.depth < MAX_ASK_DEPTH,
     conv: { id: conv.id, name: conv.name },

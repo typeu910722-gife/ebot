@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=11"></script>
+<script src="/i18n-dict.js?v=13"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -363,6 +363,11 @@ pre.notes{margin:0;white-space:pre-wrap;font:inherit;font-size:13px;color:var(--
 .el{font-variant-numeric:tabular-nums;color:var(--gold2)}
 .tlearn{color:var(--faint)}
 .tk{color:var(--gold2);font-variant-numeric:tabular-nums}
+.iw .item .need,.iw .item .ub{margin-right:26px}
+.need{font-style:normal;flex:none;border-radius:99px;padding:1px 8px;font-size:11px;background:var(--prio);color:#12110e;white-space:nowrap}
+.atpop button small{color:var(--faint);font-size:12px;margin-left:auto;padding-left:12px}
+.atpop{max-height:300px;overflow-y:auto}
+#mic.rec{background:var(--prio);color:#12110e;border-color:var(--prio)}
 .prog{margin-left:8px;color:var(--mute)}
 .prog::before{content:'· '}
 .quick{display:flex;gap:6px;flex-wrap:wrap;padding:0 20px 6px}
@@ -404,8 +409,8 @@ details.adv[open]{display:grid;gap:8px}
   <header class="hhd"><div class="hl"><img src="/icon.png?v=octopus" alt="" class="logo"><div class="brand" data-u>OCTA｜奧克塔</div></div><div class="row2"><span id="hLang"></span><button class="ghost" id="hLogin">登入網頁版</button></div></header>
   <section class="hero">
     <img src="/icon.png?v=octopus" alt="OCTA 章魚標誌" class="logo-xl">
-    <h1>讓一群 AI 小幫手<br>替你把日常工作做完</h1>
-    <p>像傳訊息一樣交代工作：查後台、整理訂單、寫試算表、擬好回覆等你按核准。機器人在你自己的電腦上，用你已經有的 Claude、ChatGPT、Gemini 等帳號工作，不用另外付 API 費用。</p>
+    <h1>你的 AI 同事團隊<br>交代一次，它自己做完</h1>
+    <p>用聊天的方式告訴機器人要負責什麼，它會自己整理成工作、設好排程，打開網站一路做完再回報；要發訊息或付款前先等你核准。機器人在你自己的電腦上工作，可以自由選 Claude、ChatGPT、Gemini 等你已經有的 AI，不用另外付 API 費用。</p>
     <div class="row2 cta"><a class="btn big" id="hDl" href="#">下載 Windows 版（免費）</a><button class="ghost big" id="hWeb">改用網頁版</button></div>
     <small id="hDlNote">Windows 10／11 · 安裝檔約 120 MB · 免費</small>
   </section>
@@ -413,17 +418,20 @@ details.adv[open]{display:grid;gap:8px}
     <h2>三步驟開始</h2>
     <ol class="hsteps">
       <li><b>下載安裝 OCTA</b><span>按上面的下載按鈕，打開安裝檔，再登入或註冊 OCTA 帳號。Windows 若跳出「已保護您的電腦」，按「其他資訊 → 仍要執行」。</span></li>
-      <li><b>連上一個 AI</b><span>打開 OCTA 後會出現設定指引。選你已經有帳號的 AI（例如 Claude 或 ChatGPT），按「一鍵安裝並登入」，再按「測試」。沒有付費帳號可以先用 Gemini 的免費額度。</span></li>
-      <li><b>建立機器人、交代工作</b><span>從範本開始（門市、民宿、研究…），或自己寫任務。可以設定每天幾點自動做，做完會通知你。</span></li>
+      <li><b>連上一個 AI</b><span>打開 OCTA 後會出現設定指引。選你已經有帳號的 AI（例如 Claude 或 ChatGPT），按「一鍵安裝並登入」，再按「測試」。沒有付費帳號可以用 Gemini 的免費額度，或 Ollama 本機模型。</span></li>
+      <li><b>建立機器人，直接用說的交代</b><span>取個名字就好，然後像跟同事說話一樣告訴它：「每 30 分鐘看一次 LINE 官方帳號，有新訊息就擬好回覆給我確認」。它會自己整理成指定任務、建好例行任務。也可以從範本開始。</span></li>
     </ol>
   </section>
   <section class="hsec">
     <h2>能做什麼</h2>
     <div class="hgrid">
-      <div><b>多個機器人分工</b><span>每個機器人一個任務，拉進群組依序接力，或用 @ 指定誰做。</span></div>
-      <div><b>操作你登入的網站</b><span>每個機器人有自己的瀏覽器，登入一次就記住，互不干擾。</span></div>
-      <div><b>重要的事先問你</b><span>發訊息、付款這類動作會先等你按「核准」。</span></div>
-      <div><b>每天自動執行</b><span>設定時間就會自己做，卡住或需要你時通知電腦、Telegram 或 LINE。</span></div>
+      <div><b>自己理解、自己做完</b><span>交代目標就好。它會自己規劃步驟、打開網站一路做完，做完列出需要你決定的事並附上建議。</span></div>
+      <div><b>操作你登入的網站</b><span>每個機器人有一個一直開著的專屬瀏覽器。遇到登入或驗證碼，把它的瀏覽器叫到螢幕上，幫它登入後按「繼續」。</span></div>
+      <div><b>重要的事先問你</b><span>發訊息、付款這類動作會先擬好等你核准，可以選「只這次」或「一律允許」。</span></div>
+      <div><b>排程與持續巡查</b><span>說「每天 8 點」「每 30 分鐘」就會自己建好例行任務；卡住或需要你時通知手機、電腦、Telegram 或 LINE。</span></div>
+      <div><b>會記住、會學技能</b><span>記得你的偏好和規則；做順的流程可以存成技能，輸入 / 就能再叫它做一次。</span></div>
+      <div><b>多個機器人分工</b><span>每個機器人一個角色，拉進群組依序接力、用 @ 指定誰做，同分區的機器人還能互相詢問。</span></div>
+      <div><b>自由選 AI</b><span>每個機器人可以用不同的 AI 和模型（從選單選），AI 連線頁看得到各家剩餘流量和今天用了多少 token。</span></div>
       <div><b>一台主機，到處指揮</b><span>一台電腦裝 OCTA 當主機，手機、平板、其他電腦打開網頁版登入同一個帳號，就能即時指揮、收到通知。</span></div>
       <div><b>檔案留在你的電腦</b><span>附件、截圖、機器人做出的報表都存在主機電腦的資料夾（也可以選 Google 雲端硬碟），每個機器人分開放、可以互相調用。</span></div>
     </div>
@@ -437,7 +445,9 @@ details.adv[open]{display:grid;gap:8px}
     <h2>常見問題</h2>
     <details><summary>要錢嗎？</summary><p>OCTA 免費、開源。AI 的部分用你自己的訂閱或免費額度。</p></details>
     <details><summary>桌面版和網頁版差在哪？</summary><p>兩者用同一個帳號、資料同步。機器人要在電腦上工作，所以至少要有一台電腦裝桌面版並保持開著；之後用手機或其他電腦打開網頁版就能指揮、看結果。</p></details>
-    <details><summary>電腦要一直開著嗎？</summary><p>要。機器人在你的電腦上工作，電腦關機或休眠時會暫停，開機後繼續。</p></details>
+    <details><summary>電腦要一直開著嗎？</summary><p>要。機器人在你的電腦上工作，電腦關機或休眠時會暫停；例行任務會排隊，開機後自動補做並通知你。</p></details>
+    <details><summary>它跟 Grok Bot 這類 AI 同事有什麼不同？</summary><p>概念一樣：有名字的機器人、用聊天交代、自己操作網站、需要時找你核准或登入、排程與技能。不同的是 OCTA 在你自己的電腦上執行，可以自由選擇已經訂閱的 AI（Claude、ChatGPT、Gemini、Copilot、Cursor、通義千問、Ollama），資料和檔案留在你的電腦。</p></details>
+    <details><summary>帳號密碼安全嗎？</summary><p>不要在對話裡貼密碼。需要登入時，把機器人的瀏覽器叫到螢幕上自己登入，或改用你自己的 Chrome，讓 Chrome 自動填入已儲存的密碼，機器人看不到密碼本身。</p></details>
     <details><summary>有 Mac 版嗎？</summary><p>目前先提供 Windows 版；Mac 使用者可以先用網頁版。</p></details>
   </section>
   <footer class="hft"><span>OCTA｜奧克塔 · 歪計劃 YZ PROJECT</span><a id="hRepo" href="#" target="_blank" rel="noopener" hidden>原始碼</a></footer>
@@ -447,7 +457,7 @@ details.adv[open]{display:grid;gap:8px}
   <form id="lf">
     <img src="/icon.png?v=octopus" alt="" class="logo-lg"><div class="brand">OCTA｜奧克塔</div>
     <h1 id="lt">登入</h1>
-    <p>登入網頁版。機器人會在你電腦上用你自己的 AI 帳號工作。</p>
+    <p>登入 OCTA。機器人在你的主機電腦上，用你自己的 AI 帳號工作；手機和其他電腦登入同一個帳號就能指揮。</p>
     <label class="field">帳號<input id="ln" autocomplete="username" required></label>
     <label class="field">密碼<input id="lp" type="password" autocomplete="current-password" required minlength="8"></label>
     <div class="errmsg" id="le"></div>
@@ -492,7 +502,7 @@ details.adv[open]{display:grid;gap:8px}
     <div class="quick" id="quick"></div>
     <div class="atpop" id="atpop" hidden></div>
     <div class="att" id="att"></div>
-    <form class="in" id="f" hidden><button type="button" class="clip" id="clip" aria-label="附加檔案">＋</button><input type="file" id="fileIn" multiple accept="image/*,.pdf,.txt,.csv,.md,.json,.xlsx,.docx" hidden><textarea id="msg" rows="1" placeholder="輸入指示…"></textarea><button class="send">送出</button></form>
+    <form class="in" id="f" hidden><button type="button" class="clip" id="clip" aria-label="附加檔案">＋</button><input type="file" id="fileIn" multiple accept="image/*,.pdf,.txt,.csv,.md,.json,.xlsx,.docx" hidden><textarea id="msg" rows="1" placeholder="輸入指示…"></textarea><button type="button" class="clip" id="mic" aria-label="語音輸入" hidden>🎙</button><button class="send">送出</button></form>
     <div class="note" id="note" hidden></div>
   </section>
 </div>
@@ -574,7 +584,7 @@ async function refresh(){
   try{const d=await api('state');if(!S.loaded)boot.set(85,'整理畫面…');
     const prevTop=S.loaded?topBotId():null;
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
-      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120,tokens:d.tokens||{}});
+      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120,tokens:d.tokens||{},models:d.models||{},pins:d.pins||[],mute:d.mute||{},memory:d.memory||{},skills:d.skills||{}});
     if(cur&&!conv(cur))cur=null;
     if(cur)await loadMsgs(cur,'new');
     if(prevTop!==null)notifyNew(prevTop);
@@ -622,6 +632,8 @@ const fmtTok=n=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+'M':n>=1e3?(n/1e3).toFixed(n>
 const elapsed=t=>{const s=Math.max(0,Math.round((Date.now()-t)/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 setInterval(()=>document.querySelectorAll('.el[data-since]').forEach(e=>e.textContent=elapsed(+e.dataset.since)),1000);
 const lastOf=id=>S.last.find(x=>x.conv===id);
+// a bot is waiting for you: its newest message asks for approval or a sign-in
+const needsYou=id=>{const l=lastOf(id);return !!l&&l.by!=='me'&&l.by!=='sys'&&(/✅\s*待確認/.test(l.text)||/需要使用者在電腦上登入/.test(l.text))};
 function preview(id){const ms=convMsgs(id).filter(x=>x.by!=='sys'&&!x.tmp),l=lastOf(id),m=ms.length&&(!l||ms[ms.length-1].id>=l.id)?ms[ms.length-1]:l;
   if(!m)return conv(id).task;
   const plain=m.by==='me'?m.text:m.text.replace(/```[\s\S]*?```/g,' ').replace(/^#{1,4}\s+|^\s*[-*•>]\s+|\*\*|__|`|~~/gm,'').replace(/\|/g,' ').replace(/\s+/g,' ').trim();
@@ -632,7 +644,7 @@ const notiOn=()=>{try{const v=localStorage.getItem(NOTI_KEY);return v===null?!!w
 function notifyNew(prevTop){
   const fresh=S.ur.filter(([,i])=>i>prevTop);if(!fresh.length)return;
   const convs=[...new Set(fresh.map(([c])=>c))];
-  for(const c of convs){const l=lastOf(c),cv=conv(c);if(!l||!cv||l.by==='me'||l.by==='sys')continue;
+  for(const c of convs){const l=lastOf(c),cv=conv(c);if(!l||!cv||l.by==='me'||l.by==='sys'||(S.mute||{})[c])continue;
     const looking=c===cur&&!document.hidden;if(looking)continue;
     const who=isG(c)?nameOf(l.by)+' · '+cv.name:cv.name;
     if(!document.hidden)toast(who+'：'+l.text.slice(0,40));
@@ -657,7 +669,7 @@ function loginHtml(m){const b=bot(m.by);if(!b||b.browser==='mine'||!NEEDLOGIN.te
 function apprHtml(m){const a=m.text.match(APPR);if(!a)return '';
   const later=convMsgs(m.conv).some(x=>x.id>m.id&&(x.by==='me'||x.by===m.by));
   if(later)return '';
-  return `<div class="appr"><button type="button" class="btn" data-approve="${m.id}">核准（只這次）</button><button type="button" class="no" data-always="${m.id}">一律允許</button><button type="button" class="no" data-revise="${m.id}">修改</button></div>`}
+  return `<div class="appr"><button type="button" class="btn" data-approve="${m.id}">核准（只這次）</button><button type="button" class="no" data-always="${m.id}">一律允許</button><button type="button" class="no" data-revise="${m.id}">修改</button><button type="button" class="no" data-deny="${m.id}">拒絕</button></div>`}
 function fmt(t){return esc(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/@([^\s@，。、]+)/g,'<span class="at">@$1</span>')}
 /* bot replies: a small, safe Markdown subset (everything is escaped first) */
 function inl(t){return esc(t)
@@ -695,14 +707,18 @@ function render(scroll){
   $('online').title=I18N.t(S.runnerOnline?'機器人在主機電腦上工作中':'主機電腦沒開或沒連上，訊息會先排隊');
   let h='';
   if(!S.loaded)h+=`<div class="empty fade">載入中…</div>`;
-  else if(!S.bots.length)h+=`<div class="empty">還沒有機器人。按「＋ 機器人」，或到「設定」套用範本。</div>`;
+  else if(!S.bots.length)h+=`<div class="empty">還沒有機器人。按「＋ 機器人」取個名字，再直接傳訊息告訴它要做什麼；也可以到「設定 → 範本」。</div>`;
   const q=($('q')?.value||'').trim().toLowerCase(),hit=x=>!q||x.name.toLowerCase().includes(q)||(x.task||'').toLowerCase().includes(q);
-  const gItem=g=>`<div class="iw"><button class="item ${cur===g.id?'on':''}" data-id="${g.id}"><span class="av grp">${g.members.length}${busyIn(g.id).length?'<i class="dot"></i>':''}</span><span class="t" data-u><b>${esc(g.name)}</b><small>${esc(preview(g.id))}</small></span>${cur!==g.id&&unread(g.id)?`<i class="ub">${unread(g.id)}</i>`:''}</button><button class="more" data-more="${g.id}" aria-label="更多">⋯</button></div>`;
-  const bItem=b=>`<div class="iw"><button class="item ${cur===b.id?'on':''}" data-id="${b.id}"><span class="av" data-u>${avOf(b.id)}${S.busy.some(x=>x.bot_id===b.id&&x.status==='running')?'<i class="dot"></i>':''}</span><span class="t" data-u><b>${esc(b.name)}</b><small>${esc(preview(b.id))}</small></span>${cur!==b.id&&unread(b.id)?`<i class="ub">${unread(b.id)}</i>`:''}</button><button class="more" data-more="${b.id}" aria-label="更多">⋯</button></div>`;
-  const sect=(f,title)=>{const gs=S.groups.filter(g=>(g.folder||null)===f&&hit(g)),bs=S.bots.filter(b=>(b.folder||null)===f&&hit(b));
+  const pins=S.pins||[],pinned=id=>pins.includes(id);
+  const tag=id=>needsYou(id)?'<i class="need">待你處理</i>':cur!==id&&unread(id)?`<i class="ub">${unread(id)}</i>`:'';
+  const gItem=g=>`<div class="iw"><button class="item ${cur===g.id?'on':''}" data-id="${g.id}"><span class="av grp">${g.members.length}${busyIn(g.id).length?'<i class="dot"></i>':''}</span><span class="t" data-u><b>${esc(g.name)}</b><small>${esc(preview(g.id))}</small></span>${tag(g.id)}</button><button class="more" data-more="${g.id}" aria-label="更多">⋯</button></div>`;
+  const bItem=b=>`<div class="iw"><button class="item ${cur===b.id?'on':''}" data-id="${b.id}"><span class="av" data-u>${avOf(b.id)}${S.busy.some(x=>x.bot_id===b.id&&x.status==='running')?'<i class="dot"></i>':''}</span><span class="t" data-u><b>${esc(b.name)}</b><small>${esc(preview(b.id))}</small></span>${tag(b.id)}</button><button class="more" data-more="${b.id}" aria-label="更多">⋯</button></div>`;
+  const sect=(f,title)=>{const gs=S.groups.filter(g=>(g.folder||null)===f&&hit(g)&&!pinned(g.id)),bs=S.bots.filter(b=>(b.folder||null)===f&&hit(b)&&!pinned(b.id));
     if((!f||q)&&!gs.length&&!bs.length)return '';
     return `<div class="sec"><span${f?' data-u':''}>${esc(title)}</span>${f?`<button class="more" data-folder="${f}" aria-label="分區選項">⋯</button>`:''}</div>`+
       (gs.length||bs.length?gs.map(gItem).join('')+bs.map(bItem).join(''):'<div class="empty">空的分區。用機器人旁的 ⋯ 移進來。</div>')};
+  const pg=S.groups.filter(g=>pinned(g.id)&&hit(g)),pb=S.bots.filter(b=>pinned(b.id)&&hit(b));
+  if(pg.length||pb.length)h+=`<div class="sec"><span>📌 置頂</span></div>`+pg.map(gItem).join('')+pb.map(bItem).join('');
   S.folders.forEach(f=>h+=sect(f.id,f.name));
   h+=sect(null,S.folders.length?'未分區':'全部');
   if(q&&!h.includes('class="iw"'))h+=`<div class="empty">找不到「${esc(q)}」</div>`;
@@ -710,7 +726,7 @@ function render(scroll){
   const tot=[...S.bots,...S.groups].reduce((a,x)=>a+(x.id===cur&&!document.hidden?0:unread(x.id)),0);document.title=(tot?`(${tot}) `:'')+'OCTA｜奧克塔';
   const c=cur&&conv(cur);
   ['ph','task','msgs','f','note'].forEach(k=>$(k).hidden=!c);if(!c)$('offb').hidden=true;$('blank').hidden=!!c;
-  if(!c)setHTML($('blank'),!S.loaded?'':S.bots.length?'左邊選一個機器人或群組開始對話':`<div class="guidecard"><div>還沒有機器人。跟著設定指引，幾分鐘就能讓第一個機器人開始工作。</div><button class="btn" onclick="openGuide()">開始設定</button></div>`);
+  if(!c)setHTML($('blank'),!S.loaded?'':S.bots.length?'左邊選一個機器人或群組開始對話。輸入 / 可以叫出指令和技能。':`<div class="guidecard"><div>還沒有機器人。跟著設定指引，幾分鐘就能讓第一個機器人開始工作。</div><button class="btn" onclick="openGuide()">開始設定</button></div>`);
   if(!c){$('mention').innerHTML='';$('quick').innerHTML='';$('quick')._h='';return}
   const g=isG(cur);
   $('pav').className='av'+(g?' grp':'');if(g)$('pav').textContent=c.members.length;else $('pav').innerHTML=avOf(c.id);$('pav').toggleAttribute('data-u',!g)
@@ -765,6 +781,9 @@ $('q').addEventListener('keydown',e=>{if(e.key==='Enter'){const f=$('list').quer
 $('jump').onclick=()=>{const b=$('msgs');b.scrollTo({top:b.scrollHeight,behavior:'smooth'});$('jump').hidden=true};
 $('msgs').addEventListener('scroll',()=>{const b=$('msgs');if(b.scrollHeight-b.scrollTop-b.clientHeight<60){$('jump').hidden=true;if(cur&&unread(cur)){markSeen(cur);render(false)}}},{passive:true});
 document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key===','&&!$('app').hidden){e.preventDefault();openSettings()}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'&&!$('app').hidden&&window.octaDesktop){e.preventDefault();sheet('b')}
+  if(e.altKey&&e.key.toLowerCase()==='n'&&!$('app').hidden){e.preventDefault();sheet('b')}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('app').classList.remove('chat');$('q').focus();$('q').select()}
   if(e.key==='Escape'&&!$('veil').hidden&&!document.querySelector('.menu'))closeSheet()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cur)render(false)});
@@ -790,6 +809,7 @@ $('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).th
   const ob=e.target.closest('[data-openb]');if(ob){ob.disabled=true;openBrowser(ob.dataset.openb);return}
   const im=e.target.closest('img[data-file]');if(im)openFile(im.dataset.file);
   const fc=e.target.closest('[data-open-file]');if(fc)openFile(fc.dataset.openFile);
+  const dn=e.target.closest('[data-deny]');if(dn){const m=convMsgs(cur).find(x=>String(x.id)===dn.dataset.deny);if(m){dn.disabled=true;sendMsg((isG(cur)?'@'+nameOf(m.by)+' ':'')+'不要做：'+m.text.match(APPR)[1]+'。這件事先停下，不用再問。')}return}
   const al=e.target.closest('[data-always]');if(al){const m=convMsgs(cur).find(x=>String(x.id)===al.dataset.always);if(m)alwaysSheet(m);return}
   const ap=e.target.closest('[data-approve]'),rv=e.target.closest('[data-revise]');
   if(ap||rv){const m=convMsgs(cur).find(x=>x.id==(ap||rv).dataset[ap?'approve':'revise']);if(!m)return;
@@ -797,24 +817,45 @@ $('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).th
     if(ap){ap.disabled=true;sendMsg(at+'核准：'+m.text.match(APPR)[1])}
     else{$('msg').value=at;$('msg').focus()}}};
 let atSel=0;
-function atList(){const i=$('msg'),c=conv(cur);if(!c||!isG(cur))return null;const before=i.value.slice(0,i.selectionStart),m=before.match(/@([^\s@]*)$/);if(!m)return null;
+// "/" at the start: built-in actions, saved instructions and the bot's skills
+function slashItems(){const c=conv(cur);if(!c)return [];const ids=isG(cur)?c.members:[cur];
+  const items=[{k:'browser',t:'/瀏覽器',d:I18N.t('在電腦上顯示它的瀏覽器')},{k:'hide',t:'/收起瀏覽器',d:I18N.t('收到背景')},{k:'stop',t:'/停止',d:I18N.t('停止目前的工作')},
+    {k:'shots',t:'/截圖',d:I18N.t('看最後的畫面')},{k:'edit',t:'/任務設定',d:I18N.t('名稱、任務、排程、記憶')},{k:'clear',t:'/清空對話',d:I18N.t('清空對話紀錄')}];
+  for(const id of ids)for(const k of ((S.skills||{})[id]||[]))items.push({k:'skill',t:'/'+k.name,d:'🧩 '+(isG(cur)?bot(id)?.name+' · ':'')+I18N.t('技能'),v:k.name,b:id});
+  ((S.quick||{})[cur]||[]).forEach(q=>items.push({k:'quick',t:'⚡ '+(q.length>30?q.slice(0,30)+'…':q),d:I18N.t('常用指令'),v:q}));
+  return items}
+function atList(){const i=$('msg'),c=conv(cur);if(!c)return null;const before=i.value.slice(0,i.selectionStart);
+  const sl=before.match(/^\/(\S*)$/);if(sl){const q=sl[1].toLowerCase(),list=slashItems().filter(x=>x.t.toLowerCase().includes(q));return list.length?{slash:true,list}:null}
+  if(!isG(cur))return null;const m=before.match(/@([^\s@]*)$/);if(!m)return null;
   const q=m[1].toLowerCase(),list=c.members.map(bot).filter(b=>b&&b.name.toLowerCase().includes(q));return list.length?{q:m[1],list}:null}
 function atRender(){const a=atList(),p=$('atpop');if(!a){p.hidden=true;return}atSel=Math.min(atSel,a.list.length-1);
+  if(a.slash){p.innerHTML=a.list.map((x,i)=>`<button type="button" class="${i===atSel?'on':''}" data-slash="${i}"><b data-u>${esc(x.t)}</b><small data-u>${esc(x.d)}</small></button>`).join('');p.hidden=false;return}
   p.innerHTML=a.list.map((b,i)=>`<button type="button" class="${i===atSel?'on':''}" data-pick="${esc(b.name)}"><span class="av sm" data-u>${avOf(b.id)}</span><span data-u>${esc(b.name)}</span></button>`).join('');p.hidden=false}
 function atPick(name){const i=$('msg'),pos=i.selectionStart,before=i.value.slice(0,pos).replace(/@([^\s@]*)$/,'@'+name+' ');i.value=before+i.value.slice(pos);i.selectionStart=i.selectionEnd=before.length;$('atpop').hidden=true;grow();i.focus()}
 $('msg').addEventListener('input',()=>{atSel=0;atRender()});
 $('msg').addEventListener('blur',()=>setTimeout(()=>$('atpop').hidden=true,150));
-$('atpop').addEventListener('mousedown',e=>{const b=e.target.closest('[data-pick]');if(b){e.preventDefault();atPick(b.dataset.pick)}});
+$('atpop').addEventListener('mousedown',e=>{const s2=e.target.closest('[data-slash]');if(s2){e.preventDefault();runSlash(slashItems().filter(x=>x.t.toLowerCase().includes(($('msg').value.slice(1)||'').toLowerCase()))[+s2.dataset.slash]);return}
+  const b=e.target.closest('[data-pick]');if(b){e.preventDefault();atPick(b.dataset.pick)}});
+function runSlash(x){if(!x)return;$('msg').value='';grow();$('atpop').hidden=true;const c=conv(cur);if(!c)return;const first=isG(cur)?c.members.find(bot):cur;
+  ({browser:()=>openBrowser(first),hide:()=>openBrowser(first,'',true),stop:()=>api('cancel','POST',{conv:cur}).then(()=>{toast(I18N.t('已停止'));refresh()}),
+    shots:()=>shotSheet(isG(cur)?c.members.filter(bot):[cur]),edit:()=>sheet(isG(cur)?'g':'b',true),clear:()=>clearConv(cur),
+    skill:()=>sendMsg((isG(cur)?'@'+bot(x.b)?.name+' ':'')+'請執行技能「'+x.v+'」'),quick:()=>sendMsg(x.v)})[x.k]?.()}
 $('msg').addEventListener('keydown',e=>{
   if(!$('atpop').hidden){const a=atList();if(a){
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();atSel=(atSel+(e.key==='ArrowDown'?1:-1)+a.list.length)%a.list.length;atRender();return}
-    if((e.key==='Enter'||e.key==='Tab')&&!e.isComposing){e.preventDefault();atPick(a.list[atSel].name);return}
+    if((e.key==='Enter'||e.key==='Tab')&&!e.isComposing){e.preventDefault();a.slash?runSlash(a.list[atSel]):atPick(a.list[atSel].name);return}
     if(e.key==='Escape'){$('atpop').hidden=true;return}}}
   if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('f').requestSubmit()}});
 let pending=[];
 function renderAtt(){$('att').innerHTML=pending.map((f,i)=>`<span class="chip"><span>${f.up?'⏳ ':''}${esc(f.name)}</span><button type="button" data-rm="${i}" aria-label="移除">✕</button></span>`).join('')}
 $('att').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){pending.splice(+b.dataset.rm,1);renderAtt()}};
 $('clip').onclick=()=>$('fileIn').click();
+/* voice input (browsers that support speech recognition, e.g. Chrome on phones and computers) */
+(()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR||window.octaDesktop)return;$('mic').hidden=false;let rec=null;
+  $('mic').onclick=()=>{if(rec){rec.stop();return}rec=new SR();rec.lang=I18N.lang==='en'?'en-US':I18N.lang==='ja'?'ja-JP':I18N.lang;rec.interimResults=true;rec.continuous=false;
+    const base=$('msg').value;$('mic').classList.add('rec');
+    rec.onresult=e=>{let t='';for(const r of e.results)t+=r[0].transcript;$('msg').value=(base?base+' ':'')+t;grow()};
+    rec.onend=()=>{rec=null;$('mic').classList.remove('rec');$('msg').focus()};rec.onerror=()=>{};rec.start()}})();
 const b64=blob=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=no;r.readAsDataURL(blob)});
 async function shrink(file){const img=await createImageBitmap(file);const k=Math.min(1,1600/Math.max(img.width,img.height));
   const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
@@ -859,6 +900,10 @@ const ENG={
     npm:'@qwen-code/qwen-code',login:'qwen',hint:'依畫面選擇登入方式，完成後輸入 /quit 離開',m:'例如 qwen3-coder-plus'},
   opencode:{n:'Ollama',full:'Ollama 本機模型（免費）',tag:'免費',good:'本機部署開源模型、私有化 AI、中文處理、程式開發',who:'想用免費的開源模型，資料不離開電腦',cost:'免費，在你的電腦上執行（需要較好的顯示卡或 16GB 以上記憶體）',site:'https://ollama.com',quota:'local',
     npm:'opencode-ai',pre:'winget install -e --id Ollama.Ollama',login:'ollama pull qwen3',hint:'會先安裝 Ollama，再下載 qwen3 模型（約 5 GB）',m:'例如 qwen3、gemma3、llama3.1（空白就用電腦上第一個模型）'}};
+// model menu: fixed lists for AIs that can't list their models; the host computer reports the rest
+const MODELS={claude:['sonnet','opus','haiku'],codex:['gpt-5-codex','gpt-5.5','gpt-5.4','gpt-5.4-mini'],gemini:['gemini-3-pro-preview','gemini-3-flash-preview','gemini-2.5-pro','gemini-2.5-flash'],
+  copilot:[],cursor:[],qwen:['qwen3-coder-plus'],opencode:[]};
+const modelsFor=k=>[...new Set([...(MODELS[k]||[]),...((S.models||{})[k]||[])])];
 const engState=k=>S.engines?(S.engines[k]?'ok':'no'):'unknown';
 const EMOJIS=['🤖','🐙','🦊','🐱','🐶','🐼','🦉','🐝','🧠','💬','📋','🧾','📊','📝','🔎','📦','🛎️','🧹','🏨','🛒','📅','💡','⚡','🌟'];
 const TPL=['用瀏覽器打開網站後台','整理成清單或表格','寫入 Google 試算表','擬好訊息給我確認再發','做完回報重點'];
@@ -883,10 +928,12 @@ function sheet(kind,edit){
     <label class="bc"><input type="radio" name="sf_b" value="mine" ${c?.browser==='mine'?'checked':''}><span><b>使用我的 Chrome</b><small>直接用你 Chrome 已登入的網站和已儲存的密碼。需要先在設定裡連接 Chrome。</small></span></label>
   </div></div>
   <label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>
-  <label class="field">模型（選填，空白用該工具的預設）<input id="sf_m" maxlength="80" value="${esc(c?.model||'')}"></label>
+  <label class="field">模型<select id="sf_m"></select></label>
   <p style="margin-top:-6px" id="sf_hint"></p>`}
   <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option data-u value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
   ${!g&&c&&((S.allow||{})[c.id]||[]).length?`<div class="field">一律允許的事（機器人做這些不會再問你）<div class="picks" id="sf_al">${S.allow[c.id].map((t,i)=>`<div class="pick"><span data-u style="flex:1">${esc(t)}</span><button type="button" class="mv" data-unallow="${i}" aria-label="收回">✕</button></div>`).join('')}</div></div>`:''}
+  ${!g&&c&&((S.memory||{})[c.id]||[]).length?`<div class="field">它記得的事（📌）<div class="picks" id="sf_mem">${S.memory[c.id].map((t,i)=>`<div class="pick"><span data-u style="flex:1">${esc(t)}</span><button type="button" class="mv" data-unmem="${i}" aria-label="忘記">✕</button></div>`).join('')}</div></div>`:''}
+  ${!g&&c&&((S.skills||{})[c.id]||[]).length?`<div class="field">它會的技能（🧩，輸入 / 叫用）<div class="picks" id="sf_sk">${S.skills[c.id].map((k,i)=>`<div class="pick"><span data-u style="flex:1" title="${esc(k.steps)}">${esc(k.name)}</span><button type="button" class="mv" data-unsk="${i}" aria-label="刪除">✕</button></div>`).join('')}</div></div>`:''}
   <label class="field">常用指令（一行一個，會變成輸入框上方的快速按鈕）<textarea id="sf_q" maxlength="2000" style="min-height:70px" placeholder="例如：整理今天的訂單&#10;把結果寫進試算表">${esc(((S.quick||{})[c?.id]||[]).join('\n'))}</textarea></label>
   ${edit?`<div class="field">例行任務<div class="rt" id="rt"></div></div>`:'<p>建立後可以在「任務設定」加入例行任務（每天固定時間自動執行）。</p>'}
   <div class="errmsg" id="se"></div>
@@ -898,8 +945,15 @@ function sheet(kind,edit){
     $('sf_avc').oninput=()=>{av=$('sf_avc').value.trim();box.querySelectorAll('.emo-b').forEach(x=>x.classList.toggle('on',false))};
     $('sn').addEventListener('input',()=>{const f=box.querySelector('[data-emo=""]');if(f)f.textContent=($('sn').value||'字').slice(0,1)});
     sheet.av=()=>av;
-    const upd=()=>{const e=ENG[$('sf_e').value];$('sf_m').placeholder=e.m;const k=$('sf_e').value;$('sf_hint').innerHTML=engState(k)==='ok'?'<span class="p-ok">這台電腦已連接這個 AI。</span>':`這台電腦還沒連接這個 AI。<a href="#" id="sf_conn">看怎麼連接</a>`;if($('sf_conn'))$('sf_conn').onclick=ev=>{ev.preventDefault();openAI(k)}};$('sf_e').onchange=upd;upd()}
+    const fillModels=()=>{const k=$('sf_e').value,list=modelsFor(k),curM=(c&&c.engine===k?c.model:'')||'',curShort=k==='opencode'?curM.replace(/^ollama\//,''):curM;
+      const opts=[...list];if(curShort&&!opts.includes(curShort))opts.push(curShort);
+      $('sf_m').innerHTML=(k==='opencode'&&!opts.length?`<option value="">${esc(I18N.t('這台電腦還沒下載模型，先到 AI 連線下載'))}</option>`:`<option value="">${esc(I18N.t('預設（推薦）'))}</option>`)+opts.map(m=>`<option value="${esc(m)}" ${m===curShort?'selected':''} data-u>${esc(m)}</option>`).join('')};
+    const upd=()=>{const k=$('sf_e').value;fillModels();$('sf_hint').innerHTML=engState(k)==='ok'?'<span class="p-ok">這台電腦已連接這個 AI。</span>':`這台電腦還沒連接這個 AI。<a href="#" id="sf_conn">看怎麼連接</a>`;if($('sf_conn'))$('sf_conn').onclick=ev=>{ev.preventDefault();openAI(k)}};$('sf_e').onchange=upd;upd()}
   if(edit)renderRoutines();
+  if($('sf_mem'))$('sf_mem').onclick=async e=>{const x=e.target.closest('[data-unmem]');if(!x)return;const list=[...S.memory[c.id]];list.splice(+x.dataset.unmem,1);
+    try{await api('settings','PUT',{memory:{bot:c.id,list}});S.memory[c.id]=list;x.closest('.pick').remove();toast(I18N.t('已忘記'))}catch(err){toast(err.message)}};
+  if($('sf_sk'))$('sf_sk').onclick=async e=>{const x=e.target.closest('[data-unsk]');if(!x)return;const list=[...S.skills[c.id]];list.splice(+x.dataset.unsk,1);
+    try{await api('settings','PUT',{skills:{bot:c.id,list}});S.skills[c.id]=list;x.closest('.pick').remove();toast(I18N.t('已刪除'))}catch(err){toast(err.message)}};
   if($('sf_al'))$('sf_al').onclick=async e=>{const x=e.target.closest('[data-unallow]');if(!x)return;const list=[...S.allow[c.id]];list.splice(+x.dataset.unallow,1);
     try{await api('settings','PUT',{allow:{bot:c.id,list}});S.allow[c.id]=list;x.closest('.pick').remove();toast(I18N.t('已收回'))}catch(err){toast(err.message)}};
   if(g)$('picks').onclick=e=>{const b=e.target.closest('.mv');if(!b)return;e.preventDefault();const row=b.closest('.pick');
@@ -964,12 +1018,16 @@ function itemMenu(anchor,id){const c=conv(id);if(!c)return;
     <button data-a="mv" data-v=""><span class="ck">${!c.folder?'✓':''}</span>未分區</button><hr>
     <button data-a="nf"><span class="ck">＋</span>建立分區並移入</button>
     <button data-a="ed"><span class="ck">✎</span>任務設定</button><hr>
+    <button data-a="pin"><span class="ck">📌</span>${(S.pins||[]).includes(id)?'取消置頂':'置頂'}</button>
+    <button data-a="mute"><span class="ck">${(S.mute||{})[id]?'🔔':'🔕'}</span>${(S.mute||{})[id]?'開啟通知':'關閉通知'}</button>
     ${isG(id)?'':'<button data-a="dup"><span class="ck">⧉</span>複製這個機器人</button>'}
     <button data-a="clr"><span class="ck">⌫</span>清空對話紀錄</button>
     <button data-a="del" class="danger"><span class="ck">🗑</span>${isG(id)?'刪除群組':'刪除機器人'}</button>`,
    {mv:async v=>{await api('move','POST',{id,folder:v||null});refresh()},
     nf:()=>folderSheet(null,id),
     clr:()=>clearConv(id),del:()=>deleteConv(id),dup:()=>dupBot(id),
+    pin:async()=>{const p=S.pins||[];await api('settings','PUT',{pins:p.includes(id)?p.filter(x=>x!==id):[id,...p]});refresh()},
+    mute:async()=>{await api('settings','PUT',{mute:{bot:id,on:!(S.mute||{})[id]}});toast(I18N.t((S.mute||{})[id]?'已開啟通知':'已關閉通知'));refresh()},
     ed:()=>{cur=id;render(true);$('app').classList.add('chat');sheet(isG(id)?'g':'b',true)}})}
 function folderMenu(anchor,fid){
   popMenu(anchor,`<button data-a="rn"><span class="ck">✎</span>分區名稱與資料</button><button data-a="del" class="danger"><span class="ck">✕</span>刪除分區（內容移到未分區）</button>`,
@@ -1319,8 +1377,8 @@ async function openGuide(){
 curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre><p>然後按下面的按鈕，把出現的那一行也貼上執行。</p><div class="row2"><button class="ghost" id="gGen">產生連線指令</button></div><pre class="code" id="gCmd" hidden></pre></details>`});
     steps.push(S.runnerOnline?aiStep:{cls:'',t:'連接 AI（至少一個）',b:'<p>電腦連上後，這裡會顯示你電腦上已經裝好的 AI，並教你怎麼加裝。</p><div class="row2"><button class="ghost" data-ai>先看有哪些 AI 可以用</button></div>'});
   }
-  steps.push({cls:st(hasBot),t:'建立機器人',b:hasBot?`<p>已有 ${S.bots.length} 個機器人。可以再加範本，或用左邊「＋ 機器人」自己建。</p>${tplHtml()}`:`<p>選一個範本開始，之後都能改名、改任務。也可以關掉指引，用左邊「＋ 機器人」自己建立。</p>${tplHtml()}`});
-  steps.push({cls:testState==='ok'?'ok':testState&&testState!=='run'?'bad':'',t:'試跑一次',b:`<p>傳一句話給第一個機器人，確認整條流程能動。第一次可能要等一分鐘。</p><div class="row2"><button class="btn" id="gTest" ${hasBot?'':'disabled'}>${testState==='run'?'等待回覆中…':'開始測試'}</button></div><div id="gRes">${testState==='ok'?'<p class="p-ok">成功，機器人回覆了。之後在「任務設定」可以加例行任務，讓它每天自動做事。</p>':testState&&testState!=='run'?`<p class="errmsg">${esc(testState)}</p>`:''}</div>`});
+  steps.push({cls:st(hasBot),t:'建立機器人',b:hasBot?`<p>已有 ${S.bots.length} 個機器人。可以再加範本，或用左邊「＋ 機器人」自己建。</p>${tplHtml()}`:`<p>最簡單的方式：按左邊「＋ 機器人」取個名字，然後直接傳訊息告訴它要做什麼，它會自己整理成指定任務。也可以從範本開始：</p>${tplHtml()}`});
+  steps.push({cls:testState==='ok'?'ok':testState&&testState!=='run'?'bad':'',t:'試跑一次',b:`<p>傳一句話給第一個機器人，確認整條流程能動。第一次可能要等一分鐘。</p><div class="row2"><button class="btn" id="gTest" ${hasBot?'':'disabled'}>${testState==='run'?'等待回覆中…':'開始測試'}</button></div><div id="gRes">${testState==='ok'?'<p class="p-ok">成功，機器人回覆了。接下來直接跟它說要做什麼，例如「每天 8 點幫我整理今天的訂單」，它會自己建好例行任務。</p>':testState&&testState!=='run'?`<p class="errmsg">${esc(testState)}</p>`:''}</div>`});
   $('veil').innerHTML=`<div class="sheet"><h2>設定指引</h2><p>照順序完成，打勾代表已經就緒。</p>
   <div class="steps">${steps.map((x,i)=>`<div class="step ${x.cls}"><span class="n">${x.cls==='ok'?'✓':x.cls==='bad'?'!':i+1}</span><b>${x.t}</b><div class="bd">${x.b}</div></div>`).join('')}</div>
   <div class="acts"><button class="btn" id="sx">${steps.every(x=>x.cls==='ok')?'完成':'先關閉'}</button></div></div>`;

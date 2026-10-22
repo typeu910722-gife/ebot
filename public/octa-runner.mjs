@@ -19,7 +19,7 @@ import { dirname, join, extname, basename, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 
-export const VERSION = '10.3';
+export const VERSION = '11.0';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -160,6 +160,8 @@ function buildPrompt(job, here) {
     if (job.canAsk) lines.push('需要同事的資料或幫忙時，在回覆中單獨一行寫「@同事名 你的問題」，系統會請對方回答，再把你叫回來繼續。不需要就不要寫。');
   }
   lines.push('', '你的運作環境（使用者問到你用什麼 AI、方案、還剩多少流量時，照這些資料回答，不要說你查不到）：', ...aboutMe(job));
+  if (job.memory?.length) lines.push('', '你記得的事（之前學到的偏好和重要事實；重要決定前仍要到來源確認最新狀況）：', ...job.memory.map(m => '- ' + m));
+  if (job.skills?.length) lines.push('', '你會的技能（使用者說「執行技能 X」或要做相同的事時，照步驟做）：', ...job.skills.map(k => `【${k.name}】\n${k.steps}`));
   if (job.notes) lines.push('', '共用資料（所有機器人都要知道）：', job.notes);
   if (job.folderNotes) lines.push('', `分區「${job.folder}」的資料：`, job.folderNotes);
   lines.push(
@@ -174,6 +176,8 @@ function buildPrompt(job, here) {
     '- 做完先講結果，再列出「需要你決定的事」，每一項附上你的建議做法。',
     '- 主動做下一步：根據指定任務推斷接下來應該做什麼。在允許範圍內就直接做；需要核准的事（例如回覆客人）先把內容擬好，用 ✅待確認 讓使用者一鍵核准。例如看到未回覆的客人訊息，就點開讀完、擬好回覆。',
     '- 指定任務太簡短或模糊時（只有幾個字），根據你看到的實際情況推斷完整的工作內容，用 📝任務更新 寫出來，並提出合適的例行任務。',
+    '- 記住長期有用的事：使用者說了穩定的偏好、規則或重要事實（例如「回覆客人要用敬語」「302 房冷氣壞了」），在回覆最後加一行「📌記住：一句話」。一次性的事不要記。',
+    '- 存成技能：使用者說「把這個流程存起來／存成技能」，或同一套步驟你已經做順了，在回覆最後寫「🧩技能：技能名稱」，換行後條列每個步驟（去哪裡、點什麼、怎麼判斷、輸出什麼），最後一行寫「🧩結束」。',
     '',
     '規則：',
     `- 用${({ 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', en: '英文（English）', ja: '日文（日本語）' })[job.lang] || '繁體中文'}回覆，簡潔、先給結果。你的最後輸出會原封不動顯示成聊天訊息。`,
@@ -316,6 +320,25 @@ function codexUsage() {   // `codex app-server` answers account/rateLimits/read 
     });
     send({ id: 1, method: 'initialize', params: { clientInfo: { name: 'octa', title: 'OCTA', version: VERSION } } });
   });
+}
+// which models each AI on this computer offers (for the model menu); asked from the tools that can list them
+const runText = (bin, args) => new Promise(ok => execFile(bin, args, { shell: WIN, windowsHide: true, timeout: 20000, encoding: 'utf8', maxBuffer: 4 << 20 }, (e, out, err) => ok(e ? '' : String(out || '') + String(err || ''))));
+let lastModels = 0;
+async function modelReport() {   // every 30 minutes
+  if (Date.now() - lastModels < 30 * 60000) return undefined;
+  lastModels = Date.now();
+  const out = {};
+  if (await has('ollama')) out.opencode = (await runText('ollama', ['list'])).split('\n').slice(1).map(l => l.trim().split(/\s+/)[0]).filter(Boolean).slice(0, 30);
+  if (await has('agent')) {
+    const t = (await runText('agent', ['--list-models'])).replace(/\x1b\[[0-9;]*m/g, '');
+    out.cursor = [...new Set(t.split('\n').map(l => (l.match(/^\s*(?:[-*•]\s*)?([a-z0-9][\w.\-]{2,40})(?:\s|$)/i) || [])[1]).filter(x => x && /\d|-/.test(x)))].slice(0, 30);
+  }
+  if (await has('copilot')) {
+    const t = await runText('copilot', ['--help']);
+    const m = t.match(/--model[\s\S]{0,300}?choices:\s*([^)]+)\)/);
+    if (m) out.copilot = [...m[1].matchAll(/"([^"]+)"/g)].map(x => x[1]).slice(0, 40);
+  }
+  return out;
 }
 let lastUsage = 0, usageNow = {};
 async function usageReport() {   // every 10 minutes
@@ -535,7 +558,7 @@ function startSession(job, b) {
 }
 async function warmClaude(job, b, here, live) {
   // anything that changes the bot's standing instructions starts a fresh session
-  const fp = JSON.stringify([job.bot.task, job.bot.model, job.bot.browser, job.bot.livePort, job.notes, job.folderNotes, job.group, (job.colleagues || []).map(c => c.name + c.task), job.allowed, job.lang, storeDir(), job.conv?.id]);
+  const fp = JSON.stringify([job.memory, (job.skills || []).map(k => k.name + k.steps), job.bot.task, job.bot.model, job.bot.browser, job.bot.livePort, job.notes, job.folderNotes, job.group, (job.colleagues || []).map(c => c.name + c.task), job.allowed, job.lang, storeDir(), job.conv?.id]);
   let s = sessions.get(job.bot.id), text;
   const ids = job.history.map(h => h.id || 0), newest = Math.max(0, ...ids);
   if (s && s.fp === fp && s.convId === job.conv?.id) {
@@ -570,7 +593,7 @@ async function testJob(job) {
   const b = botDir('_test-' + job.engine);
   log(`🔌 測試 ${ENGINES[job.engine]?.label || job.engine}`);
   const res = await runEngine(job.engine, job.prompt, b, '');
-  lastReport = 0; lastUsage = 0;   // refresh the installed list and quotas right after a test
+  lastReport = 0; lastUsage = 0; lastModels = 0;   // refresh the installed list, models and quotas right after a test
   await api('runner/done', { id: job.id, ok: res.ok, text: res.text });
 }
 
@@ -719,7 +742,7 @@ async function loop() {
       const slots = MAX - active;
       poll = new AbortController();
       const r = await api('runner/next', {
-        wait: true, slots, engines: await engineReport(), usage: await usageReport(),
+        wait: true, slots, engines: await engineReport(), usage: await usageReport(), models: await modelReport(),
         version: VERSION, app: cfg.appVersion || undefined, store: storeDir()
       }, 'POST', slots ? undefined : poll.signal).catch(e => { if (e.name === 'AbortError') return {}; throw e; });
       failures = 0;
@@ -743,7 +766,7 @@ export function startRunner(opts) {
   MAX = Math.max(1, Math.min(+opts.max || 3, 8));
   if (opts.log) log = opts.log;
   onFatal = opts.onFatal || null;
-  stopped = false; lastReport = 0; lastUsage = 0; standby = false;
+  stopped = false; lastReport = 0; lastUsage = 0; lastModels = 0; standby = false;
   mkdirSync(join(workDir, 'bots'), { recursive: true });
   mkdirSync(storeDir(), { recursive: true });
   log(`OCTA 執行器 v${VERSION} 啟動，最多 ${MAX} 個機器人同時工作；檔案資料夾：${storeDir()}`);
