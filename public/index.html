@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=17"></script>
+<script src="/i18n-dict.js?v=18"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -438,7 +438,7 @@ details.adv[open]{display:grid;gap:8px}
   </section>
   <section class="hsec">
     <h2>支援的 AI</h2>
-    <p class="hai">Claude · ChatGPT · Gemini · Grok · GitHub Copilot · Cursor · 通義千問 · Ollama 本機模型</p>
+    <p class="hai">Claude · ChatGPT · Gemini · Grok Bot · Ollama 本機模型</p>
     <p class="hmuted">用你自己的帳號登入，費用依各家方案；Gemini 個人帳號有免費額度，Ollama 本機模型完全免費。</p>
   </section>
   <section class="hsec">
@@ -446,7 +446,7 @@ details.adv[open]{display:grid;gap:8px}
     <details><summary>要錢嗎？</summary><p>OCTA 免費、開源。AI 的部分用你自己的訂閱或免費額度。</p></details>
     <details><summary>桌面版和網頁版差在哪？</summary><p>兩者用同一個帳號、資料同步。機器人要在電腦上工作，所以至少要有一台電腦裝桌面版並保持開著；之後用手機或其他電腦打開網頁版就能指揮、看結果。</p></details>
     <details><summary>電腦要一直開著嗎？</summary><p>要。機器人在你的電腦上工作，電腦關機或休眠時會暫停；例行任務會排隊，開機後自動補做並通知你。</p></details>
-    <details><summary>它跟 Grok Bot 這類 AI 同事有什麼不同？</summary><p>概念一樣：有名字的機器人、用聊天交代、自己操作網站、需要時找你核准或登入、排程與技能。不同的是 OCTA 在你自己的電腦上執行，可以自由選擇已經訂閱的 AI（Claude、ChatGPT、Gemini、Copilot、Cursor、通義千問、Ollama），資料和檔案留在你的電腦。</p></details>
+    <details><summary>它跟 Grok Bot 這類 AI 同事有什麼不同？</summary><p>概念一樣：有名字的機器人、用聊天交代、自己操作網站、需要時找你核准或登入、排程與技能。不同的是 OCTA 在你自己的電腦上執行，可以自由選擇已經訂閱的 AI（Claude、ChatGPT、Gemini、Ollama，也能帶入你在 Grok Bot 的機器人），資料和檔案留在你的電腦。</p></details>
     <details><summary>帳號密碼安全嗎？</summary><p>不要在對話裡貼密碼。需要登入時，把機器人的瀏覽器叫到螢幕上自己登入，或改用你自己的 Chrome，讓 Chrome 自動填入已儲存的密碼，機器人看不到密碼本身。</p></details>
     <details><summary>有 Mac 版嗎？</summary><p>目前先提供 Windows 版；Mac 使用者可以先用網頁版。</p></details>
   </section>
@@ -893,13 +893,13 @@ const ENG={
     npm:'@openai/codex',login:'codex login',hint:'瀏覽器會打開，用 ChatGPT 帳號登入',m:'例如 gpt-5.5'},
   gemini:{n:'Gemini',full:'Gemini（Antigravity CLI）',tag:'免費額度',good:'Google 服務整合、長文件分析、多模態理解、資料研究',who:'有 Google 帳號就能用',cost:'免費 Google 帳號也能用，AI Pro／Ultra 額度更多',site:'https://antigravity.google/docs/cli',quota:'count',limit:'在 agy 裡輸入 /usage 可查剩餘量',
     win:'irm https://antigravity.google/cli/install.ps1 | iex',mac:'curl -fsSL https://antigravity.google/cli/install.sh | bash',login:'agy',hint:'瀏覽器會打開，用 Google 帳號登入，完成後輸入 /quit 離開',m:'例如 gemini-3.8-flash-medium'},
-  copilot:{n:'GitHub Copilot',full:'GitHub Copilot（GPT／Claude／Gemini）',good:'程式碼補全、日常編碼、程式碼審查、測試輔助',who:'有 GitHub Copilot 訂閱',cost:'一個訂閱可選多家模型',site:'https://github.com/github/copilot-cli',quota:'count',
+  copilot:{hide:1,n:'GitHub Copilot',full:'GitHub Copilot（GPT／Claude／Gemini）',good:'程式碼補全、日常編碼、程式碼審查、測試輔助',who:'有 GitHub Copilot 訂閱',cost:'一個訂閱可選多家模型',site:'https://github.com/github/copilot-cli',quota:'count',
     npm:'@github/copilot',login:'copilot',hint:'出現畫面後輸入 /login，用 GitHub 帳號登入',m:'例如 gpt-5.5、claude-sonnet-4.6'},
-  cursor:{n:'Cursor',full:'Cursor（Cursor CLI）',good:'多檔案修改、程式重構、專案除錯、AI Agent 開發',who:'有 Cursor 訂閱',cost:'用你的 Cursor 訂閱',site:'https://cursor.com/cli',quota:'count',
+  cursor:{hide:1,n:'Cursor',full:'Cursor（Cursor CLI）',good:'多檔案修改、程式重構、專案除錯、AI Agent 開發',who:'有 Cursor 訂閱',cost:'用你的 Cursor 訂閱',site:'https://cursor.com/cli',quota:'count',
     win:"irm 'https://cursor.com/install?win32=true' | iex",mac:'curl https://cursor.com/install -fsS | bash',login:'agent login',hint:'瀏覽器會打開，用 Cursor 帳號登入',m:'例如 gpt-5、sonnet-4'},
-  qwen:{n:'通義千問',full:'通義千問（Qwen Code）',good:'中文理解與生成、長篇文件分析、程式碼生成、數學推理、多模態分析（圖片、音訊、影片）、AI Agent 工具調用、自動化工作流程，以及開放模型部署',who:'有阿里雲／Qwen 帳號',cost:'依 Qwen 官方方案',site:'https://github.com/QwenLM/qwen-code',quota:'count',
+  qwen:{hide:1,n:'通義千問',full:'通義千問（Qwen Code）',good:'中文理解與生成、長篇文件分析、程式碼生成、數學推理、多模態分析（圖片、音訊、影片）、AI Agent 工具調用、自動化工作流程，以及開放模型部署',who:'有阿里雲／Qwen 帳號',cost:'依 Qwen 官方方案',site:'https://github.com/QwenLM/qwen-code',quota:'count',
     npm:'@qwen-code/qwen-code',login:'qwen',hint:'依畫面選擇登入方式，完成後輸入 /quit 離開',m:'例如 qwen3-coder-plus'},
-  grok:{n:'Grok',full:'Grok（xAI Grok CLI）',good:'即時資訊與 X（Twitter）趨勢、網路研究、推理與寫作、程式開發',who:'有 X Premium／SuperGrok 等 Grok 方案',cost:'用你的 Grok 帳號；依 xAI 方案',site:'https://docs.x.ai/build/overview',quota:'count',
+  grok:{hide:1,n:'Grok',full:'Grok（xAI Grok CLI）',good:'即時資訊與 X（Twitter）趨勢、網路研究、推理與寫作、程式開發',who:'有 X Premium／SuperGrok 等 Grok 方案',cost:'用你的 Grok 帳號；依 xAI 方案',site:'https://docs.x.ai/build/overview',quota:'count',
     win:'irm https://x.ai/cli/install.ps1 | iex',mac:'curl -fsSL https://x.ai/cli/install.sh | bash',login:'grok login',hint:'瀏覽器會打開，用你的 X／Grok 帳號登入',m:''},
   grokbot:{n:'Grok Bot',full:'Grok Bot（帶入你在 Grok Bot 的機器人）',tag:'第三方',good:'把 Grok Bot 裡設定好的機器人帶進 OCTA：它在 xAI 的雲端電腦上工作，OCTA 負責排程、事件觸發、核准和通知',who:'有 Grok Bot（SuperGrok 或 Cursor 方案），並在這台電腦裝好、登入 Grok Bot 桌面 App',cost:'用你的 Grok Bot 方案。透過開源工具 grok-bot-cli 連接（第三方，不是 xAI 官方），它會使用這台電腦上 Grok Bot App 的登入狀態',site:'https://github.com/ScriptedAlchemy/grok-bot-cli',quota:'count',
     npm:'grok-bot-cli',login:'gbot bots list',hint:'先在這台電腦安裝並登入 Grok Bot 桌面 App，裝好會列出你的 Grok Bot 機器人',m:''},
@@ -932,7 +932,7 @@ function sheet(kind,edit){
     <label class="bc"><input type="radio" name="sf_b" value="own" ${c?.browser!=='mine'?'checked':''}><span><b>機器人專屬瀏覽器</b><small>獨立的分頁與登入，不會動到你的 Chrome。第一次用某網站要在「瀏覽器」幫它登入一次。</small></span></label>
     <label class="bc"><input type="radio" name="sf_b" value="mine" ${c?.browser==='mine'?'checked':''}><span><b>使用我的 Chrome</b><small>直接用你 Chrome 已登入的網站和已儲存的密碼。需要先在設定裡連接 Chrome。</small></span></label>
   </div></div>
-  <label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>
+  <label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).filter(([k,v])=>!v.hide||c?.engine===k).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>
   <label class="field">模型<select id="sf_m"></select></label>
   <p style="margin-top:-6px" id="sf_hint"></p>`}
   <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option data-u value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
@@ -1367,7 +1367,7 @@ async function openAI(focus){
     return `<details class="aic" data-k="${k}" ${focus===k?'open':''}><summary><span class="ait"><b>${e.n}</b>${e.tag?` <span class="pill p-pr" style="color:var(--gold2)">${e.tag}</span>`:''} ${badge}<small class="aigood">${esc(e.good)}</small><span class="aiq">${quotaHtml(k,U)}</span></span></summary>
       <div class="aib"><p>適合：${esc(e.who)}。${esc(e.cost)}。</p>${steps}${res}<p><a href="${e.site}" target="_blank" rel="noopener">官方說明</a></p></div></details>`};
   subSheet('AI 連線',`<p>機器人用主機電腦上登入的 AI 工作，用的是你自己的帳號或訂閱。連一個就能開始，之後在每個機器人的「任務設定 → AI 引擎」選要用哪個。點開每一項看安裝方式。</p>
-  <div class="ais">${Object.keys(ENG).map(card).join('')}</div>
+  <div class="ais">${Object.keys(ENG).filter(k=>!ENG[k].hide).map(card).join('')}</div>
   <p class="hmuted">剩餘流量每 10 分鐘更新一次。Claude 與 ChatGPT 會顯示方案剩下的比例；其他服務沒有提供查詢，改顯示 OCTA 今天用了幾次。</p>`);
   $('veil').querySelectorAll('pre.code').forEach(p=>{p.insertAdjacentHTML('afterend',`<div class="row2" style="margin-top:4px">${copyBtn(p.textContent)}</div>`)});
   $('veil').querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.copy).then(()=>b.textContent=I18N.t('已複製 ✓')).catch(()=>{})});
@@ -1414,8 +1414,8 @@ async function openGuide(){
   const site=location.origin,hasBot=S.bots.length>0;
   const st=(ok,bad)=>ok?'ok':bad?'bad':'';
   const steps=[];
-  const anyAI=Object.values(S.engines||{}).some(Boolean);
-  const aiStep={cls:st(anyAI,S.engines&&!anyAI),t:'連接 AI（至少一個）',b:anyAI?`<p>已連接：${Object.keys(ENG).filter(k=>S.engines[k]).map(k=>ENG[k].n).join('、')}。</p><div class="row2"><button class="ghost" data-ai>管理 AI 連線</button></div>`:
+  const anyAI=Object.entries(S.engines||{}).some(([k,v])=>v&&ENG[k]&&!ENG[k].hide);
+  const aiStep={cls:st(anyAI,S.engines&&!anyAI),t:'連接 AI（至少一個）',b:anyAI?`<p>已連接：${Object.keys(ENG).filter(k=>S.engines[k]&&!ENG[k].hide).map(k=>ENG[k].n).join('、')}。</p><div class="row2"><button class="ghost" data-ai>管理 AI 連線</button></div>`:
     `<p>機器人要靠 AI 才能思考。選一個你已經有帳號的 AI 連上就好，最推薦 Claude；沒有付費訂閱可以先用 Gemini 的免費額度。</p><div class="row2"><button class="btn" data-ai>選擇並連接 AI</button></div>`};
   if(DESK()){
     steps.push(aiStep);

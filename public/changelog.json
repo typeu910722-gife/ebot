@@ -1,5 +1,21 @@
 [
  {
+  "v": "2.2.9",
+  "date": "2026-10-22",
+  "notes": [
+   "精簡 AI 選擇：先專心支援 Claude、ChatGPT、Gemini、Grok Bot、Ollama 五個；GitHub Copilot、Cursor、通義千問、Grok 暫時不開放連接（已經在用的機器人不受影響）",
+   "更新完成後 OCTA 會自己重新打開（2.2.8 起）"
+  ],
+  "notes_en": [
+   "Simpler AI choice: focusing on Claude, ChatGPT, Gemini, Grok Bot and Ollama; GitHub Copilot, Cursor, Qwen and Grok can’t be connected for now (bots already using them keep working)",
+   "OCTA reopens by itself after an update (since 2.2.8)"
+  ],
+  "notes_ja": [
+   "AI の選択肢を整理：Claude、ChatGPT、Gemini、Grok Bot、Ollama の 5 つに集中。GitHub Copilot、Cursor、Qwen、Grok は当面接続できません（使用中のボットはそのまま動作）",
+   "更新後に OCTA が自動で再起動します（2.2.8 以降）"
+  ]
+ },
+ {
   "v": "2.2.8",
   "date": "2026-10-22",
   "notes": [

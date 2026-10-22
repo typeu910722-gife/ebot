@@ -831,7 +831,7 @@ T.update({
  '電腦要一直開著嗎？': ('Does the computer need to stay on?', 'パソコンはずっと付けておく必要がありますか？'),
  '要。機器人在你的電腦上工作，電腦關機或休眠時會暫停；例行任務會排隊，開機後自動補做並通知你。': ('Yes. Bots work on your computer and pause while it is off or asleep; routines wait in line and run once it is back, and you are notified.', 'はい。ボットはパソコンで動くため、電源オフやスリープ中は止まります。定期タスクは順番待ちになり、起動後に自動で実行して通知します。'),
  '它跟 Grok Bot 這類 AI 同事有什麼不同？': ('How is it different from AI coworkers like Grok Bot?', 'Grok Bot のような AI 同僚とは何が違う？'),
- '概念一樣：有名字的機器人、用聊天交代、自己操作網站、需要時找你核准或登入、排程與技能。不同的是 OCTA 在你自己的電腦上執行，可以自由選擇已經訂閱的 AI（Claude、ChatGPT、Gemini、Copilot、Cursor、通義千問、Ollama），資料和檔案留在你的電腦。': ('Same idea: named bots, instructions by chat, operating websites, asking you for approvals or sign-ins, routines and skills. The difference: OCTA runs on your own computer, lets you pick any AI you already subscribe to (Claude, ChatGPT, Gemini, Copilot, Cursor, Qwen, Ollama), and keeps data and files on your computer.', '考え方は同じです：名前のあるボット、チャットで指示、サイト操作、必要に応じて承認やログインを依頼、定期タスクとスキル。違いは、OCTA はあなたのパソコンで動き、契約済みの AI（Claude・ChatGPT・Gemini・Copilot・Cursor・Qwen・Ollama）を自由に選べ、データとファイルがパソコンに残ることです。'),
+ '概念一樣：有名字的機器人、用聊天交代、自己操作網站、需要時找你核准或登入、排程與技能。不同的是 OCTA 在你自己的電腦上執行，可以自由選擇已經訂閱的 AI（Claude、ChatGPT、Gemini、Ollama，也能帶入你在 Grok Bot 的機器人），資料和檔案留在你的電腦。': ('Same idea: named bots, instructions by chat, operating websites, asking you for approvals or sign-ins, routines and skills. The difference: OCTA runs on your own computer, lets you pick any AI you already subscribe to (Claude, ChatGPT, Gemini, Ollama, or bots from your Grok Bot), and keeps data and files on your computer.', '考え方は同じです：名前のあるボット、チャットで指示、サイト操作、必要に応じて承認やログインを依頼、定期タスクとスキル。違いは、OCTA はあなたのパソコンで動き、契約済みの AI（Claude・ChatGPT・Gemini・Ollama・Grok Bot のボット）を自由に選べ、データとファイルがパソコンに残ることです。'),
  '帳號密碼安全嗎？': ('Are my passwords safe?', 'パスワードは安全ですか？'),
  '不要在對話裡貼密碼。需要登入時，把機器人的瀏覽器叫到螢幕上自己登入，或改用你自己的 Chrome，讓 Chrome 自動填入已儲存的密碼，機器人看不到密碼本身。': ('Don’t paste passwords in chat. To sign in, bring the bot’s browser on screen and sign in yourself, or switch it to your own Chrome so Chrome fills in saved passwords — the bot never sees them.', 'チャットにパスワードを貼らないでください。ログインはボットのブラウザを画面に出して自分で行うか、自分の Chrome に切り替えて保存済みパスワードを Chrome に入力させます。ボットはパスワードを見ません。'),
  '登入 OCTA。機器人在你的主機電腦上，用你自己的 AI 帳號工作；手機和其他電腦登入同一個帳號就能指揮。': ('Sign in to OCTA. Bots work on your host computer with your own AI accounts; sign in to the same account on phones and other computers to give instructions.', 'OCTA にログイン。ボットはホストパソコンであなたの AI アカウントを使って動きます。スマホや他のパソコンから同じアカウントで指示できます。'),
@@ -928,4 +928,9 @@ T.update({
  '在 agy 裡輸入 /usage 可查剩餘量': ('Type /usage in agy to see what’s left', 'agy で /usage と入力すると残量を確認できます'),
  '瀏覽器會打開，用 Google 帳號登入，完成後輸入 /quit 離開': ('a browser opens — sign in with your Google account, then type /quit', 'ブラウザが開くので Google アカウントでログインし、/quit で終了'),
  '例如 gemini-3.8-flash-medium': ('e.g. gemini-3.8-flash-medium', '例：gemini-3.8-flash-medium'),
+})
+
+T.update({
+ 'Claude · ChatGPT · Gemini · Grok Bot · Ollama 本機模型': ('Claude · ChatGPT · Gemini · Grok Bot · Ollama local models', 'Claude · ChatGPT · Gemini · Grok Bot · Ollama ローカルモデル'),
+ '這個 AI 暫時不開放連接': ('This AI isn’t available to connect for now', 'この AI は現在接続できません'),
 })

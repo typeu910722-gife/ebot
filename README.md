@@ -6,10 +6,8 @@
 | --- | --- | --- |
 | Claude | [Claude Code](https://code.claude.com) | `claude` → `/login`（Pro / Max） |
 | ChatGPT | [Codex CLI](https://developers.openai.com/codex/cli) | `codex` → Sign in with ChatGPT |
-| Gemini | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `gemini` → Google 帳號 |
-| GitHub Copilot（GPT／Claude／Gemini） | [Copilot CLI](https://github.com/github/copilot-cli) | `copilot` → `/login` |
-| Cursor | [Cursor CLI](https://cursor.com/cli) | `agent login` |
-| 通義千問 | [Qwen Code](https://github.com/QwenLM/qwen-code) | `qwen` 依畫面登入 |
+| Gemini | [Antigravity CLI](https://antigravity.google/docs/cli)（`agy`） | `agy` → Google 帳號（免費帳號可用） |
+| Grok Bot（帶入你在 Grok Bot 的機器人） | [grok-bot-cli](https://github.com/ScriptedAlchemy/grok-bot-cli)（第三方）＋ Grok Bot 桌面 App | 先登入 Grok Bot App |
 | 本機開源模型（免費，不接付費 API） | [Ollama](https://ollama.com) ＋ [OpenCode](https://opencode.ai) | `ollama pull qwen3`，機器人模型填 `qwen3` |
 
 ## 快速開始（桌面版，推薦）
@@ -23,7 +21,7 @@
 
 ## 能做什麼
 
-- **機器人**：每個機器人有自己的指定任務，並可選 Claude、ChatGPT、Gemini、Copilot、Cursor、Qwen 或 Ollama 本機模型
+- **機器人**：每個機器人有自己的指定任務，並可選 Claude、ChatGPT、Gemini、Ollama 本機模型，或帶入 Grok Bot 的機器人
 - **群組**：把機器人拉進群組依序協作，或用 `@名字` 指定誰做
 - **分區**：區隔不同門市或專案；同分區的機器人可以互相詢問
 - **例行任務**：每天固定時間自動執行，可隨時開關；可選雲端排程（主機離線時排隊並通知）或電腦排程
