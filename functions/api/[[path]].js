@@ -935,7 +935,7 @@ async function route({ request: req, env, params }) {
       const [ur, busy, rev, ...lasts] = await db.batch([
         // recent bot replies, for unread counts and notifications
         db.prepare("SELECT conv,id FROM messages WHERE user_id=? AND by_ NOT IN ('me','sys') ORDER BY id DESC LIMIT 300").bind(U),
-        db.prepare("SELECT conv,bot_id,status,kind FROM jobs WHERE user_id=? AND kind<>'test' AND status IN ('pending','running')").bind(U),
+        db.prepare("SELECT conv,bot_id,status,kind,started FROM jobs WHERE user_id=? AND kind<>'test' AND status IN ('pending','running')").bind(U),
         db.prepare('SELECT rev FROM users WHERE id=?').bind(U),
         // newest non-system message of each conversation (list previews); one indexed lookup each
         ...convIds.map(c => db.prepare("SELECT conv,id,by_ AS by,substr(text,1,140) AS text,ts FROM messages WHERE user_id=? AND conv=? AND by_<>'sys' ORDER BY id DESC LIMIT 1").bind(U, c))
@@ -947,7 +947,7 @@ async function route({ request: req, env, params }) {
         me: me.name, local: me.kind === 'local', rev: rev.results[0]?.rev ?? 0,
         engines: h ? h.engines : JSON.parse((await db.prepare('SELECT engines FROM users WHERE id=?').bind(U).first())?.engines || 'null'),
         runnerOnline: env.runnerOnline ? env.runnerOnline() : h.online,
-        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud',
+        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {},
         ...all, last: last.results, ur: ur.results.map(r => [r.conv, r.id]), busy: busy.results
       });
     }
@@ -1179,6 +1179,14 @@ async function route({ request: req, env, params }) {
       if (body.notifyAll !== undefined) st.notifyAll = !!body.notifyAll;
       if (['cloud', 'pc'].includes(body.sched)) st.sched = body.sched;
       if (['zh-TW', 'zh-CN', 'en', 'ja'].includes(body.lang)) st.lang = body.lang;
+      if (body.quick && typeof body.quick === 'object') {   // 常用指令 per conversation
+        const conv = clean(body.quick.conv, 64), list = (Array.isArray(body.quick.list) ? body.quick.list : []).map(x => clean(x, 300)).filter(Boolean).slice(0, 12);
+        st.quick = st.quick || {};
+        if (list.length) st.quick[conv] = list; else delete st.quick[conv];
+        await putSettings(db, U, st);
+        await bump(db, U);
+        return J({ ok: true });
+      }
       for (const k of ['tg', 'line']) if (body[k]) {
         const cur = st[k] || {};
         const tok = clean(body[k].token, 300);

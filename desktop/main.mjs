@@ -76,7 +76,14 @@ function createWindow() {
     logError('load', `${code} ${desc} ${url}`);
     if (url.startsWith(CLOUD)) showSplash().then(() => failSplash('連不上 OCTA 雲端（' + desc + '）。請檢查網路後重試，或先用離線模式。'));
   });
-  win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
+  win.on('close', e => {
+    if (quitting) return;
+    e.preventDefault(); win.hide();
+    if (!cfg.toldTray) {   // the first time: say the bots keep working in the background
+      cfg = { ...cfg, toldTray: true }; writeCfg(cfg);
+      new Notification({ title: 'OCTA 還在背景工作', body: '機器人會繼續執行。點右下角章魚圖示可以打開，要完全關閉請在圖示上按右鍵 →「結束」。', icon: icon() }).on('click', showWindow).show();
+    }
+  });
   win.on('closed', () => (win = null));
   win.once('ready-to-show', () => { if (!hiddenStart) { win.show(); win.focus(); } });
 }

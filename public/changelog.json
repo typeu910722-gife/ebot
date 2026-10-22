@@ -4,15 +4,42 @@
   "date": "2026-10-22",
   "notes": [
    "機器人知道自己用哪個 AI、哪個方案和剩餘流量，問它就會回答",
-   "AI 連線頁顯示方案名稱（Claude Max／Pro、ChatGPT Plus／Pro）"
+   "AI 連線頁顯示方案名稱（Claude Max／Pro、ChatGPT Plus／Pro）",
+   "機器人的回覆支援表格、清單、粗體、程式碼（可一鍵複製）",
+   "機器人工作時顯示已經花了多久",
+   "失敗的回覆有「重試」按鈕",
+   "很長的回覆會先收合，按「顯示全部」展開",
+   "常用指令：在任務設定填好，輸入框上方一鍵送出",
+   "可以複製機器人（⋯ →「複製這個機器人」）",
+   "群組裡輸入 @ 會跳出成員選單",
+   "手機可以把 OCTA 加到主畫面，像 App 一樣開啟",
+   "桌面版第一次關閉視窗時提醒仍在背景工作"
   ],
   "notes_en": [
    "Bots know which AI, plan and remaining quota they run on, and answer when asked",
-   "The AI connections page shows the plan name (Claude Max/Pro, ChatGPT Plus/Pro)"
+   "The AI connections page shows the plan name (Claude Max/Pro, ChatGPT Plus/Pro)",
+   "Bot replies show tables, lists, bold text and code (with a copy button)",
+   "Shows how long a bot has been working",
+   "Failed replies get a Retry button",
+   "Long replies are collapsed with “Show all”",
+   "Saved instructions: set them in bot settings and send with one tap above the input",
+   "Duplicate a bot (⋯ → Duplicate)",
+   "Typing @ in a group shows a member picker",
+   "Add OCTA to your phone's home screen like an app",
+   "The desktop app explains it keeps working in the background the first time you close the window"
   ],
   "notes_ja": [
    "ボットが自分の AI・プラン・残り使用量を把握し、聞かれたら答えます",
-   "AI 接続ページにプラン名を表示（Claude Max／Pro、ChatGPT Plus／Pro）"
+   "AI 接続ページにプラン名を表示（Claude Max／Pro、ChatGPT Plus／Pro）",
+   "ボットの返信で表・リスト・太字・コード（コピーボタン付き）を表示",
+   "ボットの作業経過時間を表示",
+   "失敗した返信に「再試行」ボタン",
+   "長い返信は折りたたみ、「すべて表示」で展開",
+   "よく使う指示：タスク設定で登録し、入力欄の上からワンタップで送信",
+   "ボットを複製（⋯ →「このボットを複製」）",
+   "グループで @ を入力するとメンバー候補を表示",
+   "スマホのホーム画面に OCTA をアプリのように追加可能",
+   "デスクトップ版は初めてウィンドウを閉じたとき、バックグラウンドで動作中と案内"
   ]
  },
  {

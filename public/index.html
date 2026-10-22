@@ -10,9 +10,10 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=3"></script>
+<script src="/i18n-dict.js?v=4"></script>
 <script src="/i18n-core.js?v=2"></script>
-<link rel="apple-touch-icon" href="/icon.png?v=octopus">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500&display=swap">
 <style>
 /* Dark-gold theme. Desktop: rail + chat pane. Phone: list ⇄ chat. */
@@ -341,6 +342,32 @@ label.dev{justify-content:flex-start}
 .chg ul{margin:4px 0 0;padding-left:18px;line-height:1.7}
 pre.notes{margin:0;white-space:pre-wrap;font:inherit;font-size:13px;color:var(--mute);background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;max-height:220px;overflow:auto}
 .older{align-self:center}
+.bub.md{white-space:normal}
+.bub.md p{margin:0 0 8px}.bub.md p:last-child{margin-bottom:0}
+.bub.md ul,.bub.md ol{margin:4px 0 8px;padding-left:22px}.bub.md li{margin:2px 0}
+.bub.md .h1,.bub.md .h2{font-family:var(--tc);font-weight:700;font-size:16px;color:var(--gold2);margin:6px 0 6px}
+.bub.md .h3,.bub.md .h4{font-weight:500;color:var(--gold2);margin:6px 0 4px}
+.bub.md code{background:var(--bg);border:1px solid var(--line2);border-radius:5px;padding:0 5px;font-size:.92em}
+.bub.md blockquote{margin:4px 0 8px;padding:2px 10px;border-left:3px solid var(--line);color:var(--mute)}
+.bub.md hr{border:0;border-top:1px solid var(--line2);margin:10px 0}
+.bub.md .tw{overflow-x:auto;margin:6px 0 8px;max-width:100%}
+.bub.md table{border-collapse:collapse;font-size:13px;min-width:100%}
+.bub.md th,.bub.md td{border:1px solid var(--line2);padding:5px 9px;text-align:left;vertical-align:top}
+.bub.md th{background:var(--panel2);color:var(--gold2);font-weight:500;white-space:nowrap}
+.cb{position:relative;margin:6px 0 8px}
+.cb pre{margin:0;background:var(--bg);border:1px solid var(--line2);border-radius:8px;padding:10px 12px;overflow-x:auto;font-size:12px;line-height:1.55}
+.cb pre code{border:0;padding:0;background:none}
+.cbc{position:absolute;top:6px;right:6px;border:1px solid var(--line2);background:var(--panel2);border-radius:6px;font-size:11px;padding:2px 8px;color:var(--mute)}
+.bub.long{max-height:380px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 75%,transparent);mask-image:linear-gradient(#000 75%,transparent)}
+.more3{border:0;background:none;color:var(--gold2);font-size:12px;padding:4px 2px}
+.el{font-variant-numeric:tabular-nums;color:var(--gold2)}
+.quick{display:flex;gap:6px;flex-wrap:wrap;padding:0 20px 6px}
+.quick button{border:1px dashed var(--line);background:none;border-radius:99px;padding:4px 10px;font-size:12px;color:var(--gold2);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quick button:hover{background:var(--panel)}
+.atpop{position:absolute;left:20px;bottom:76px;z-index:6;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:grid}
+.atpop button{display:flex;gap:8px;align-items:center;border:0;background:none;text-align:left;padding:7px 8px;border-radius:8px;font-size:14px}
+.atpop button.on,.atpop button:hover{background:var(--panel2)}
+@media (max-width:760px){.quick{padding-left:max(16px,env(safe-area-inset-left,0px))}.atpop{left:16px}}
 .hint2{flex-basis:100%;color:var(--faint);font-size:12px}
 .hb{display:inline-flex;align-items:center;gap:5px}
 .hi{font-size:13px;line-height:1}
@@ -458,6 +485,8 @@ details.adv[open]{display:grid;gap:8px}
     <div class="msgs" id="msgs" aria-live="polite" hidden></div>
     <button type="button" class="jump" id="jump" hidden>↓ 新訊息</button>
     <div class="mention" id="mention"></div>
+    <div class="quick" id="quick"></div>
+    <div class="atpop" id="atpop" hidden></div>
     <div class="att" id="att"></div>
     <form class="in" id="f" hidden><button type="button" class="clip" id="clip" aria-label="附加檔案">＋</button><input type="file" id="fileIn" multiple accept="image/*,.pdf,.txt,.csv,.md,.json,.xlsx,.docx" hidden><textarea id="msg" rows="1" placeholder="輸入指示…"></textarea><button class="send">送出</button></form>
     <div class="note" id="note" hidden></div>
@@ -541,7 +570,7 @@ async function refresh(){
   try{const d=await api('state');if(!S.loaded)boot.set(85,'整理畫面…');
     const prevTop=S.loaded?topBotId():null;
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
-      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched});
+      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{}});
     if(cur&&!conv(cur))cur=null;
     if(cur)await loadMsgs(cur,'new');
     if(prevTop!==null)notifyNew(prevTop);
@@ -585,10 +614,13 @@ function markSeen(id){const ids=[...convMsgs(id).filter(m=>!m.tmp).map(m=>m.id),
 const setHTML=(el,h)=>{if(el._h!==h){el._h=h;el.innerHTML=h;return true}return false};
 const hm=ts=>ts?new Date(ts).toLocaleTimeString(I18N.lang,{hour:'2-digit',minute:'2-digit'}):'';
 const busyIn=id=>S.busy.filter(b=>b.conv===id);
+const elapsed=t=>{const s=Math.max(0,Math.round((Date.now()-t)/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+setInterval(()=>document.querySelectorAll('.el[data-since]').forEach(e=>e.textContent=elapsed(+e.dataset.since)),1000);
 const lastOf=id=>S.last.find(x=>x.conv===id);
 function preview(id){const ms=convMsgs(id).filter(x=>x.by!=='sys'&&!x.tmp),l=lastOf(id),m=ms.length&&(!l||ms[ms.length-1].id>=l.id)?ms[ms.length-1]:l;
   if(!m)return conv(id).task;
-  return (m.by==='me'?I18N.t('你：'):isG(id)?nameOf(m.by)+'：':'')+m.text}
+  const plain=m.by==='me'?m.text:m.text.replace(/```[\s\S]*?```/g,' ').replace(/^#{1,4}\s+|^\s*[-*•>]\s+|\*\*|__|`|~~/gm,'').replace(/\|/g,' ').replace(/\s+/g,' ').trim();
+  return (m.by==='me'?I18N.t('你：'):isG(id)?nameOf(m.by)+'：':'')+plain}
 /* notifications on this device: new bot replies you're not looking at */
 const NOTI_KEY='octa_notify';
 const notiOn=()=>{try{const v=localStorage.getItem(NOTI_KEY);return v===null?!!window.octaDesktop:v==='1'}catch(e){return false}};
@@ -609,6 +641,10 @@ function loadThumbs(root){root.querySelectorAll('img[data-file]:not([src]):not([
 async function openFile(id){toast(I18N.t('讀取檔案中…'));try{const d=await fileData(id);const b=await (await fetch(`data:${d.mime};base64,${d.data}`)).blob();
   const u=URL.createObjectURL(b);if(/^(image|text)\/|pdf$/.test(d.mime))window.open(u,'_blank');else{const a=document.createElement('a');a.href=u;a.download=d.name;a.click()}}catch(e){toast(e.message)}}
 const APPR=/^✅\s*待確認[:：]\s*(.+)$/m;
+const OPENED=new Set();
+// a failed reply: offer to send the same instruction again
+function retryHtml(m){if(!/^⚠/.test(m.text))return '';const ms=convMsgs(m.conv);if(ms.some(x=>x.id>m.id&&!x.tmp&&x.by!=='sys'))return '';
+  return `<div class="appr"><button type="button" class="no" data-retry="${m.id}">↻ 重試</button></div>`}
 const NEEDLOGIN=/需要使用者在電腦上登入|需要.{0,6}登入/;
 function loginHtml(m){const b=bot(m.by);if(!b||b.browser==='mine'||!NEEDLOGIN.test(m.text))return '';
   if(convMsgs(m.conv).some(x=>x.id>m.id&&x.by===m.by))return '';
@@ -618,6 +654,35 @@ function apprHtml(m){const a=m.text.match(APPR);if(!a)return '';
   if(later)return '';
   return `<div class="appr"><button type="button" class="btn" data-approve="${m.id}">核准</button><button type="button" class="no" data-revise="${m.id}">修改</button></div>`}
 function fmt(t){return esc(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/@([^\s@，。、]+)/g,'<span class="at">@$1</span>')}
+/* bot replies: a small, safe Markdown subset (everything is escaped first) */
+function inl(t){return esc(t)
+  .replace(/`([^`]+)`/g,'<code>$1</code>')
+  .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+  .replace(/(^|[^"'>=])(https?:\/\/[^\s<]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>')
+  .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/__([^_]+)__/g,'<b>$1</b>')
+  .replace(/(^|[^*])\*([^*\s][^*]*)\*/g,'$1<i>$2</i>')
+  .replace(/~~([^~]+)~~/g,'<s>$1</s>')
+  .replace(/(^|\s)@([^\s@，。、<]+)/g,'$1<span class="at">@$2</span>')}
+function md(src){
+  const L=String(src).replace(/\r/g,'').split('\n'),out=[];let i=0;
+  const isRow=l=>/^\s*\|.*\|\s*$/.test(l),cells=l=>l.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+  while(i<L.length){const l=L[i];
+    if(/^\s*```/.test(l)){const buf=[];i++;while(i<L.length&&!/^\s*```/.test(L[i]))buf.push(L[i++]);i++;
+      out.push(`<div class="cb"><button type="button" class="cbc" data-copy-code>複製</button><pre><code>${esc(buf.join('\n'))}</code></pre></div>`);continue}
+    if(isRow(l)&&i+1<L.length&&/^\s*\|?\s*:?-{2,}/.test(L[i+1])){const head=cells(l);i+=2;const rows=[];while(i<L.length&&isRow(L[i]))rows.push(cells(L[i++]));
+      out.push(`<div class="tw"><table><thead><tr>${head.map(c=>`<th>${inl(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${inl(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);continue}
+    let m;
+    if((m=l.match(/^(#{1,4})\s+(.+)/))){out.push(`<div class="h${m[1].length}">${inl(m[2])}</div>`);i++;continue}
+    if(/^\s*([-*•]|\d+[.)])\s+/.test(l)){const ol=/^\s*\d/.test(l),items=[];
+      while(i<L.length&&/^\s*([-*•]|\d+[.)])\s+/.test(L[i])){items.push(L[i].replace(/^\s*([-*•]|\d+[.)])\s+/,''));i++}
+      out.push(`<${ol?'ol':'ul'}>${items.map(x=>`<li>${inl(x)}</li>`).join('')}</${ol?'ol':'ul'}>`);continue}
+    if(/^\s*>\s?/.test(l)){const q=[];while(i<L.length&&/^\s*>\s?/.test(L[i]))q.push(L[i++].replace(/^\s*>\s?/,''));out.push(`<blockquote>${q.map(inl).join('<br>')}</blockquote>`);continue}
+    if(/^\s*(-{3,}|\*{3,})\s*$/.test(l)){out.push('<hr>');i++;continue}
+    if(!l.trim()){i++;continue}
+    const p=[];while(i<L.length&&L[i].trim()&&!/^\s*(```|#{1,4}\s|[-*•]\s|\d+[.)]\s|>|\|)/.test(L[i]))p.push(L[i++]);
+    if(!p.length)p.push(L[i++]);
+    out.push(`<p>${p.map(inl).join('<br>')}</p>`)}
+  return out.join('')}
 
 /* ---------- render ---------- */
 function render(scroll){
@@ -641,7 +706,7 @@ function render(scroll){
   const c=cur&&conv(cur);
   ['ph','task','msgs','f','note'].forEach(k=>$(k).hidden=!c);if(!c)$('offb').hidden=true;$('blank').hidden=!!c;
   if(!c)setHTML($('blank'),!S.loaded?'':S.bots.length?'左邊選一個機器人或群組開始對話':`<div class="guidecard"><div>還沒有機器人。跟著設定指引，幾分鐘就能讓第一個機器人開始工作。</div><button class="btn" onclick="openGuide()">開始設定</button></div>`);
-  if(!c){$('mention').innerHTML='';return}
+  if(!c){$('mention').innerHTML='';$('quick').innerHTML='';$('quick')._h='';return}
   const g=isG(cur);
   $('pav').className='av'+(g?' grp':'');if(g)$('pav').textContent=c.members.length;else $('pav').innerHTML=avOf(c.id);$('pav').toggleAttribute('data-u',!g)
   $('pname').textContent=c.name;
@@ -651,6 +716,8 @@ function render(scroll){
   if(off)setHTML($('offb'),`<span>⚠ 主機電腦離線，訊息會先排隊，電腦連上後自動處理。</span><button type="button" class="ghost" onclick="openGuide()">怎麼連上？</button>`);
   setHTML($('task'),'<em>'+(g?'協作規則':'指定任務')+'</em><span data-u>'+esc(c.task)+'</span>');
   $('msg').placeholder=I18N.t(g?'輸入指示，可用 @ 指定誰做':'輸入指示…');
+  const qk=(S.quick||{})[cur]||[];
+  setHTML($('quick'),qk.length?qk.map((q,i)=>`<button type="button" data-q="${i}" title="${esc(q)}" data-u>⚡ ${esc(q.length>24?q.slice(0,24)+'…':q)}</button>`).join(''):'');
   $('mention').innerHTML=g?c.members.map(id=>bot(id)?`<button data-at="${esc(bot(id).name)}" data-u>@${esc(bot(id).name)}</button>`:'').join(''):'';
   const box=$('msgs'),atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<120;
   const switched=box._conv!==cur;box._conv=cur;
@@ -659,10 +726,11 @@ function render(scroll){
   mh+=convMsgs(cur).map(m=>{
     if(m.by==='sys')return `<div class="sys">${esc(m.text)}<span class="ts">${hm(m.ts)}</span></div>`;
     if(m.by==='me')return `<div class="m me${m.tmp?' tmp':''}"><div class="bx"><div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div><div class="meta">${m.tmp?'傳送中…':hm(m.ts)}</div></div></div>`;
-    return `<div class="m"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div>${apprHtml(m)}${loginHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
+    const long=m.text.length>1400||m.text.split('\n').length>30,open=OPENED.has(m.id);
+    return `<div class="m"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
   const bz=busyIn(cur);
   if(bz.length){const run=bz.find(b=>b.status==='running');
-    mh+=`<div class="work"><span class="fade">${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器在電腦上開著，你可以放心輸入；關掉視窗後機器人才會繼續':esc(nameOf(run.bot_id))+' 處理中…'):S.runnerOnline?'排隊中…':'等待主機電腦上線…'}</span><button id="stop">停止</button></div>`}
+    mh+=`<div class="work"><span class="fade">${run&&run.kind==='chat'&&run.started?`<span class="el" data-since="${run.started}">${elapsed(run.started)}</span> `:''}${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器在電腦上開著，你可以放心輸入；關掉視窗後機器人才會繼續':esc(nameOf(run.bot_id))+' 處理中…'):S.runnerOnline?'排隊中…':'等待主機電腦上線…'}</span><button id="stop">停止</button></div>`}
   const changed=setHTML(box,mh);if(changed)loadThumbs(box);
   if(switched||scroll){box.scrollTop=box.scrollHeight;$('jump').hidden=true}
   else if(changed){if(atBottom)box.scrollTo({top:box.scrollHeight,behavior:'smooth'});else $('jump').hidden=false}
@@ -695,11 +763,18 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cur)rende
 function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.className='toast';document.body.appendChild(el)}
   el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),1800)}
 $('back').onclick=()=>{saveDraft();$('app').classList.remove('chat')};
+$('quick').onclick=e=>{const b=e.target.closest('[data-q]');if(!b)return;const q=(S.quick||{})[cur]?.[+b.dataset.q];if(!q)return;
+  if(e.shiftKey||$('msg').value.trim()){const i=$('msg');i.value=(i.value?i.value+'\n':'')+q;grow();i.focus()}else sendMsg(q)};
 $('mention').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=$('msg');i.value=(i.value+' @'+b.dataset.at+' ').trimStart();i.focus()};
 $('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).then(()=>{toast('已停止');refresh()});
   if(e.target.id==='older'){const box=$('msgs'),h0=box.scrollHeight,id=cur;e.target.disabled=true;
     loadMsgs(id,'older').then(()=>{if(cur!==id)return;render(false);box.scrollTop=box.scrollHeight-h0}).catch(()=>{e.target.disabled=false});return}
   const cp=e.target.closest('[data-copy-msg]');if(cp){const m=convMsgs(cur).find(x=>String(x.id)===cp.dataset.copyMsg);if(m)navigator.clipboard?.writeText(m.text).then(()=>toast('已複製')).catch(()=>{});return}
+  const ex=e.target.closest('[data-expand]');if(ex){const id=+ex.dataset.expand;OPENED.has(id)?OPENED.delete(id):OPENED.add(id);render(false);return}
+  const cc=e.target.closest('[data-copy-code]');if(cc){navigator.clipboard?.writeText(cc.nextElementSibling.textContent).then(()=>toast(I18N.t('已複製'))).catch(()=>{});return}
+  const rt=e.target.closest('[data-retry]');if(rt){const ms=convMsgs(cur),i=ms.findIndex(x=>String(x.id)===rt.dataset.retry);
+    const last=ms.slice(0,i).reverse().find(x=>x.by==='me');if(!last){toast(I18N.t('找不到上一則指示'));return}
+    rt.disabled=true;sendMsg(last.text==='（附件）'?'':last.text,(last.files||[]).map(f=>f.id),last.files||[]);return}
   const ob=e.target.closest('[data-openb]');if(ob){ob.disabled=true;openBrowser(ob.dataset.openb);return}
   const im=e.target.closest('img[data-file]');if(im)openFile(im.dataset.file);
   const fc=e.target.closest('[data-open-file]');if(fc)openFile(fc.dataset.openFile);
@@ -708,7 +783,21 @@ $('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).th
     const at=isG(cur)?'@'+nameOf(m.by)+' ':'';
     if(ap){ap.disabled=true;sendMsg(at+'核准：'+m.text.match(APPR)[1])}
     else{$('msg').value=at;$('msg').focus()}}};
-$('msg').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('f').requestSubmit()}});
+let atSel=0;
+function atList(){const i=$('msg'),c=conv(cur);if(!c||!isG(cur))return null;const before=i.value.slice(0,i.selectionStart),m=before.match(/@([^\s@]*)$/);if(!m)return null;
+  const q=m[1].toLowerCase(),list=c.members.map(bot).filter(b=>b&&b.name.toLowerCase().includes(q));return list.length?{q:m[1],list}:null}
+function atRender(){const a=atList(),p=$('atpop');if(!a){p.hidden=true;return}atSel=Math.min(atSel,a.list.length-1);
+  p.innerHTML=a.list.map((b,i)=>`<button type="button" class="${i===atSel?'on':''}" data-pick="${esc(b.name)}"><span class="av sm" data-u>${avOf(b.id)}</span><span data-u>${esc(b.name)}</span></button>`).join('');p.hidden=false}
+function atPick(name){const i=$('msg'),pos=i.selectionStart,before=i.value.slice(0,pos).replace(/@([^\s@]*)$/,'@'+name+' ');i.value=before+i.value.slice(pos);i.selectionStart=i.selectionEnd=before.length;$('atpop').hidden=true;grow();i.focus()}
+$('msg').addEventListener('input',()=>{atSel=0;atRender()});
+$('msg').addEventListener('blur',()=>setTimeout(()=>$('atpop').hidden=true,150));
+$('atpop').addEventListener('mousedown',e=>{const b=e.target.closest('[data-pick]');if(b){e.preventDefault();atPick(b.dataset.pick)}});
+$('msg').addEventListener('keydown',e=>{
+  if(!$('atpop').hidden){const a=atList();if(a){
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();atSel=(atSel+(e.key==='ArrowDown'?1:-1)+a.list.length)%a.list.length;atRender();return}
+    if((e.key==='Enter'||e.key==='Tab')&&!e.isComposing){e.preventDefault();atPick(a.list[atSel].name);return}
+    if(e.key==='Escape'){$('atpop').hidden=true;return}}}
+  if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('f').requestSubmit()}});
 let pending=[];
 function renderAtt(){$('att').innerHTML=pending.map((f,i)=>`<span class="chip"><span>${f.up?'⏳ ':''}${esc(f.name)}</span><button type="button" data-rm="${i}" aria-label="移除">✕</button></span>`).join('')}
 $('att').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){pending.splice(+b.dataset.rm,1);renderAtt()}};
@@ -726,7 +815,7 @@ async function addFiles(list){for(const file of list.slice(0,Math.max(0,6-pendin
       Object.assign(item,r,{up:false})}
     catch(err){pending.splice(pending.indexOf(item),1);$('note').textContent=err.message}
     renderAtt()}}
-async function sendMsg(v,files=[]){const c=cur,fs=pending.filter(f=>files.includes(f.id)).map(f=>({id:f.id,name:f.name,mime:f.mime}));
+async function sendMsg(v,files=[],meta){const c=cur,fs=meta||pending.filter(f=>files.includes(f.id)).map(f=>({id:f.id,name:f.name,mime:f.mime}));
   const mc=MSG[c]||(MSG[c]={list:[],more:false,loaded:false});
   mc.list.push({id:'tmp'+Date.now(),tmp:true,conv:c,by:'me',text:v||'（附件）',files:fs,ts:Date.now()});render(true);
   try{await api('messages','POST',{conv:c,text:v,files});refresh();return true}
@@ -784,6 +873,7 @@ function sheet(kind,edit){
   <label class="field">模型（選填，空白用該工具的預設）<input id="sf_m" maxlength="80" value="${esc(c?.model||'')}"></label>
   <p style="margin-top:-6px" id="sf_hint"></p>`}
   <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option data-u value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
+  <label class="field">常用指令（一行一個，會變成輸入框上方的快速按鈕）<textarea id="sf_q" maxlength="2000" style="min-height:70px" placeholder="例如：整理今天的訂單&#10;把結果寫進試算表">${esc(((S.quick||{})[c?.id]||[]).join('\n'))}</textarea></label>
   ${edit?`<div class="field">例行任務<div class="rt" id="rt"></div></div>`:'<p>建立後可以在「任務設定」加入例行任務（每天固定時間自動執行）。</p>'}
   <div class="errmsg" id="se"></div>
   <div class="acts">${edit?'<button type="button" class="del" id="sd">刪除</button>':''}<button type="button" class="no" id="sx">取消</button><button class="btn">${edit?'儲存':'建立'}</button></div></form>`;
@@ -806,7 +896,9 @@ function sheet(kind,edit){
     if(!g){body.avatar=sheet.av?.()||'';body.browser=$('veil').querySelector('input[name=sf_b]:checked')?.value||'own';body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();}
     if(g)body.members=[...$('veil').querySelectorAll('.picks input:checked')].map(i=>i.value);
     try{const r=await api(edit?(g?'groups/':'bots/')+cur:(g?'groups':'bots'),edit?'PUT':'POST',body);
-      if(!edit)cur=r.id;closeSheet();await refresh();$('app').classList.add('chat')}
+      if(!edit)cur=r.id;
+      const ql=$('sf_q').value.split('\n').map(x=>x.trim()).filter(Boolean).slice(0,12);
+      if(ql.join('\n')!==((S.quick||{})[cur]||[]).join('\n'))await api('settings','PUT',{quick:{conv:cur,list:ql}});closeSheet();await refresh();$('app').classList.add('chat')}
     catch(err){$('se').textContent=err.message}}}
 function alertSheet(t,p){$('veil').innerHTML=`<div class="sheet"><h2>${esc(t)}</h2><p>${esc(p)}</p><div class="acts"><button class="btn" id="sx">知道了</button></div></div>`;$('veil').hidden=false;$('sx').onclick=closeSheet}
 const ago=t=>{const m=Math.round((Date.now()-t)/60000),rt=new Intl.RelativeTimeFormat(I18N.lang,{numeric:'auto'});return m<60?rt.format(-m,'minute'):m<1440?rt.format(-Math.round(m/60),'hour'):rt.format(-Math.round(m/1440),'day')};
@@ -856,11 +948,12 @@ function itemMenu(anchor,id){const c=conv(id);if(!c)return;
     <button data-a="mv" data-v=""><span class="ck">${!c.folder?'✓':''}</span>未分區</button><hr>
     <button data-a="nf"><span class="ck">＋</span>建立分區並移入</button>
     <button data-a="ed"><span class="ck">✎</span>任務設定</button><hr>
+    ${isG(id)?'':'<button data-a="dup"><span class="ck">⧉</span>複製這個機器人</button>'}
     <button data-a="clr"><span class="ck">⌫</span>清空對話紀錄</button>
     <button data-a="del" class="danger"><span class="ck">🗑</span>${isG(id)?'刪除群組':'刪除機器人'}</button>`,
    {mv:async v=>{await api('move','POST',{id,folder:v||null});refresh()},
     nf:()=>folderSheet(null,id),
-    clr:()=>clearConv(id),del:()=>deleteConv(id),
+    clr:()=>clearConv(id),del:()=>deleteConv(id),dup:()=>dupBot(id),
     ed:()=>{cur=id;render(true);$('app').classList.add('chat');sheet(isG(id)?'g':'b',true)}})}
 function folderMenu(anchor,fid){
   popMenu(anchor,`<button data-a="rn"><span class="ck">✎</span>分區名稱與資料</button><button data-a="del" class="danger"><span class="ck">✕</span>刪除分區（內容移到未分區）</button>`,
@@ -918,6 +1011,11 @@ function deleteConv(id){const c=conv(id);if(!c)return;const g=isG(id);
     ${inGroups.length?`<li><span>會從這些群組移除：</span><span data-u>${esc(inGroups.map(x=>x.name).join('、'))}</span></li>`:''}
     <li>主機電腦上的檔案資料夾會保留，不會刪除</li></ul><p>刪除後無法復原。</p>`,g?'刪除群組':'刪除機器人',true,
     async()=>{await api((g?'groups/':'bots/')+id,'DELETE');delete MSG[id];if(cur===id){cur=null;$('app').classList.remove('chat')}toast(I18N.t('已刪除'));await refresh()})}
+async function dupBot(id){const b=bot(id);if(!b)return;
+  let name=b.name.slice(0,16)+I18N.t('（複製）');for(let n=2;S.bots.some(x=>x.name===name);n++)name=b.name.slice(0,14)+I18N.t('（複製）')+n;
+  try{const r=await api('bots','POST',{name:name.slice(0,20),task:b.task,folder:b.folder,engine:b.engine,model:b.model,avatar:b.avatar,browser:b.browser==='mine'?'mine':'own'});
+    const q=(S.quick||{})[id];if(q?.length)await api('settings','PUT',{quick:{conv:r.id,list:q}});
+    toast(I18N.t('已複製，可以改名或改任務'));await refresh();openConv(r.id);sheet('b',true)}catch(e){toast(e.message)}}
 function clearConv(id){const c=conv(id);if(!c)return;
   confirmSheet('清空對話紀錄',`<p>清空「<b data-u>${esc(c.name)}</b>」的所有訊息？機器人之後不會再看到這些舊對話。機器人本身、任務設定和例行任務都會保留。</p>`,'清空',true,
     async()=>{await api('clear','POST',{conv:id});delete MSG[id];toast(I18N.t('已清空'));await refresh();if(cur===id){await loadMsgs(id,'first');render(true)}})}

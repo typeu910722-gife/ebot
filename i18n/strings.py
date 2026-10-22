@@ -691,3 +691,18 @@ T.update({
  '在跳出的視窗登入，完成後關掉視窗，機器人就能接著做。': ('Sign in in the window that opens, then close it and the bot carries on.', '開いたウィンドウでログインし、閉じるとボットが続きを行います。'),
 })
 P.append((r'^(.+) 的瀏覽器在電腦上開著，你可以放心輸入；關掉視窗後機器人才會繼續$', '$1’s browser is open on the computer — type freely; the bot continues after you close the window', '$1 のブラウザがパソコンで開いています。安心して入力できます。ウィンドウを閉じるとボットが続行します'))
+
+T.update({
+ '複製': ('Copy', 'コピー'),
+ '顯示全部': ('Show all', 'すべて表示'),
+ '收合': ('Collapse', '折りたたむ'),
+ '↻ 重試': ('↻ Retry', '↻ 再試行'),
+ '找不到上一則指示': ('Couldn’t find the previous instruction', '前の指示が見つかりません'),
+ '常用指令（一行一個，會變成輸入框上方的快速按鈕）': ('Saved instructions (one per line; they become quick buttons above the input)', 'よく使う指示（1 行に 1 つ。入力欄の上にボタンとして表示）'),
+ '例如：整理今天的訂單\n把結果寫進試算表': ('e.g. Sort today’s orders\nWrite the results to the spreadsheet', '例：今日の注文を整理\n結果をスプレッドシートに書く'),
+ '複製這個機器人': ('Duplicate this bot', 'このボットを複製'),
+ '（複製）': (' (copy)', '（コピー）'),
+ '已複製，可以改名或改任務': ('Duplicated — rename it or change its task', '複製しました。名前やタスクを変更できます'),
+ 'OCTA 還在背景工作': ('OCTA is still working in the background', 'OCTA はバックグラウンドで動作中'),
+ '已複製': ('Copied', 'コピーしました'),
+})
