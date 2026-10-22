@@ -19,7 +19,7 @@ import { dirname, join, extname, basename, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 
-export const VERSION = '10.1';
+export const VERSION = '10.2';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -157,6 +157,7 @@ function buildPrompt(job, here) {
     for (const c of job.colleagues) lines.push(`- ${c.name}：${c.task}`);
     if (job.canAsk) lines.push('需要同事的資料或幫忙時，在回覆中單獨一行寫「@同事名 你的問題」，系統會請對方回答，再把你叫回來繼續。不需要就不要寫。');
   }
+  lines.push('', '你的運作環境（使用者問到你用什麼 AI、方案、還剩多少流量時，照這些資料回答，不要說你查不到）：', ...aboutMe(job));
   if (job.notes) lines.push('', '共用資料（所有機器人都要知道）：', job.notes);
   if (job.folderNotes) lines.push('', `分區「${job.folder}」的資料：`, job.folderNotes);
   lines.push(
@@ -183,6 +184,24 @@ function buildPrompt(job, here) {
   for (const h of job.history) lines.push(`【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   lines.push('', '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
+}
+
+// what the bot runs on and how much of the plan is left, for the prompt
+const PLAN_NOTE = { gemini: '個人 Google 帳號的免費額度約每天 1000 次（Google 沒有提供剩餘量查詢）', copilot: 'GitHub Copilot 訂閱（GitHub 沒有提供剩餘量查詢）', cursor: 'Cursor 訂閱（Cursor 沒有提供剩餘量查詢）', qwen: 'Qwen 帳號（官方沒有提供剩餘量查詢）', opencode: '電腦本機的 Ollama 模型，免費、沒有流量限制' };
+function aboutMe(job) {
+  const e = job.bot.engine || 'claude', E = ENGINES[e] || ENGINES.claude, u = usageNow[e];
+  const out = [`- AI：${E.label}${job.bot.model ? `，模型 ${job.bot.model}` : '（該工具的預設模型）'}；在使用者的主機電腦「${os.hostname()}」上執行，透過 OCTA 執行器 v${VERSION}。`];
+  const when = t => { try { return new Date(t).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return t; } };
+  if (u?.windows?.length) {
+    const lab = { '5h': '5 小時額度', '7d': '本週額度' };
+    out.push(`- 方案：${u.plan || '（讀不到方案名稱）'}`);
+    for (const w of u.windows) out.push(`- ${lab[w.k] || w.k}：已用 ${w.used}%，剩 ${Math.max(0, 100 - w.used)}%${w.reset ? `，${when(w.reset)} 重置` : ''}`);
+    out.push(`- 以上是 ${when(u.t)} 讀到的數字（每 10 分鐘更新）。`);
+  } else if (e === 'claude' || e === 'codex') {
+    out.push(`- 方案：${u?.plan || '讀不到'}；剩餘流量這次讀不到${u?.error ? `（${u.error}）` : ''}，請使用者到 OCTA「設定 → AI 連線」查看。`);
+  } else out.push(`- 方案：${PLAN_NOTE[e] || '官方沒有提供剩餘量查詢'}`);
+  if (job.usageToday != null) out.push(`- 今天 OCTA 已經用這個 AI 執行了 ${job.usageToday} 次工作。`);
+  return out;
 }
 
 // install: { win, mac } shell commands, or npm: package name (needs Node.js); pre: installed first; login: command that starts sign-in
@@ -235,13 +254,21 @@ const engineReport = async () => {   // tell the app which AI tools this compute
 async function claudeUsage() {
   const f = join(os.homedir(), '.claude', '.credentials.json');
   if (!existsSync(f)) return { error: 'no-credentials' };   // e.g. kept in the macOS keychain
-  const tok = JSON.parse(readFileSync(f, 'utf8'))?.claudeAiOauth?.accessToken;
+  const o = JSON.parse(readFileSync(f, 'utf8'))?.claudeAiOauth || {}, tok = o.accessToken;
   if (!tok) return { error: 'no-credentials' };
+  const plan = { max: 'Claude Max', pro: 'Claude Pro', team: 'Claude Team', enterprise: 'Claude Enterprise' }[String(o.subscriptionType || '').toLowerCase()] || (o.subscriptionType ? 'Claude ' + o.subscriptionType : '');
   const r = await fetch('https://api.anthropic.com/api/oauth/usage', { headers: { authorization: 'Bearer ' + tok, 'anthropic-beta': 'oauth-2025-04-20' }, signal: AbortSignal.timeout(10000) });
-  if (!r.ok) return { error: 'HTTP ' + r.status };
+  if (!r.ok) return { error: 'HTTP ' + r.status, plan };
   const d = await r.json();
   const w = (x, k) => (x && typeof x.utilization === 'number' ? { k, used: Math.round(x.utilization), reset: x.resets_at || null } : null);
-  return { windows: [w(d.five_hour, '5h'), w(d.seven_day, '7d')].filter(Boolean) };
+  return { plan, windows: [w(d.five_hour, '5h'), w(d.seven_day, '7d')].filter(Boolean) };
+}
+function codexPlan() {   // ChatGPT plan from the sign-in Codex saved (only the plan label is read)
+  try {
+    const a = JSON.parse(readFileSync(join(os.homedir(), '.codex', 'auth.json'), 'utf8'));
+    const p = JSON.parse(Buffer.from(String(a?.tokens?.id_token || '').split('.')[1] || '', 'base64url').toString())['https://api.openai.com/auth']?.chatgpt_plan_type;
+    return p ? 'ChatGPT ' + p[0].toUpperCase() + p.slice(1) : '';
+  } catch { return ''; }
 }
 function codexUsage() {   // `codex app-server` answers account/rateLimits/read over JSON-RPC
   return new Promise(resolve => {
@@ -261,18 +288,19 @@ function codexUsage() {   // `codex app-server` answers account/rateLimits/read 
         if (msg.id === 2) {
           const rl = msg.result?.rateLimits || msg.result || {};
           const w = (x, k) => (x && typeof x.usedPercent === 'number' ? { k, used: Math.round(x.usedPercent), reset: x.resetsAt ? new Date(x.resetsAt * (x.resetsAt < 1e12 ? 1000 : 1)).toISOString() : null } : null);
-          finish(msg.error ? { error: msg.error.message || 'error' } : { windows: [w(rl.primary, '5h'), w(rl.secondary, '7d')].filter(Boolean) });
+          finish(msg.error ? { error: msg.error.message || 'error', plan: codexPlan() } : { plan: codexPlan() || (rl.planType ? 'ChatGPT ' + rl.planType : ''), windows: [w(rl.primary, '5h'), w(rl.secondary, '7d')].filter(Boolean) });
         }
       }
     });
     send({ id: 1, method: 'initialize', params: { clientInfo: { name: 'octa', title: 'OCTA', version: VERSION } } });
   });
 }
-let lastUsage = 0;
+let lastUsage = 0, usageNow = {};
 async function usageReport() {   // every 10 minutes
   if (Date.now() - lastUsage < 10 * 60000) return undefined;
   lastUsage = Date.now();
   const out = {};
+  usageNow = out;   // bots read this to answer "how much quota is left" 
   const safe = async (k, fn) => { try { const v = (await engineReady(k)) ? await fn() : null; if (v) out[k] = { ...v, t: Date.now() }; } catch (e) { out[k] = { error: String(e.message || e).slice(0, 80), t: Date.now() }; } };
   await Promise.all([safe('claude', claudeUsage), safe('codex', codexUsage)]);
   return out;

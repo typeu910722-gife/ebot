@@ -1123,8 +1123,8 @@ function quotaHtml(k,U){   // how much of the plan is left, as far as each servi
   if(e.quota==='local')return '<span class="qt">本機 AI，無流量限制</span>';
   if(e.quota==='plan'){
     if(u?.windows?.length){const lab={'5h':'5 小時內','7d':'本週'};
-      return `<span class="qt">${u.windows.map(w=>`<span class="qw"><span>${lab[w.k]||w.k}</span> <b>剩 ${pct(100-w.used)}%</b><span class="ytrack qbar"><span class="yfill" style="width:${pct(100-w.used)}%"></span></span>${w.reset?`<small>重置 ${when(Date.parse(w.reset))}</small>`:''}</span>`).join('')}</span>${today}`}
-    return `<span class="qt off">${u?.error?'無法讀取剩餘流量':'正在讀取剩餘流量…'}</span>${today}`}
+      return `${u.plan?`<small data-u>${esc(u.plan)}</small>`:''}<span class="qt">${u.windows.map(w=>`<span class="qw"><span>${lab[w.k]||w.k}</span> <b>剩 ${pct(100-w.used)}%</b><span class="ytrack qbar"><span class="yfill" style="width:${pct(100-w.used)}%"></span></span>${w.reset?`<small>重置 ${when(Date.parse(w.reset))}</small>`:''}</span>`).join('')}</span>${today}`}
+    return `${u?.plan?`<small data-u>${esc(u.plan)}</small>`:''}<span class="qt off">${u?.error?'無法讀取剩餘流量':'正在讀取剩餘流量…'}</span>${today}`}
   return `<span class="qt off">官方沒有提供剩餘流量查詢</span>${e.limit?`<small>${e.limit}</small>`:''}${today}`}
 async function openAI(focus){
   const online=S.runnerOnline||CFG.local;const desk=DESK();

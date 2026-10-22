@@ -1,5 +1,21 @@
 [
  {
+  "v": "2.0.2",
+  "date": "2026-10-22",
+  "notes": [
+   "機器人知道自己用哪個 AI、哪個方案和剩餘流量，問它就會回答",
+   "AI 連線頁顯示方案名稱（Claude Max／Pro、ChatGPT Plus／Pro）"
+  ],
+  "notes_en": [
+   "Bots know which AI, plan and remaining quota they run on, and answer when asked",
+   "The AI connections page shows the plan name (Claude Max/Pro, ChatGPT Plus/Pro)"
+  ],
+  "notes_ja": [
+   "ボットが自分の AI・プラン・残り使用量を把握し、聞かれたら答えます",
+   "AI 接続ページにプラン名を表示（Claude Max／Pro、ChatGPT Plus／Pro）"
+  ]
+ },
+ {
   "v": "2.0.1",
   "date": "2026-10-22",
   "notes": [

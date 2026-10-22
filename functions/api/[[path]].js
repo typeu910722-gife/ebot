@@ -1324,7 +1324,7 @@ async function nextWork(env, db, U, slots) {
       ORDER BY id LIMIT 1`).bind(U).first();
     if (j) {
       const claimed = await db.prepare("UPDATE jobs SET status='running', started=? WHERE id=? AND status='pending'").bind(now(), j.id).run();
-      if (claimed.meta.changes) { await bump(db, U); job = await jobPayload(db, U, j); }
+      if (claimed.meta.changes) { await bump(db, U); job = await jobPayload(env, db, U, j); }
     }
   }
   if (!job && !inbox.length && !pull.length) return null;
@@ -1332,7 +1332,7 @@ async function nextWork(env, db, U, slots) {
   const convName = id => (all?.bots.find(b => b.id === id) || all?.groups.find(g => g.id === id))?.name || '';
   return { job, inbox: inbox.map(f => ({ ...f, convName: convName(f.conv) })), pull };
 }
-async function jobPayload(db, U, job) {
+async function jobPayload(env, db, U, job) {
   if (job.kind === 'test') return { id: job.id, kind: 'test', engine: engineOk(job.url), prompt: job.prompt };
   const { bots, groups, folders } = await loadAll(db, U);
   const name = id => id === 'me' ? '使用者' : id === 'sys' ? '系統' : (bots.find(b => b.id === id)?.name || '已刪除的機器人');
@@ -1345,8 +1345,11 @@ async function jobPayload(db, U, job) {
   const where = fileIds.length ? (await db.prepare(`SELECT id,path FROM files WHERE user_id=? AND id IN (${fileIds.map(() => '?').join(',')})`).bind(U, ...fileIds).all()).results : [];
   const pathOf = id => where.find(w => w.id === id)?.path || null;
   const st = await getSettings(db, U);
+  const { date } = localNow(env);   // how many jobs this AI already ran today, so the bot can tell the user
+  const dayStart = Date.parse(date + 'T00:00:00Z') - (+env.TZ_OFFSET_MIN || 0) * 60000;
+  const usageToday = (await db.prepare("SELECT COUNT(*) AS n FROM jobs j JOIN bots b ON b.id=j.bot_id WHERE j.user_id=? AND j.kind='chat' AND j.created>=? AND IFNULL(b.engine,'claude')=?").bind(U, dayStart, bot.engine || 'claude').first())?.n ?? null;
   return {
-    id: job.id, kind: job.kind, url: job.url, prompt: job.prompt,
+    id: job.id, kind: job.kind, url: job.url, prompt: job.prompt, usageToday,
     canAsk: job.depth < MAX_ASK_DEPTH,
     conv: { id: conv.id, name: conv.name },
     bot: { id: bot.id, name: bot.name, task: bot.task, page: bot.page, engine: bot.engine || 'claude', model: bot.model || '', browser: bot.browser === 'mine' ? 'mine' : 'own' },
