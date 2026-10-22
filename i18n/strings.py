@@ -906,3 +906,5 @@ T.update({
  '，這次新增了：': ('. What’s new:', '。今回の新機能：'),
  '看全部更新內容': ('See all release notes', 'すべての更新内容を見る'),
 })
+
+T.update({'本月': ('This month', '今月')})

@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=14"></script>
+<script src="/i18n-dict.js?v=15"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -1341,13 +1341,16 @@ function quotaHtml(k,U){   // how much of the plan is left, as far as each servi
   const today=n?`<small>今天 OCTA 用了 ${n} 次</small>`:'';
   if(e.quota==='local')return '<span class="qt">本機 AI，無流量限制</span>';
   if(e.quota==='plan'){
-    if(u?.windows?.length){const lab={'5h':'5 小時內','7d':'本週'};
-      return `${u.plan?`<small data-u>${esc(u.plan)}</small>`:''}<span class="qt">${u.windows.map(w=>`<span class="qw"><span>${lab[w.k]||w.k}</span> <b>剩 ${pct(100-w.used)}%</b><span class="ytrack qbar"><span class="yfill" style="width:${pct(100-w.used)}%"></span></span>${w.reset?`<small>重置 ${when(Date.parse(w.reset))}</small>`:''}</span>`).join('')}</span>${today}`}
+    if(u?.windows?.length){const lab={'5h':'5 小時內','7d':'本週','30d':'本月'};
+      return `${u.plan?`<small data-u>${esc(u.plan)}</small>`:''}<span class="qt">${u.windows.map(w=>`<span class="qw"><span>${lab[w.k]||(/^\d+h$/.test(w.k)?parseInt(w.k)+' 小時內':esc(w.k))}</span> <b>剩 ${pct(100-w.used)}%</b><span class="ytrack qbar"><span class="yfill" style="width:${pct(100-w.used)}%"></span></span>${w.reset?`<small>重置 ${when(Date.parse(w.reset))}</small>`:''}</span>`).join('')}</span>${today}`}
     return `${u?.plan?`<small data-u>${esc(u.plan)}</small>`:''}<span class="qt off">${u?.error?'無法讀取剩餘流量':'正在讀取剩餘流量…'}</span>${today}`}
   return `<span class="qt off">官方沒有提供剩餘流量查詢</span>${e.limit?`<small>${e.limit}</small>`:''}${today}`}
 async function openAI(focus){
   const online=S.runnerOnline||CFG.local;const desk=DESK();
+  // re-rendering (after a test or live update) keeps the cards you opened and where you scrolled
+  const again=!$('veil').hidden&&$('veil').querySelector('.ais'),keepOpen=again?[...$('veil').querySelectorAll('.aic[open]')].map(d=>d.dataset.k):[],keepTop=again?$('veil').querySelector('.sheet')?.scrollTop||0:0;
   let U=null;try{U=await api('ai-usage');if(U.engines)S.engines=U.engines}catch(e){}
+  for(const [k,t] of Object.entries(aiTests))if(t&&t.ok&&S.engines)S.engines[k]=true;   // a passing test means it's connected
   const card=k=>{const e=ENG[k],stt=engState(k),t=aiTests[k];
     const badge=stt==='ok'?'<span class="pill p-ok">已連接</span>':stt==='no'?'<span class="pill p-off">未接上</span>':'<span class="pill p-off">主機離線</span>';
     const pre=e.pre?`<li><a href="https://ollama.com/download" target="_blank" rel="noopener">先下載安裝 Ollama</a></li>`:'';
@@ -1368,6 +1371,7 @@ async function openAI(focus){
   $('veil').querySelectorAll('[data-install]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('desktop/install','POST',{engine:b.dataset.install});b.textContent=I18N.t('已打開安裝視窗')}catch(e){b.disabled=false;alertSheet('無法開啟',e.message)}});
   $('veil').querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>testAI(b.dataset.test));
   $('veil').querySelectorAll('[data-gbimport]').forEach(b=>b.onclick=grokImport);
+  if(again){keepOpen.forEach(k=>{const d=$('veil').querySelector(`.aic[data-k="${k}"]`);if(d)d.open=true});const sh=$('veil').querySelector('.sheet');if(sh)sh.scrollTop=keepTop}
 }
 /* bring bots from Grok Bot into OCTA: the host computer lists them, you pick */
 async function grokImport(){

@@ -263,12 +263,16 @@ export async function startServer(opts = {}) {
           '$ErrorActionPreference = "Continue"',
           e.npm ? `if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { ${say('先安裝 Node.js（安裝 AI 工具需要它）…')}; winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements; $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User') }` : '',
           e.npm ? `if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { ${say('無法自動安裝 Node.js，請到 https://nodejs.org 安裝後重新按一次「安裝並登入」')}; Start-Process 'https://nodejs.org'; Read-Host ${q('按 Enter 關閉')}; exit }` : '',
+          'Set-Location $HOME',   // not the OCTA folder: AI tools ask whether to trust the folder they start in
           say(`正在安裝 ${e.label}…`), pre, install,
           e.paths ? `$env:Path = [Environment]::ExpandEnvironmentVariables(${q(e.paths.win)}) + ';' + $env:Path` : '',
           e.npm ? `$env:Path = (npm prefix -g) + ';' + $env:Path` : '',
+          // installer servers sometimes refuse for a moment (rate limits); try once more
+          `if (-not (Get-Command ${q(e.bin)} -ErrorAction SilentlyContinue)) { ${say('安裝沒有成功，10 秒後再試一次…')}; Start-Sleep 10; ${install}; $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User') + ';' + $env:Path }`,
+          `if (-not (Get-Command ${q(e.bin)} -ErrorAction SilentlyContinue)) { ${say('還是沒有安裝成功，請把上面的錯誤訊息截圖給我們，或稍後再按一次「安裝並登入」。')}; Read-Host ${q('按 Enter 關閉')}; exit }`,
           "Write-Host ''", say(`安裝完成。接著登入：${e.loginHint}`), "Write-Host ''", e.login,
           "Write-Host ''", `Read-Host ${q('完成後按 Enter 關閉這個視窗，回到 OCTA 按「測試」')}`].filter(Boolean).join('\r\n'));
-        spawn('cmd', ['/c', 'start', '', 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', f], { detached: true, stdio: 'ignore', windowsHide: false }).unref();
+        spawn('cmd', ['/c', 'start', '', 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', f], { cwd: os.homedir(), detached: true, stdio: 'ignore', windowsHide: false }).unref();
       } else {
         const f = join(dir, `install-${key}.command`);
         writeFileSync(f, ['#!/bin/bash', e.npm ? 'command -v npm >/dev/null || { echo "需要先安裝 Node.js：https://nodejs.org"; read -p "按 Enter 關閉"; exit; }' : '',

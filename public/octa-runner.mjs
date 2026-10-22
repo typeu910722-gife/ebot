@@ -221,9 +221,9 @@ function aboutMe(job) {
   const out = [`- AI：${E.label}${job.bot.model ? `，模型 ${job.bot.model}` : '（該工具的預設模型）'}；在使用者的主機電腦「${os.hostname()}」上執行，透過 OCTA 執行器 v${VERSION}。`];
   const when = t => { try { return new Date(t).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return t; } };
   if (u?.windows?.length) {
-    const lab = { '5h': '5 小時額度', '7d': '本週額度' };
+    const lab = { '5h': '5 小時額度', '7d': '本週額度', '30d': '本月額度' };
     out.push(`- 方案：${u.plan || '（讀不到方案名稱）'}`);
-    for (const w of u.windows) out.push(`- ${lab[w.k] || w.k}：已用 ${w.used}%，剩 ${Math.max(0, 100 - w.used)}%${w.reset ? `，${when(w.reset)} 重置` : ''}`);
+    for (const w of u.windows) out.push(`- ${lab[w.k] || (/^\d+h$/.test(w.k) ? parseInt(w.k) + ' 小時額度' : w.k)}：已用 ${w.used}%，剩 ${Math.max(0, 100 - w.used)}%${w.reset ? `，${when(w.reset)} 重置` : ''}`);
     out.push(`- 以上是 ${when(u.t)} 讀到的數字（每 10 分鐘更新）。`);
   } else if (e === 'claude' || e === 'codex') {
     out.push(`- 方案：${u?.plan || '讀不到'}；剩餘流量這次讀不到${u?.error ? `（${u.error}）` : ''}，請使用者到 OCTA「設定 → AI 連線」查看。`);
@@ -265,14 +265,37 @@ function decode(chunks) {
   return utf;
 }
 const installed = {};
+// Windows: tools installed after OCTA started aren't on its PATH; re-read the saved PATH now and then
+let pathRead = 0;
+function refreshPath() {
+  if (!WIN || Date.now() - pathRead < 120000) return Promise.resolve();
+  pathRead = Date.now();
+  return new Promise(ok => execFile('powershell', ['-NoProfile', '-NonInteractive', '-Command', "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')"],
+    { windowsHide: true, timeout: 20000 }, (err, out) => {
+      if (!err && out) {
+        const have = new Set(String(process.env.PATH || '').toLowerCase().split(';'));
+        const more = String(out).trim().split(';').map(p => p.replace(/%([^%]+)%/g, (_, v) => process.env[v] || '')).filter(p => p && !have.has(p.toLowerCase()));
+        if (more.length) process.env.PATH = process.env.PATH + ';' + more.join(';');
+      }
+      ok();
+    }));
+}
+// looks through PATH itself instead of running `where` for each tool: running many `where` at once
+// sometimes timed out on Windows, which made AIs flip between connected and not connected
+function findBin(bin) {
+  const dirs = String(process.env.PATH || '').split(WIN ? ';' : ':').filter(Boolean);
+  const exts = WIN ? ['', ...String(process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').toLowerCase().split(';').filter(Boolean)] : [''];
+  for (const d of dirs) for (const x of exts) { const p = join(d.replace(/^"|"$/g, ''), bin + x); try { if (existsSync(p) && (WIN ? x !== '' : true)) return p; } catch { } }
+  return '';
+}
 // async on purpose: a blocking check freezes the desktop app's window
-export function has(bin, fresh) {   // a missing command can't be told apart from a failing one after the fact, so check first
+export async function has(bin, fresh) {   // a missing command can't be told apart from a failing one after the fact, so check first
   const c = installed[bin];
-  if (!fresh && c && (c.ok || Date.now() - c.t < 60000)) return Promise.resolve(c.ok);
-  return new Promise(ok => execFile(WIN ? 'where' : 'which', [bin], { windowsHide: true, timeout: 10000 }, err => {
-    installed[bin] = { ok: !err, t: Date.now() };
-    ok(!err);
-  }));
+  if (!fresh && c && (c.ok || Date.now() - c.t < 30000)) return c.ok;
+  if (!c?.ok) await refreshPath();
+  const p = findBin(bin);
+  installed[bin] = { ok: !!p, t: Date.now(), path: p };
+  return !!p;
 }
 const engineReady = async (k, fresh) => (await has(ENGINES[k].bin, fresh)) && (!ENGINES[k].also || await has(ENGINES[k].also, fresh));
 let lastReport = 0;
@@ -304,6 +327,8 @@ function codexPlan() {   // ChatGPT plan from the sign-in Codex saved (only the 
     return p ? 'ChatGPT ' + p[0].toUpperCase() + p.slice(1) : '';
   } catch { return ''; }
 }
+// label a quota window by its real length (the free ChatGPT plan has a monthly window, not 5 hours)
+const winKey = (m, k) => !m ? k : m <= 1440 ? (m === 300 ? '5h' : Math.round(m / 60) + 'h') : m <= 10080 ? '7d' : '30d';
 function codexUsage() {   // `codex app-server` answers account/rateLimits/read over JSON-RPC
   return new Promise(resolve => {
     let done = false, buf = '';
@@ -321,7 +346,7 @@ function codexUsage() {   // `codex app-server` answers account/rateLimits/read 
         if (msg.id === 1) { send({ method: 'initialized' }); send({ id: 2, method: 'account/rateLimits/read' }); }
         if (msg.id === 2) {
           const rl = msg.result?.rateLimits || msg.result || {};
-          const w = (x, k) => (x && typeof x.usedPercent === 'number' ? { k, used: Math.round(x.usedPercent), reset: x.resetsAt ? new Date(x.resetsAt * (x.resetsAt < 1e12 ? 1000 : 1)).toISOString() : null } : null);
+          const w = (x, k) => (x && typeof x.usedPercent === 'number' ? { k: winKey(x.windowDurationMins, k), used: Math.round(x.usedPercent), reset: x.resetsAt ? new Date(x.resetsAt * (x.resetsAt < 1e12 ? 1000 : 1)).toISOString() : null } : null);
           finish(msg.error ? { error: msg.error.message || 'error', plan: codexPlan() } : { plan: codexPlan() || (rl.planType ? 'ChatGPT ' + rl.planType : ''), windows: [w(rl.primary, '5h'), w(rl.secondary, '7d')].filter(Boolean) });
         }
       }
