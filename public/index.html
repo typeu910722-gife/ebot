@@ -1516,7 +1516,7 @@ async function whatsNew(){const log=await changelog(),x=log[0];if(!x)return;let 
   try{CFG=await (await fetch('/api/config')).json()}catch(e){}
   boot.set(45,'載入介面…');
   if(CFG.pair){$('ln').closest('label').hidden=true;$('ln').required=false;$('lp').previousSibling.textContent='配對碼';$('lp').minLength=4;$('lp').autocomplete='one-time-code';
-    $('lf').querySelector('p').textContent='輸入電腦上 OCTA「設定 → 手機遠端」顯示的配對碼。';$('ls').hidden=true}
+    $('lf').querySelector('p').textContent='輸入電腦上 OCTA「設定 → 手機遠端」顯示的配對碼。';$('ls').hidden=true;$('lForgot').hidden=true}   // no account password here: nothing to reset
   if(CFG.local||TOKEN)start();else if(CFG.pair||window.octaDesktop)showLogin();else showHome()})();
 </script>
 </body>

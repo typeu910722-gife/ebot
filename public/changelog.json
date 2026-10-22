@@ -1,5 +1,18 @@
 [
  {
+  "v": "2.3.1",
+  "date": "2026-10-23",
+  "notes": [
+   "手機配對（離線模式）的登入畫面不再顯示「忘記密碼」，避免按了出現網路錯誤"
+  ],
+  "notes_en": [
+   "The phone pairing screen (offline mode) no longer shows “Forgot password”, which led to a network error"
+  ],
+  "notes_ja": [
+   "スマホのペアリング画面（オフラインモード）に「パスワードを忘れた」を表示しないようにしました（ネットワークエラーの原因）"
+  ]
+ },
+ {
   "v": "2.3.0",
   "date": "2026-10-22",
   "notes": [
