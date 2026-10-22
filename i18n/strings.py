@@ -727,3 +727,10 @@ P.extend([
  (r'^在電腦上顯示「(.+)」的瀏覽器$', 'Show $1’s browser on the computer', 'パソコンで $1 のブラウザを表示'),
  (r'^把「(.+)」的瀏覽器收到背景$', 'Send $1’s browser to the background', '$1 のブラウザをバックグラウンドへ'),
 ])
+
+T.update({
+ '改用我的 Chrome（用已儲存的密碼自動填入）': ('Use my Chrome instead (saved passwords autofill)', '自分の Chrome に切り替え（保存済みパスワードで自動入力）'),
+ '機器人停在登入頁。在電腦上顯示的視窗裡登入（不用關掉），再按「登入好了，繼續」。或改讓它在你自己的 Chrome 裡工作：由 Chrome 自動填入你存的密碼，機器人看不到密碼本身。': ('The bot stopped at a sign-in page. Sign in in the window shown on the computer, then press “Signed in, continue”. Or let it work in your own Chrome, where Chrome fills in your saved password — the bot never sees the password itself.', 'ボットはログインページで止まっています。パソコンに表示されたウィンドウでログインし「ログインした・続ける」を押してください。または自分の Chrome で作業させると、Chrome が保存済みパスワードを自動入力し、ボットはパスワード自体を見ません。'),
+ '改用我的 Chrome': ('Use my Chrome', '自分の Chrome を使う'),
+ '改用並繼續': ('Switch and continue', '切り替えて続ける'),
+})

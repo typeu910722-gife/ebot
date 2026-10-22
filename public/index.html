@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=5"></script>
+<script src="/i18n-dict.js?v=6"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -648,7 +648,7 @@ function retryHtml(m){if(!/^⚠/.test(m.text)||NEEDLOGIN.test(m.text))return '';
 const NEEDLOGIN=/需要使用者在電腦上登入|需要.{0,6}登入/;
 function loginHtml(m){const b=bot(m.by);if(!b||b.browser==='mine'||!NEEDLOGIN.test(m.text))return '';
   if(convMsgs(m.conv).some(x=>x.id>m.id&&x.by===m.by))return '';
-  return `<div class="appr"><button type="button" class="btn" data-openb="${esc(m.by)}">🖥 在電腦上顯示它的瀏覽器</button><button type="button" class="no" data-retry="${m.id}">✓ 登入好了，繼續</button><small class="hint2">機器人停在登入頁。在電腦上顯示的視窗裡登入（不用關掉），再按「登入好了，繼續」。</small></div>`}
+  return `<div class="appr"><button type="button" class="btn" data-openb="${esc(m.by)}">🖥 在電腦上顯示它的瀏覽器</button><button type="button" class="no" data-retry="${m.id}">✓ 登入好了，繼續</button><button type="button" class="no" data-usemine="${m.id}">改用我的 Chrome（用已儲存的密碼自動填入）</button><small class="hint2">機器人停在登入頁。在電腦上顯示的視窗裡登入（不用關掉），再按「登入好了，繼續」。或改讓它在你自己的 Chrome 裡工作：由 Chrome 自動填入你存的密碼，機器人看不到密碼本身。</small></div>`}
 function apprHtml(m){const a=m.text.match(APPR);if(!a)return '';
   const later=convMsgs(m.conv).some(x=>x.id>m.id&&(x.by==='me'||x.by===m.by));
   if(later)return '';
@@ -775,6 +775,10 @@ $('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).th
   const rt=e.target.closest('[data-retry]');if(rt){const ms=convMsgs(cur),i=ms.findIndex(x=>String(x.id)===rt.dataset.retry);
     const last=ms.slice(0,i).reverse().find(x=>x.by==='me');if(!last){toast(I18N.t('找不到上一則指示'));return}
     rt.disabled=true;sendMsg(last.text==='（附件）'?'':last.text,(last.files||[]).map(f=>f.id),last.files||[]);return}
+  const um=e.target.closest('[data-usemine]');if(um){const ms=convMsgs(cur),m=ms.find(x=>String(x.id)===um.dataset.usemine),b=m&&bot(m.by);if(!b)return;
+    confirmSheet('改用我的 Chrome',`<p>「<b data-u>${esc(b.name)}</b>」之後會在你自己的 Chrome 裡工作（自己的分頁群組），登入頁由 Chrome 從你已儲存的密碼自動填入，機器人不會讀到密碼本身。</p><p>需要先在「設定 → 電腦與主機 → 使用我的 Chrome」連接 Chrome。之後可以在任務設定改回專屬瀏覽器。</p>`,'改用並繼續',false,
+      async()=>{await api('bots/'+b.id,'PUT',{name:b.name,task:b.task,folder:b.folder,engine:b.engine,model:b.model,avatar:b.avatar,browser:'mine'});await refresh();
+        const last=ms.slice(0,ms.indexOf(m)).reverse().find(x=>x.by==='me');if(last)sendMsg(last.text==='（附件）'?'':last.text,(last.files||[]).map(f=>f.id),last.files||[])});return}
   const ob=e.target.closest('[data-openb]');if(ob){ob.disabled=true;openBrowser(ob.dataset.openb);return}
   const im=e.target.closest('img[data-file]');if(im)openFile(im.dataset.file);
   const fc=e.target.closest('[data-open-file]');if(fc)openFile(fc.dataset.openFile);
