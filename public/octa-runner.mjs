@@ -19,7 +19,7 @@ import { dirname, join, extname, basename, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 
-export const VERSION = '10.2';
+export const VERSION = '10.3';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -184,8 +184,12 @@ function buildPrompt(job, here) {
     '',
     '對話紀錄（舊到新）：'
   );
-  for (const h of job.history) lines.push(`【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
-  lines.push('', '現在請處理這則指示：', job.prompt);
+  // older messages are shortened; the last few stay whole
+  job.history.forEach((h, i) => {
+    const recent = i >= job.history.length - 4, t = recent || h.text.length <= 600 ? h.text : h.text.slice(0, 600) + '…（較早的訊息，已截短）';
+    lines.push(`【${h.who}】${t}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
+  });
+  lines.push('', '先判斷這則指示的類型：如果只是問問題、要你確認、複述或說明（例如「重新看一下任務」「你在做什麼」「方案是哪種」），直接根據上面的資料回答，不要打開瀏覽器、不要讀寫檔案、不要開始做任務。需要實際做事時才使用工具。', '', '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
 
@@ -309,14 +313,21 @@ async function usageReport() {   // every 10 minutes
   return out;
 }
 
-async function spawnCli(bin, args, dir, input) {
+// opts.onLine: called with each stdout line (live progress); opts.ctl.kill() stops the run
+async function spawnCli(bin, args, dir, input, opts = {}) {
   if (!(await has(bin))) return { code: -1, out: '', err: '', missing: true };
   return new Promise(resolve => {
     const child = spawn(bin, WIN ? args.map(q) : args, { cwd: dir, shell: WIN, windowsHide: true });
     const out = [], err = [];
-    let killed = false;
+    let killed = false, part = '';
+    if (opts.ctl) opts.ctl.kill = () => { try { WIN ? spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true }) : child.kill(); } catch { } };
     const timer = setTimeout(() => { killed = true; child.kill(); }, JOB_TIMEOUT_MS);
-    child.stdout.on('data', d => out.push(d));
+    child.stdout.on('data', d => {
+      out.push(d);
+      if (!opts.onLine) return;
+      part += d.toString('utf8');
+      let i; while ((i = part.indexOf('\n')) >= 0) { const l = part.slice(0, i); part = part.slice(i + 1); try { opts.onLine(l); } catch { } }
+    });
     child.stderr.on('data', d => err.push(d));
     child.on('error', e => { clearTimeout(timer); resolve({ code: -1, out: decode(out), err: e.message, missing: e.code === 'ENOENT' }); });
     child.on('close', code => { clearTimeout(timer); resolve({ code, out: decode(out), err: decode(err) + (killed ? '\n執行超過 15 分鐘，已中止。' : '') }); });
@@ -331,7 +342,20 @@ function ollamaModel(model) {
   const r = spawnSync('ollama', ['list'], { encoding: 'utf8', shell: WIN, windowsHide: true, timeout: 10000 });
   return (r.stdout || '').split('\n').slice(1).map(l => l.trim().split(/\s+/)[0]).find(Boolean) || '';
 }
-async function runEngine(engine, prompt, b, model) {
+// what Claude Code is doing right now, in words, from its stream-json events
+function describeTool(name, input = {}) {
+  const n = String(name).replace(/^mcp__browser__/, '');
+  const host = u => { try { return new URL(u).host; } catch { return String(u || '').slice(0, 40); } };
+  const short = s => String(s || '').replace(/\s+/g, ' ').slice(0, 40);
+  return ({
+    browser_navigate: `打開 ${host(input.url)}`, browser_click: `點擊「${short(input.element)}」`, browser_type: `在「${short(input.element)}」輸入`,
+    browser_fill_form: '填寫表單', browser_snapshot: '讀取網頁內容', browser_take_screenshot: '截圖', browser_select_option: '選擇選項',
+    browser_tabs: '切換分頁', browser_wait_for: '等待網頁載入', browser_press_key: '按鍵盤', browser_navigate_back: '回上一頁', browser_evaluate: '讀取網頁資料',
+    Read: `讀取檔案 ${basename(String(input.file_path || ''))}`, Write: `寫入檔案 ${basename(String(input.file_path || ''))}`, Edit: `修改檔案 ${basename(String(input.file_path || ''))}`,
+    Glob: '找檔案', Grep: '搜尋檔案內容', WebSearch: `上網搜尋「${short(input.query)}」`, WebFetch: `讀取網頁 ${host(input.url)}`
+  })[n] || (n.startsWith('browser_') ? '操作瀏覽器' : `使用 ${n}`);
+}
+async function runEngine(engine, prompt, b, model, live = {}) {
   const { dir, server } = b;
   const store = storeDir();
   const m = (flag) => (model ? [flag, model] : []);
@@ -367,8 +391,24 @@ async function runEngine(engine, prompt, b, model) {
       r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, FILE_INSTR], dir, '');
       break;
     }
-    default: r = await spawnCli('claude', ['-p', '--output-format', 'text', '--mcp-config', join(dir, 'mcp.json'), '--strict-mcp-config', '--add-dir', store, ...m('--model'),
-      '--allowedTools', 'mcp__browser,WebFetch,WebSearch,Read,Write,Edit,Glob,Grep'], dir, prompt);
+    default: {
+      // stream-json: lets OCTA show what the bot is doing while it works
+      let result = null;
+      r = await spawnCli('claude', ['-p', '--output-format', 'stream-json', '--verbose', '--mcp-config', join(dir, 'mcp.json'), '--strict-mcp-config', '--add-dir', store, ...m('--model'),
+        '--allowedTools', 'mcp__browser,WebFetch,WebSearch,Read,Write,Edit,Glob,Grep'], dir, prompt, {
+        ctl: live.ctl,
+        onLine: l => {
+          let e; try { e = JSON.parse(l); } catch { return; }
+          if (e.type === 'result') { result = e; return; }
+          if (e.type === 'assistant') for (const c of e.message?.content || []) {
+            if (c.type === 'tool_use') live.progress?.(describeTool(c.name, c.input));
+            else if (c.type === 'text' && c.text?.trim()) live.progress?.('整理回覆中');
+          }
+        }
+      });
+      if (result) { text = String(result.result || '').trim(); if (result.is_error && r.code === 0) r.code = 1; }
+      else if (r.out && r.out.trim().startsWith('{')) text = '';   // stream with no result: fall back to the error output
+    }
   }
   text = (text || r.out || '').replace(/\x1b\[[0-9;]*m/g, '').trim();
   const E = ENGINES[engine] || ENGINES.claude;
@@ -398,9 +438,16 @@ async function chatJob(job) {
   const start = Date.now() - 1000;
   log(`▶ ${job.bot.name}［${job.bot.engine || 'claude'}］${job.group ? ' @' + job.group.name : ''}：${job.prompt.slice(0, 40)}`);
   job.bot.livePort = port;
+  // live progress (at most every 4 s); if the user pressed 停止, the server says so and the run is stopped
+  const ctl = {};
+  let lastSent = 0, pendingText = '', timerP = null;
+  const flush = () => { timerP = null; lastSent = Date.now(); api('runner/progress', { id: job.id, text: pendingText }).then(r => { if (r.stop) { log(`■ ${job.bot.name}：使用者按了停止`); ctl.kill?.(); } }).catch(() => { }); };
+  const progress = t => { pendingText = t; if (timerP) return; const wait = Math.max(0, 4000 - (Date.now() - lastSent)); timerP = setTimeout(flush, wait); };
+  progress('開始工作');
+  const beat = setInterval(() => { if (!timerP) flush(); }, 15000);   // also notices 停止 for AIs that don't report progress
   let res;
-  try { res = await runEngine(job.bot.engine || 'claude', buildPrompt(job, here), b, job.bot.model); }
-  finally { busyBots.delete(job.bot.id); if (port) touchBrowser(job.bot.id); }
+  try { res = await runEngine(job.bot.engine || 'claude', buildPrompt(job, here), b, job.bot.model, { progress, ctl }); }
+  finally { clearTimeout(timerP); clearInterval(beat); busyBots.delete(job.bot.id); if (port) touchBrowser(job.bot.id); }
   // what the browser shows now: taken by OCTA itself (no need for the bot to remember)
   let page = (res.text.match(/📍\s*目前頁面[:：]\s*(\S+)/) || [])[1];
   const d = new Date(), z = n => String(n).padStart(2, '0'), stamp = `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`;

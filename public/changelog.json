@@ -1,5 +1,27 @@
 [
  {
+  "v": "2.0.3",
+  "date": "2026-10-22",
+  "notes": [
+   "機器人工作時顯示它正在做什麼（例如「打開 admin.booking.com」「點擊『今日入住』」）",
+   "單純的問題（例如「重新看一下任務」）會直接回答，不再打開瀏覽器去做事，快很多",
+   "較早的長訊息會截短再交給 AI，回覆更快、更省流量",
+   "按「停止」會真的中止電腦上正在跑的 AI"
+  ],
+  "notes_en": [
+   "See what a bot is doing while it works (e.g. “open admin.booking.com”, “click ‘Today’s arrivals’”)",
+   "Plain questions (e.g. “re-read your task”) are answered directly without opening the browser — much faster",
+   "Older long messages are shortened before going to the AI: faster replies, less quota",
+   "“Stop” now really stops the AI running on the computer"
+  ],
+  "notes_ja": [
+   "ボットが今何をしているかを表示（例：「admin.booking.com を開く」「『本日のチェックイン』をクリック」）",
+   "単純な質問（例：「タスクを読み直して」）はブラウザを開かずにすぐ回答",
+   "古い長文メッセージは短くして AI に渡し、返信が速く使用量も節約",
+   "「停止」でパソコン上の AI を実際に止めます"
+  ]
+ },
+ {
   "v": "2.0.2",
   "date": "2026-10-22",
   "notes": [

@@ -138,18 +138,19 @@ const MIGRATIONS = [
   'ALTER TABLE files ADD COLUMN conv TEXT', 'ALTER TABLE files ADD COLUMN loc TEXT', 'ALTER TABLE files ADD COLUMN path TEXT', 'ALTER TABLE files ADD COLUMN size INTEGER', 'ALTER TABLE files ADD COLUMN want INTEGER',
   'CREATE INDEX IF NOT EXISTS file_user ON files(user_id, loc)', 'CREATE INDEX IF NOT EXISTS ses_user ON sessions(user_id, kind)', 'CREATE INDEX IF NOT EXISTS msg_conv ON messages(user_id, conv, id)',
   'CREATE TABLE IF NOT EXISTS chunks (file_id TEXT NOT NULL, n INTEGER NOT NULL, data TEXT NOT NULL, ts INTEGER NOT NULL, PRIMARY KEY (file_id, n))',
-  'CREATE TABLE IF NOT EXISTS logins (k TEXT PRIMARY KEY, fails INTEGER NOT NULL, until INTEGER NOT NULL)'
+  'CREATE TABLE IF NOT EXISTS logins (k TEXT PRIMARY KEY, fails INTEGER NOT NULL, until INTEGER NOT NULL)',
+  'ALTER TABLE jobs ADD COLUMN progress TEXT'
 ];
 let schemaOk = false;
 async function ensureSchema(db) {
   if (schemaOk) return;
-  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); schemaOk = true; return; } catch { }
+  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress FROM jobs LIMIT 0').all(); schemaOk = true; return; } catch { }
   for (const sql of MIGRATIONS) { try { await db.prepare(sql).run(); } catch { } }
   schemaOk = true;
 }
 
 // requests that don't change anything other devices need to see
-const NO_BUMP = /^(signup|login|logout|pair|cron|wait|reset|password|devices|notify\/|settings|runner\/(next|blob|hello|bye))/;
+const NO_BUMP = /^(signup|login|logout|pair|cron|wait|reset|password|devices|notify\/|settings|runner\/(next|blob|hello|bye|progress))/;
 const folderOk = (folders, id) => (id && folders.some(f => f.id === id) ? id : null);
 const MIMES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', pdf: 'application/pdf', txt: 'text/plain', csv: 'text/csv', md: 'text/markdown', json: 'application/json',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
@@ -830,6 +831,12 @@ async function route({ request: req, env, params }) {
           await sleep(1000);
         }
       }
+      if (path === 'runner/progress' && m === 'POST') {   // what the bot is doing now; also tells the computer if 停止 was pressed
+        const r = await db.prepare("UPDATE jobs SET progress=? WHERE id=? AND user_id=? AND status='running'").bind(clean(body.text, 120), +body.id, U).run();
+        if (!r.meta.changes) return J({ stop: true });
+        await bump(db, U);
+        return J({ ok: true });
+      }
       if (path === 'runner/stored' && m === 'POST') {   // the host saved an uploaded file into its OCTA folder
         const p = safePath(body.path);
         if (!p) return err('路徑不正確');
@@ -935,7 +942,7 @@ async function route({ request: req, env, params }) {
       const [ur, busy, rev, ...lasts] = await db.batch([
         // recent bot replies, for unread counts and notifications
         db.prepare("SELECT conv,id FROM messages WHERE user_id=? AND by_ NOT IN ('me','sys') ORDER BY id DESC LIMIT 300").bind(U),
-        db.prepare("SELECT conv,bot_id,status,kind,started FROM jobs WHERE user_id=? AND kind<>'test' AND status IN ('pending','running')").bind(U),
+        db.prepare("SELECT conv,bot_id,status,kind,started,progress FROM jobs WHERE user_id=? AND kind<>'test' AND status IN ('pending','running')").bind(U),
         db.prepare('SELECT rev FROM users WHERE id=?').bind(U),
         // newest non-system message of each conversation (list previews); one indexed lookup each
         ...convIds.map(c => db.prepare("SELECT conv,id,by_ AS by,substr(text,1,140) AS text,ts FROM messages WHERE user_id=? AND conv=? AND by_<>'sys' ORDER BY id DESC LIMIT 1").bind(U, c))
