@@ -1,4 +1,7 @@
 # OCTA 進度
+
+> 部署規則：使用者 2026-10-22 指示「以後自動推上線」— 每次改完測試通過就直接合併 main、推送並跑 desktop.yml 發布。
+
 ## 雲端版（octa.yzprojecttw.com）
 - [x] 前端（E·ROOM 金黑風格）、多帳號、Pages Functions + D1
 - [x] 執行器 v4 `public/octa-runner.mjs`：可匯入的 startRunner()、最多 3 個並行、每個機器人獨立 Chrome（Playwright MCP）、截圖、遠端開瀏覽器
