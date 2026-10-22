@@ -947,7 +947,7 @@ async function route({ request: req, env, params }) {
         me: me.name, local: me.kind === 'local', rev: rev.results[0]?.rev ?? 0,
         engines: h ? h.engines : JSON.parse((await db.prepare('SELECT engines FROM users WHERE id=?').bind(U).first())?.engines || 'null'),
         runnerOnline: env.runnerOnline ? env.runnerOnline() : h.online,
-        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {},
+        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {},
         ...all, last: last.results, ur: ur.results.map(r => [r.conv, r.id]), busy: busy.results
       });
     }
@@ -1179,6 +1179,14 @@ async function route({ request: req, env, params }) {
       if (body.notifyAll !== undefined) st.notifyAll = !!body.notifyAll;
       if (['cloud', 'pc'].includes(body.sched)) st.sched = body.sched;
       if (['zh-TW', 'zh-CN', 'en', 'ja'].includes(body.lang)) st.lang = body.lang;
+      if (body.allow && typeof body.allow === 'object') {   // 一律允許: things a bot may do without asking each time
+        const bid = clean(body.allow.bot, 64), list = (Array.isArray(body.allow.list) ? body.allow.list : []).map(x => clean(x, 120)).filter(Boolean).slice(0, 20);
+        st.allow = st.allow || {};
+        if (list.length) st.allow[bid] = list; else delete st.allow[bid];
+        await putSettings(db, U, st);
+        await bump(db, U);
+        return J({ ok: true });
+      }
       if (body.quick && typeof body.quick === 'object') {   // 常用指令 per conversation
         const conv = clean(body.quick.conv, 64), list = (Array.isArray(body.quick.list) ? body.quick.list : []).map(x => clean(x, 300)).filter(Boolean).slice(0, 12);
         st.quick = st.quick || {};
@@ -1358,7 +1366,7 @@ async function jobPayload(env, db, U, job) {
   const dayStart = Date.parse(date + 'T00:00:00Z') - (+env.TZ_OFFSET_MIN || 0) * 60000;
   const usageToday = (await db.prepare("SELECT COUNT(*) AS n FROM jobs j JOIN bots b ON b.id=j.bot_id WHERE j.user_id=? AND j.kind='chat' AND j.created>=? AND IFNULL(b.engine,'claude')=?").bind(U, dayStart, bot.engine || 'claude').first())?.n ?? null;
   return {
-    id: job.id, kind: job.kind, url: job.url, prompt: job.prompt, usageToday,
+    id: job.id, kind: job.kind, url: job.url, prompt: job.prompt, usageToday, allowed: (st.allow || {})[bot.id] || [],
     canAsk: job.depth < MAX_ASK_DEPTH,
     conv: { id: conv.id, name: conv.name },
     bot: { id: bot.id, name: bot.name, task: bot.task, page: bot.page, engine: bot.engine || 'claude', model: bot.model || '', browser: bot.browser === 'mine' ? 'mine' : 'own' },

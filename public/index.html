@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=6"></script>
+<script src="/i18n-dict.js?v=7"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -570,7 +570,7 @@ async function refresh(){
   try{const d=await api('state');if(!S.loaded)boot.set(85,'整理畫面…');
     const prevTop=S.loaded?topBotId():null;
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
-      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{}});
+      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{}});
     if(cur&&!conv(cur))cur=null;
     if(cur)await loadMsgs(cur,'new');
     if(prevTop!==null)notifyNew(prevTop);
@@ -652,7 +652,7 @@ function loginHtml(m){const b=bot(m.by);if(!b||b.browser==='mine'||!NEEDLOGIN.te
 function apprHtml(m){const a=m.text.match(APPR);if(!a)return '';
   const later=convMsgs(m.conv).some(x=>x.id>m.id&&(x.by==='me'||x.by===m.by));
   if(later)return '';
-  return `<div class="appr"><button type="button" class="btn" data-approve="${m.id}">核准</button><button type="button" class="no" data-revise="${m.id}">修改</button></div>`}
+  return `<div class="appr"><button type="button" class="btn" data-approve="${m.id}">核准（只這次）</button><button type="button" class="no" data-always="${m.id}">一律允許</button><button type="button" class="no" data-revise="${m.id}">修改</button></div>`}
 function fmt(t){return esc(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/@([^\s@，。、]+)/g,'<span class="at">@$1</span>')}
 /* bot replies: a small, safe Markdown subset (everything is escaped first) */
 function inl(t){return esc(t)
@@ -782,6 +782,7 @@ $('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).th
   const ob=e.target.closest('[data-openb]');if(ob){ob.disabled=true;openBrowser(ob.dataset.openb);return}
   const im=e.target.closest('img[data-file]');if(im)openFile(im.dataset.file);
   const fc=e.target.closest('[data-open-file]');if(fc)openFile(fc.dataset.openFile);
+  const al=e.target.closest('[data-always]');if(al){const m=convMsgs(cur).find(x=>String(x.id)===al.dataset.always);if(m)alwaysSheet(m);return}
   const ap=e.target.closest('[data-approve]'),rv=e.target.closest('[data-revise]');
   if(ap||rv){const m=convMsgs(cur).find(x=>x.id==(ap||rv).dataset[ap?'approve':'revise']);if(!m)return;
     const at=isG(cur)?'@'+nameOf(m.by)+' ':'';
@@ -877,6 +878,7 @@ function sheet(kind,edit){
   <label class="field">模型（選填，空白用該工具的預設）<input id="sf_m" maxlength="80" value="${esc(c?.model||'')}"></label>
   <p style="margin-top:-6px" id="sf_hint"></p>`}
   <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option data-u value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
+  ${!g&&c&&((S.allow||{})[c.id]||[]).length?`<div class="field">一律允許的事（機器人做這些不會再問你）<div class="picks" id="sf_al">${S.allow[c.id].map((t,i)=>`<div class="pick"><span data-u style="flex:1">${esc(t)}</span><button type="button" class="mv" data-unallow="${i}" aria-label="收回">✕</button></div>`).join('')}</div></div>`:''}
   <label class="field">常用指令（一行一個，會變成輸入框上方的快速按鈕）<textarea id="sf_q" maxlength="2000" style="min-height:70px" placeholder="例如：整理今天的訂單&#10;把結果寫進試算表">${esc(((S.quick||{})[c?.id]||[]).join('\n'))}</textarea></label>
   ${edit?`<div class="field">例行任務<div class="rt" id="rt"></div></div>`:'<p>建立後可以在「任務設定」加入例行任務（每天固定時間自動執行）。</p>'}
   <div class="errmsg" id="se"></div>
@@ -890,6 +892,8 @@ function sheet(kind,edit){
     sheet.av=()=>av;
     const upd=()=>{const e=ENG[$('sf_e').value];$('sf_m').placeholder=e.m;const k=$('sf_e').value;$('sf_hint').innerHTML=engState(k)==='ok'?'<span class="p-ok">這台電腦已連接這個 AI。</span>':`這台電腦還沒連接這個 AI。<a href="#" id="sf_conn">看怎麼連接</a>`;if($('sf_conn'))$('sf_conn').onclick=ev=>{ev.preventDefault();openAI(k)}};$('sf_e').onchange=upd;upd()}
   if(edit)renderRoutines();
+  if($('sf_al'))$('sf_al').onclick=async e=>{const x=e.target.closest('[data-unallow]');if(!x)return;const list=[...S.allow[c.id]];list.splice(+x.dataset.unallow,1);
+    try{await api('settings','PUT',{allow:{bot:c.id,list}});S.allow[c.id]=list;x.closest('.pick').remove();toast(I18N.t('已收回'))}catch(err){toast(err.message)}};
   if(g)$('picks').onclick=e=>{const b=e.target.closest('.mv');if(!b)return;e.preventDefault();const row=b.closest('.pick');
     if(b.hasAttribute('data-up')&&row.previousElementSibling)row.parentNode.insertBefore(row,row.previousElementSibling);
     if(b.hasAttribute('data-down')&&row.nextElementSibling)row.parentNode.insertBefore(row.nextElementSibling,row)};
@@ -1020,6 +1024,21 @@ async function dupBot(id){const b=bot(id);if(!b)return;
   try{const r=await api('bots','POST',{name:name.slice(0,20),task:b.task,folder:b.folder,engine:b.engine,model:b.model,avatar:b.avatar,browser:b.browser==='mine'?'mine':'own'});
     const q=(S.quick||{})[id];if(q?.length)await api('settings','PUT',{quick:{conv:r.id,list:q}});
     toast(I18N.t('已複製，可以改名或改任務'));await refresh();openConv(r.id);sheet('b',true)}catch(e){toast(e.message)}}
+/* standing approval: the bot may do this kind of thing from now on without asking (until revoked) */
+const RISKY=/付款|付錢|轉帳|刷卡|扣款|購買|下單|刪除|刪掉|清空|移除|密碼|帳號設定/;
+function alwaysSheet(m){const b=bot(m.by);if(!b)return;const act=m.text.match(APPR)[1].trim();const risky=RISKY.test(act);
+  $('veil').innerHTML=`<form class="sheet" id="awf"><h2>一律允許</h2>
+  <p>以後「<b data-u>${esc(b.name)}</b>」遇到這類事情就直接做，做完在對話裡回報，不再等你按核准。適合每天排程重複做的事。</p>
+  <label class="field">允許的事（可以改得更通用，例如去掉日期、人數）<input id="awT" maxlength="120" value="${esc(act)}"></label>
+  ${risky?'<p class="errmsg">這件事看起來涉及付款、刪除或帳號，建議只核准這次。就算設定一律允許，這類事機器人仍會每次問你。</p>':''}
+  <p class="hmuted">隨時可以在這個機器人的「任務設定 → 一律允許的事」收回。</p>
+  <div class="errmsg" id="awE"></div>
+  <div class="acts"><button type="button" class="no" id="sx">取消</button><button class="btn">一律允許並執行這次</button></div></form>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;$('awT').focus();
+  $('awf').onsubmit=async ev=>{ev.preventDefault();const t=$('awT').value.trim();if(!t)return;
+    try{const list=[...new Set([...((S.allow||{})[b.id]||[]),t])].slice(0,20);await api('settings','PUT',{allow:{bot:b.id,list}});
+      closeSheet();toast(I18N.t('已設定一律允許'));const at=isG(cur)?'@'+b.name+' ':'';sendMsg(at+'核准：'+act+'（以後這類事一律允許：'+t+'）')}
+    catch(e){$('awE').textContent=e.message}}}
 function clearConv(id){const c=conv(id);if(!c)return;
   confirmSheet('清空對話紀錄',`<p>清空「<b data-u>${esc(c.name)}</b>」的所有訊息？機器人之後不會再看到這些舊對話。機器人本身、任務設定和例行任務都會保留。</p>`,'清空',true,
     async()=>{await api('clear','POST',{conv:id});delete MSG[id];toast(I18N.t('已清空'));await refresh();if(cur===id){await loadMsgs(id,'first');render(true)}})}

@@ -734,3 +734,18 @@ T.update({
  '改用我的 Chrome': ('Use my Chrome', '自分の Chrome を使う'),
  '改用並繼續': ('Switch and continue', '切り替えて続ける'),
 })
+
+T.update({
+ '核准（只這次）': ('Approve (this time)', '承認（今回のみ）'),
+ '一律允許': ('Always allow', '常に許可'),
+ '以後「': ('From now on, “', '今後「'),
+ '」遇到這類事情就直接做，做完在對話裡回報，不再等你按核准。適合每天排程重複做的事。': ('” does this kind of thing right away and reports back in the chat, without waiting for approval. Good for routines that repeat every day.', '」はこの種の作業をすぐ実行し、チャットで報告します（承認を待ちません）。毎日繰り返す定期タスク向けです。'),
+ '允許的事（可以改得更通用，例如去掉日期、人數）': ('What to allow (make it general, e.g. drop dates or counts)', '許可する内容（日付や人数を外すなど汎用的に）'),
+ '這件事看起來涉及付款、刪除或帳號，建議只核准這次。就算設定一律允許，這類事機器人仍會每次問你。': ('This looks like it involves payment, deletion or account settings — approving just this time is safer. Even if always allowed, the bot will still ask about these each time.', '支払い・削除・アカウントに関わるようです。今回のみ承認をおすすめします。常に許可にしても、この種の作業は毎回確認されます。'),
+ '隨時可以在這個機器人的「任務設定 → 一律允許的事」收回。': ('Revoke any time under this bot’s settings → Always allowed.', 'このボットの「タスク設定 → 常に許可」でいつでも取り消せます。'),
+ '一律允許並執行這次': ('Always allow and do it now', '常に許可して今回実行'),
+ '已設定一律允許': ('Always allowed', '常に許可しました'),
+ '一律允許的事（機器人做這些不會再問你）': ('Always allowed (the bot won’t ask about these)', '常に許可（ボットは確認しません）'),
+ '收回': ('Revoke', '取り消す'),
+ '已收回': ('Revoked', '取り消しました'),
+})

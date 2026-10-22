@@ -19,7 +19,9 @@
    "可以複製機器人（⋯ →「複製這個機器人」）",
    "群組裡輸入 @ 會跳出成員選單",
    "手機可以把 OCTA 加到主畫面，像 App 一樣開啟",
-   "桌面版第一次關閉視窗時提醒仍在背景工作"
+   "桌面版第一次關閉視窗時提醒仍在背景工作",
+   "核准可選「只這次」或「一律允許」：排程重複做的事設一律允許後，機器人直接做完再回報；任務設定裡可收回。付款、刪除、帳號設定仍每次都問",
+   "機器人停在登入頁時，可一鍵改用你自己的 Chrome，由 Chrome 自動填入已儲存的密碼（機器人看不到密碼）"
   ],
   "notes_en": [
    "Browser logic redone: each bot has one browser that stays open (in the background), keeping its tabs between tasks instead of popping a new window each time",
@@ -38,7 +40,9 @@
    "Duplicate a bot (⋯ → Duplicate)",
    "Typing @ in a group shows a member picker",
    "Add OCTA to your phone's home screen like an app",
-   "The desktop app explains it keeps working in the background the first time you close the window"
+   "The desktop app explains it keeps working in the background the first time you close the window",
+   "Approvals: “this time” or “always allow”. Always-allowed actions run and are reported afterwards; revoke in bot settings. Payments, deletions and account changes still ask every time",
+   "At a sign-in page, switch the bot to your own Chrome in one click so Chrome autofills saved passwords (the bot never sees them)"
   ],
   "notes_ja": [
    "ブラウザの仕組みを刷新：各ボットに常に開いている専用ブラウザ（普段はバックグラウンド）があり、タブを次の作業でも使い続けます",
@@ -57,7 +61,9 @@
    "ボットを複製（⋯ →「このボットを複製」）",
    "グループで @ を入力するとメンバー候補を表示",
    "スマホのホーム画面に OCTA をアプリのように追加可能",
-   "デスクトップ版は初めてウィンドウを閉じたとき、バックグラウンドで動作中と案内"
+   "デスクトップ版は初めてウィンドウを閉じたとき、バックグラウンドで動作中と案内",
+   "承認は「今回のみ」か「常に許可」を選択。常に許可した作業は実行後に報告し、タスク設定で取り消し可能。支払い・削除・アカウント変更は毎回確認",
+   "ログインページで止まったら、ワンクリックで自分の Chrome に切り替え、保存済みパスワードを Chrome が自動入力（ボットはパスワードを見ません）"
   ]
  },
  {
