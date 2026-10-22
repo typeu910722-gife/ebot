@@ -64,7 +64,10 @@ CREATE TABLE IF NOT EXISTS routines (  -- 例行任務
   times TEXT NOT NULL,           -- JSON ["06:10","12:10"] local time
   enabled INTEGER NOT NULL DEFAULT 1,
   fired TEXT,                    -- JSON {"06:10":"2026-10-21"}
-  created INTEGER NOT NULL
+  created INTEGER NOT NULL,
+  hook TEXT,                     -- secret key: POST /api/hook/<key> starts the routine (LINE webhook, forms…)
+  watch TEXT,                    -- JSON {url, sel, every}: start when this page changes
+  wstate TEXT                    -- JSON {hash, text, t}: last look at the watched page
 );
 CREATE TABLE IF NOT EXISTS messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,5 +1,30 @@
 [
  {
+  "v": "2.2.0",
+  "date": "2026-10-22",
+  "notes": [
+   "例行任務可以由外部事件觸發：選「網頁有變化時」，主機電腦會在背景用機器人的瀏覽器比對頁面（不花 AI 流量），有新訊息、新訂單就自動開始，並告訴機器人多了什麼",
+   "選「外部事件」會產生專屬觸發網址，可貼到 LINE 官方帳號 Webhook、Google 表單、Zapier、IFTTT；客人一傳訊息就開始，訊息內容交給機器人，短時間內的多則訊息會合併成一次",
+   "跟機器人說「LINE 有新訊息就回覆」「監看 https://… 有變化就處理」，它會自己建立事件觸發的例行任務",
+   "新增 Grok（xAI 官方 Grok CLI）引擎：用你的 X Premium／SuperGrok 方案",
+   "新增 Grok Bot 連接：到「AI 連線 → Grok Bot」按「帶入 Grok Bot 的機器人」，勾選要帶進 OCTA 的機器人；它在 Grok Bot 雲端完成工作，OCTA 負責排程、事件觸發、核准和通知"
+  ],
+  "notes_en": [
+   "Routines can now start on external events: “When a page changes” has the host computer compare the page in the bot’s browser in the background (no AI usage) and start when new messages or orders appear, telling the bot what’s new",
+   "“External event” creates a private trigger URL for LINE Official Account webhooks, Google Forms, Zapier or IFTTT; incoming messages are handed to the bot, and bursts are merged into one run",
+   "Tell a bot “reply when LINE gets a new message” or “watch https://… and handle changes” and it sets up the event routine itself",
+   "New Grok engine (xAI’s official Grok CLI) using your X Premium / SuperGrok plan",
+   "New Grok Bot connection: AI connections → Grok Bot → “Bring in Grok Bot bots”, tick the ones you want; they work in Grok Bot’s cloud while OCTA handles routines, event triggers, approvals and notifications"
+  ],
+  "notes_ja": [
+   "定期タスクを外部イベントで起動できるように：「ページが変化したとき」はホストパソコンがボットのブラウザで裏でページを比較し（AI 使用量なし）、新しいメッセージや注文があると開始して差分をボットに渡します",
+   "「外部イベント」は専用の起動 URL を作成。LINE 公式アカウントの Webhook、Google フォーム、Zapier、IFTTT に貼れます。届いた内容はボットに渡され、短時間の連続メッセージは 1 回にまとめます",
+   "ボットに「LINE に新着があったら返信」「https://… を監視して変化があれば処理」と伝えると、イベント起動の定期タスクを自分で作ります",
+   "Grok エンジン（xAI 公式 Grok CLI）を追加。X Premium／SuperGrok プランを使用",
+   "Grok Bot 接続を追加：AI 接続 → Grok Bot →「Grok Bot のボットを取り込む」で選択。作業は Grok Bot のクラウドで、定期実行・イベント起動・承認・通知は OCTA が担当"
+  ]
+ },
+ {
   "v": "2.1.0",
   "date": "2026-10-22",
   "notes": [

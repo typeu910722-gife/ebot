@@ -18,8 +18,9 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSy
 import { dirname, join, extname, basename, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
+import { createHash } from 'node:crypto';
 
-export const VERSION = '11.0';
+export const VERSION = '12.0';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -109,6 +110,7 @@ function botDir(id, mode = 'own', port = 0) {
   put('.gemini/settings.json', { mcpServers: { browser: { ...server, timeout: 60000, trust: true } } });
   put('.qwen/settings.json', { mcpServers: { browser: { ...server, timeout: 60000, trust: true } } });
   put('.cursor/mcp.json', { mcpServers: { browser: server } });
+  put('.mcp.json', { mcpServers: { browser: server } });   // Grok CLI reads the project .mcp.json
   put('copilot-mcp.json', { mcpServers: { browser: { type: 'local', ...server, tools: ['*'] } } });
   return { dir, profile, server, put };
 }
@@ -190,7 +192,7 @@ function buildPrompt(job, here) {
     '- 需要使用者核准才能做的事，在回覆最後單獨一行寫「✅待確認：要做的事（一句話）」（「✅待確認：」這幾個字照抄，不要翻譯），然後停下。使用者回「核准：…」後才執行。',
     ...(job.allowed?.length ? ['- 使用者已經「一律允許」你做下面這些事：遇到同一類的事直接做，不用再寫 ✅待確認，做完在回覆裡清楚列出做了什麼（對象、數量、內容）。只限這些事本身，不要擴大解讀；付款、刪除資料、更改帳號設定仍然每次都要問：', ...job.allowed.map(t => '  · ' + t)] : []),
     '- 只回報實際完成的事，做不到就直說。',
-    `- 自動排程：使用者要你定時或持續做某件事（每天幾點、每隔多久巡一次）時，不要叫他自己去設定，在回覆最後加一行「⏰例行任務：名稱｜時間｜每次要做的事」。時間寫法：每天固定時間用 24 小時制（08:00,13:30），每隔一段時間寫「每30分鐘」或「每2小時」，兩種可以並用。例如「⏰例行任務：巡 LINE 訊息｜每30分鐘｜檢查 LINE 官方帳號新訊息，擬好回覆給我確認」（「⏰例行任務：」和「｜」照抄）。系統會自動建立；同名的會更新。你的任務本身就是要持續盯著某個地方（訊息、訂單、後台）時，主動建議並建立一個每隔一段時間的例行任務。${job.routines?.length ? '這個對話已經有的例行任務：' + job.routines.map(r => `${r.name}（${r.times.map(t => t.startsWith('*/') ? `每 ${t.slice(2)} 分鐘` : t).join('、')}${r.enabled ? '' : '，已停用'}）`).join('；') + '。' : ''}`,
+    `- 自動排程：使用者要你定時或持續做某件事（每天幾點、每隔多久巡一次）時，不要叫他自己去設定，在回覆最後加一行「⏰例行任務：名稱｜時間｜每次要做的事」。時間寫法：每天固定時間用 24 小時制（08:00,13:30），每隔一段時間寫「每30分鐘」或「每2小時」，兩種可以並用。例如「⏰例行任務：巡 LINE 訊息｜每30分鐘｜檢查 LINE 官方帳號新訊息，擬好回覆給我確認」（「⏰例行任務：」和「｜」照抄）。要「有新東西才做」時，時間欄寫「每10分鐘監看 網址」（系統會不花 AI 流量地檢查那個網頁，內容有變化才叫你），或寫「外部事件」（給一個觸發網址讓 LINE、表單等服務呼叫）。系統會自動建立；同名的會更新。你的任務本身就是要持續盯著某個地方（訊息、訂單、後台）時，主動建議並建立一個每隔一段時間的例行任務。${job.routines?.length ? '這個對話已經有的例行任務：' + job.routines.map(r => `${r.name}（${r.times.map(t => t.startsWith('*/') ? `每 ${t.slice(2)} 分鐘` : t).join('、')}${r.enabled ? '' : '，已停用'}）`).join('；') + '。' : ''}`,
     '- 自動整理指定任務：當使用者在對話中說明你長期要負責的工作、固定做法、規則或排程（不是一次性的小請求）時，在回覆最後加上：「📝任務更新：」換行後寫出完整、更新後的指定任務（把原本的任務和新的說明合併成一份，條列清楚：負責什麼、去哪裡做、怎麼做、結果怎麼回報、要注意的規則），最後一行寫「📝結束」。這兩個標記照抄。沒有新的長期工作說明就不要寫。',
     job.bot.livePort ? '' : '- 若這次有用瀏覽器：結束前用 browser_take_screenshot 截目前畫面（type 設 jpeg，filename 設 last.jpeg），並在回覆最後一行寫「📍 目前頁面：網址」。',
     '',
@@ -206,7 +208,7 @@ function buildPrompt(job, here) {
 }
 
 // what the bot runs on and how much of the plan is left, for the prompt
-const PLAN_NOTE = { gemini: '個人 Google 帳號的免費額度約每天 1000 次（Google 沒有提供剩餘量查詢）', copilot: 'GitHub Copilot 訂閱（GitHub 沒有提供剩餘量查詢）', cursor: 'Cursor 訂閱（Cursor 沒有提供剩餘量查詢）', qwen: 'Qwen 帳號（官方沒有提供剩餘量查詢）', opencode: '電腦本機的 Ollama 模型，免費、沒有流量限制' };
+const PLAN_NOTE = { grokbot: 'Grok Bot 方案（在 xAI 雲端電腦上工作，用量看 Grok Bot App 的 Usage）', grok: 'Grok（xAI）帳號（官方沒有提供剩餘量查詢）', gemini: '個人 Google 帳號的免費額度約每天 1000 次（Google 沒有提供剩餘量查詢）', copilot: 'GitHub Copilot 訂閱（GitHub 沒有提供剩餘量查詢）', cursor: 'Cursor 訂閱（Cursor 沒有提供剩餘量查詢）', qwen: 'Qwen 帳號（官方沒有提供剩餘量查詢）', opencode: '電腦本機的 Ollama 模型，免費、沒有流量限制' };
 // the tabs open in the bot's browser right now (the user may have just opened or signed in to one)
 function tabsNow(job) {
   const t = job.bot.tabs;
@@ -242,6 +244,12 @@ export const ENGINES = {
     install: { win: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm \'https://cursor.com/install?win32=true\' | iex"', mac: 'curl https://cursor.com/install -fsS | bash' } },
   qwen: { label: 'Qwen Code', bin: 'qwen', site: 'https://github.com/QwenLM/qwen-code', npm: '@qwen-code/qwen-code', login: 'qwen', loginHint: '依畫面選擇登入方式，完成後輸入 /quit 離開' },
   // local open models only — no paid API keys. OpenCode drives the model and the browser tool; Ollama runs the model.
+  grok: { label: 'Grok CLI（xAI）', bin: 'grok', site: 'https://docs.x.ai/build/overview', login: 'grok login', loginHint: '瀏覽器會打開，用你的 X／Grok 帳號登入',
+    install: { win: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://x.ai/cli/install.ps1 | iex"', mac: 'curl -fsSL https://x.ai/cli/install.sh | bash' } },
+  // a bot from the user's Grok Bot app, driven through the open-source grok-bot-cli (third party, not by xAI);
+  // it uses the signed-in Grok Bot desktop app on this computer
+  grokbot: { label: 'Grok Bot（grok-bot-cli）', bin: 'gbot', site: 'https://github.com/ScriptedAlchemy/grok-bot-cli', npm: 'grok-bot-cli',
+    login: 'gbot bots list', loginHint: '先在這台電腦安裝並登入 Grok Bot 桌面 App；這裡會列出你的 Grok Bot 機器人' },
   opencode: { label: 'Ollama 本機模型', bin: 'opencode', also: 'ollama', site: 'https://ollama.com', npm: 'opencode-ai',
     pre: { win: 'winget install -e --id Ollama.Ollama --accept-source-agreements --accept-package-agreements', mac: 'brew install --cask ollama' },
     paths: { win: '%LOCALAPPDATA%\\Programs\\Ollama', mac: '/usr/local/bin' },
@@ -333,6 +341,7 @@ async function modelReport() {   // every 30 minutes
     const t = (await runText('agent', ['--list-models'])).replace(/\x1b\[[0-9;]*m/g, '');
     out.cursor = [...new Set(t.split('\n').map(l => (l.match(/^\s*(?:[-*•]\s*)?([a-z0-9][\w.\-]{2,40})(?:\s|$)/i) || [])[1]).filter(x => x && /\d|-/.test(x)))].slice(0, 30);
   }
+  if (await has('gbot')) { try { out.grokbot = (await grokBots()).map(b => b.name).slice(0, 40); } catch { } }
   if (await has('copilot')) {
     const t = await runText('copilot', ['--help']);
     const m = t.match(/--model[\s\S]{0,300}?choices:\s*([^)]+)\)/);
@@ -418,6 +427,7 @@ async function runEngine(engine, prompt, b, model, live = {}) {
     case 'qwen': r = await spawnCli('qwen', ['--yolo', '--include-directories', store, ...m('-m'), '-p', STDIN_INSTR], dir, prompt); break;
     case 'copilot': r = await spawnCli('copilot', ['-p', FILE_INSTR, '-s', '--allow-all-tools', '--allow-all-paths', '--no-color',
       '--additional-mcp-config', '@' + join(dir, 'copilot-mcp.json'), ...m('--model')], dir, ''); break;
+    case 'grok': r = await spawnCli('grok', ['--no-auto-update', '--no-alt-screen', '--always-approve', '--cwd', dir, '--output-format', 'plain', ...m('-m'), '-p', FILE_INSTR], dir, ''); break;
     case 'cursor': r = await spawnCli('agent', ['-p', '--force', '--approve-mcps', '--output-format', 'text', ...m('--model'), FILE_INSTR], dir, ''); break;
     case 'opencode': {
       if (!(await has('ollama'))) { r = { missing: true }; break; }
@@ -463,7 +473,7 @@ async function runEngine(engine, prompt, b, model, live = {}) {
 async function chatJob(job) {
   const own = job.bot.browser !== 'mine';
   let port = 0;
-  if (own) { try { port = await ensureBrowser(job.bot); } catch (e) { log('瀏覽器：' + e.message); } }
+  if (own && job.bot.engine !== 'grokbot') { try { port = await ensureBrowser(job.bot); } catch (e) { log('瀏覽器：' + e.message); } }   // a Grok Bot works on xAI's cloud computer
   const b = botDir(job.bot.id, job.bot.browser, port), { dir } = b;
   const here = convDir(job.conv || job.bot);
   if (port) busyBots.add(job.bot.id);
@@ -491,7 +501,8 @@ async function chatJob(job) {
   let res;
   const engine = job.bot.engine || 'claude';
   try {
-    res = engine === 'claude' && job.warm && (await has('claude'))
+    res = engine === 'grokbot' ? await runGrokBot(job, { progress, ctl })
+      : engine === 'claude' && job.warm && (await has('claude'))
       ? await warmClaude(job, b, here, { progress, ctl })        // AI 待機: reuse the running Claude session
       : await runEngine(engine, buildPrompt(job, here), b, job.bot.model, { progress, ctl });
   }
@@ -513,6 +524,46 @@ async function chatJob(job) {
   log(`${res.ok ? '✓' : '✗'} ${job.bot.name}`);
   if (['claude', 'codex'].includes(job.bot.engine || 'claude')) lastUsage = 0;   // refresh how much is left
   try { cfg.onDone?.(job, res); } catch { }
+}
+
+// ---------- Grok Bot (through grok-bot-cli) ----------
+function jsonOut(text) { const t = String(text || '').trim(); const i = t.search(/[[{]/); if (i < 0) return null; try { return JSON.parse(t.slice(i)); } catch { return null; } }
+const pickArr = o => (Array.isArray(o) ? o : o && (o.bots || o.items || o.entries || o.thread || o.messages || o.data || o.results)) || [];
+async function grokBots() {   // [{name, description}]
+  const out = await runText('gbot', ['bots', 'list', '--json']);
+  const j = jsonOut(out);
+  if (j) return pickArr(j).map(b => ({ name: String(b.name || b.title || b.displayName || ''), description: String(b.description || b.instructions || b.label || '') })).filter(b => b.name);
+  return out.split('\n').map(l => l.replace(/\x1b\[[0-9;]*m/g, '').trim()).filter(l => l && !/^(name|bots?)\b/i.test(l)).map(l => ({ name: l.split(/\s{2,}|\t/)[0], description: '' })).filter(b => b.name);
+}
+const entryText = e => typeof e === 'string' ? e : e.text || e.body || e.markdown || e.message?.text || (Array.isArray(e.content) ? e.content.map(c => c.text || '').join('') : typeof e.content === 'string' ? e.content : '');
+const fromUser = e => /^(user|me|human|you)$/i.test(String(e.role || e.author?.type || e.author || e.from || e.sender || e.kind || ''));
+async function runGrokBot(job, live) {
+  const name = job.bot.model;
+  if (!(await has('gbot'))) return { ok: false, text: '⚠ 這台電腦還沒安裝 grok-bot-cli。請到「AI 連線 → Grok Bot」安裝。' };
+  if (!name) return { ok: false, text: '⚠ 這個機器人還沒選擇要帶入的 Grok Bot 機器人，請到任務設定的「模型」選一個。' };
+  let cursor = jsonOut(await runText('gbot', ['thread', name, '--json']))?.cursor;
+  const msg = [job.prompt, ...job.history.slice(-1).flatMap(h => h.paths?.length ? ['（附件在使用者電腦上：' + h.paths.join('、') + '）'] : [])].join('\n');
+  live.progress?.('交給 Grok Bot「' + name + '」處理');
+  const sent = await spawnCli('gbot', ['send', name, msg], storeDir(), '', { ctl: live.ctl });
+  if (sent.code !== 0) return { ok: false, text: '⚠ 傳給 Grok Bot 失敗：' + ((sent.err || sent.out || '').trim().slice(-800) || '結束碼 ' + sent.code) };
+  const got = [], t0 = Date.now();
+  let quiet = 0;
+  while (Date.now() - t0 < JOB_TIMEOUT_MS && !stopped) {
+    await pause(5000);
+    const j = jsonOut(await runText('gbot', ['thread', name, ...(cursor ? ['--after', String(cursor)] : []), '--json']));
+    if (!j) continue;
+    if (j.cursor) cursor = j.cursor;
+    const fresh = pickArr(j).filter(e => !fromUser(e)).map(entryText).filter(x => x && x.trim() && x.trim() !== msg.trim());
+    if (fresh.length) { got.push(...fresh); quiet = 0; live.progress?.('Grok Bot 回覆中'); }
+    else if (got.length && ++quiet >= 3) break;   // replies stopped for ~15 s
+  }
+  return got.length ? { ok: true, text: got.join('\n\n') } : { ok: false, text: '⚠ Grok Bot 在時間內沒有回覆，可以在 Grok Bot App 裡看看它的狀況。' };
+}
+async function listJob(job) {
+  let result;
+  try { result = JSON.stringify(await grokBots()); } catch (e) { result = JSON.stringify({ error: e.message }); }
+  if (!(await has('gbot'))) result = JSON.stringify({ error: '這台電腦還沒安裝 grok-bot-cli' });
+  await api('runner/done', { id: job.id, ok: true, text: result });
 }
 
 // ---------- AI 待機: keep a Claude Code session running between messages ----------
@@ -590,6 +641,11 @@ async function warmClaude(job, b, here, live) {
 }
 
 async function testJob(job) {
+  if (job.engine === 'grokbot') {
+    const ok = await has('gbot', true), bots = ok ? await grokBots().catch(() => []) : [];
+    lastReport = 0; lastModels = 0;
+    return api('runner/done', { id: job.id, ok: ok && bots.length > 0, text: !ok ? '這台電腦還沒安裝 grok-bot-cli' : bots.length ? `連上了，找到 ${bots.length} 個 Grok Bot 機器人：${bots.map(b => b.name).join('、')}` : '讀不到 Grok Bot 機器人：請確認這台電腦已安裝並登入 Grok Bot 桌面 App' });
+  }
   const b = botDir('_test-' + job.engine);
   log(`🔌 測試 ${ENGINES[job.engine]?.label || job.engine}`);
   const res = await runEngine(job.engine, job.prompt, b, '');
@@ -701,6 +757,40 @@ async function openJob(job) {
       : '我的瀏覽器已經在電腦上顯示。需要登入就直接在裡面登入，好了回來按「登入好了，繼續」。');
   } catch (e) { return done(false, '⚠ 無法打開瀏覽器：' + e.message); }
 }
+// ---------- 監看網頁: check pages in the bot's own browser, start the routine only when they change ----------
+// No AI is used for checking, so it costs no tokens; the bot is called only when something new shows up.
+let watches = [], watchesAt = 0;
+const lastLook = new Map();
+async function readPage(port, url, sel) {
+  return cdp(port, async send => {
+    const { targetId } = await send('Target.createTarget', { url, background: true });
+    try {
+      const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
+      const ev = async expr => (await send('Runtime.evaluate', { expression: expr, returnByValue: true }, sessionId)).result?.value;
+      for (let i = 0; i < 40 && (await ev('document.readyState').catch(() => '')) !== 'complete'; i++) await pause(500);
+      await pause(4000);   // pages that load their content afterwards (chat lists, dashboards)
+      const s = JSON.stringify(sel || '');
+      return String(await ev(`(()=>{const sel=${s};const els=sel?[...document.querySelectorAll(sel)]:[document.body];return els.map(e=>e.innerText).join('\\n')})()`) || '').slice(0, 8000);
+    } finally { await send('Target.closeTarget', { targetId }).catch(() => { }); }
+  });
+}
+async function checkWatches() {
+  if (standby || stopped) return;
+  if (Date.now() - watchesAt > 5 * 60000) { watchesAt = Date.now(); try { watches = (await api('runner/watches', {})).watches || []; } catch { } }
+  for (const w of watches) {
+    if (Date.now() - (lastLook.get(w.id) || 0) < (w.every || 10) * 60000) continue;
+    if (busyBots.has(w.bot) || sessions.get(w.bot)?.turn) continue;   // don't disturb a bot at work
+    lastLook.set(w.id, Date.now());
+    try {
+      const port = await ensureBrowser({ id: w.bot, name: '監看' });
+      const text = (await readPage(port, w.url, w.sel)).replace(/\d{1,2}:\d{2}(:\d{2})?/g, '').trim();   // ignore clocks on the page
+      const hash = createHash('sha1').update(text).digest('hex');
+      const r = await api('runner/watched', { id: w.id, hash, text });
+      if (r.changed) log(`👀 監看的網頁有變化：${w.url}`);
+    } catch (e) { log('監看失敗：' + e.message); }
+  }
+}
+
 // browsers idle for 30 minutes and not on screen are closed to save memory (tabs come back next time)
 async function reapBrowsers(all) {
   for (const [id, b] of browsers) {
@@ -724,7 +814,7 @@ let active = 0, failures = 0, stopped = true, onFatal = null, polling = false, s
 const fileWork = new Set();
 function runJob(job) {
   active++;
-  (job.kind === 'open' ? openJob(job) : job.kind === 'test' ? testJob(job) : chatJob(job))
+  (job.kind === 'open' ? openJob(job) : job.kind === 'test' ? testJob(job) : job.kind === 'list' ? listJob(job) : chatJob(job))
     .catch(e => { log('任務錯誤：' + e.message); return api('runner/done', { id: job.id, ok: false, text: '⚠ ' + e.message }).catch(() => { }); })
     .finally(() => { active--; kick(); });
 }
@@ -776,9 +866,12 @@ export function startRunner(opts) {
   }
   loop();
   const reaper = setInterval(() => reapBrowsers(false).catch(() => { }), 5 * 60000);
+  const watcher = setInterval(() => checkWatches().catch(() => { }), 60000);
+  watchesAt = 0; lastLook.clear();
+  setTimeout(() => checkWatches().catch(() => { }), 15000);
   const myCfg = cfg;
   return {
-    stop: () => { stopped = true; poll?.abort(); clearInterval(reaper); reapBrowsers(true).catch(() => { }); for (const id of [...sessions.keys()]) closeSession(id); if (myCfg.token) fetch(myCfg.url + '/api/runner/bye', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + myCfg.token }, body: '{}' }).catch(() => { }); },
+    stop: () => { stopped = true; poll?.abort(); clearInterval(reaper); clearInterval(watcher); reapBrowsers(true).catch(() => { }); for (const id of [...sessions.keys()]) closeSession(id); if (myCfg.token) fetch(myCfg.url + '/api/runner/bye', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + myCfg.token }, body: '{}' }).catch(() => { }); },
     active: () => active, standby: () => standby
   };
 }

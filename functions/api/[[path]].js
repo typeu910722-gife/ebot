@@ -98,13 +98,13 @@ async function loadAll(db, userId) {
     db.prepare('SELECT id,name,task,folder,engine,model,avatar,browser,shot_ts,shot_file,page FROM bots WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,name,task,members,folder FROM groups_ WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,name,notes FROM folders WHERE user_id=? ORDER BY created').bind(userId),
-    db.prepare('SELECT id,conv,name,prompt,times,enabled FROM routines WHERE user_id=? ORDER BY created').bind(userId)
+    db.prepare('SELECT id,conv,name,prompt,times,enabled,hook,watch FROM routines WHERE user_id=? ORDER BY created').bind(userId)
   ]);
   return {
     bots: b.results,
     groups: g.results.map(x => ({ ...x, members: JSON.parse(x.members) })),
     folders: f.results,
-    routines: r.results.map(x => ({ ...x, times: JSON.parse(x.times), enabled: !!x.enabled }))
+    routines: r.results.map(x => ({ ...x, times: JSON.parse(x.times), enabled: !!x.enabled, watch: x.watch ? JSON.parse(x.watch) : null }))
   };
 }
 async function getSettings(db, userId) {
@@ -131,10 +131,10 @@ async function sendNotify(env, st, text) {
   return out;
 }
 const needsYou = t => /✅待確認|需要使用者|^⚠/m.test(t);
-const ENGINES = ['claude', 'codex', 'gemini', 'copilot', 'cursor', 'qwen', 'opencode'];
+const ENGINES = ['claude', 'codex', 'gemini', 'grok', 'grokbot', 'copilot', 'cursor', 'qwen', 'opencode'];
 const engineOk = e => (ENGINES.includes(e) ? e : 'claude');
 const avatarOk = a => { const v = clean(a, 16); return v && !/[<>&"']/.test(v) ? v : null; };
-// opencode is only used with local Ollama models (no paid APIs): "qwen3" → "ollama/qwen3"
+// grokbot: the model field holds the Grok Bot's name. opencode is only used with local Ollama models (no paid APIs): "qwen3" → "ollama/qwen3"
 const modelOk = (engine, m) => { const v = clean(m, 80) || null; if (!v || engine !== 'opencode') return v; return 'ollama/' + v.replace(/^ollama\//, '').replace(/^.*\//, ''); };
 const TEMPLATE_AVATARS = { a: '🤖', r1: '🔎', r2: '📝', s1: '🧾', s2: '💬', s3: '📊', l1: '🛎️', l2: '🧹', l3: '👋' };
 // Columns and tables added after the first release. Applied automatically the first time a new
@@ -147,12 +147,14 @@ const MIGRATIONS = [
   'CREATE INDEX IF NOT EXISTS file_user ON files(user_id, loc)', 'CREATE INDEX IF NOT EXISTS ses_user ON sessions(user_id, kind)', 'CREATE INDEX IF NOT EXISTS msg_conv ON messages(user_id, conv, id)',
   'CREATE TABLE IF NOT EXISTS chunks (file_id TEXT NOT NULL, n INTEGER NOT NULL, data TEXT NOT NULL, ts INTEGER NOT NULL, PRIMARY KEY (file_id, n))',
   'CREATE TABLE IF NOT EXISTS logins (k TEXT PRIMARY KEY, fails INTEGER NOT NULL, until INTEGER NOT NULL)',
-  'ALTER TABLE jobs ADD COLUMN progress TEXT', 'ALTER TABLE jobs ADD COLUMN tokens INTEGER'
+  'ALTER TABLE jobs ADD COLUMN progress TEXT', 'ALTER TABLE jobs ADD COLUMN tokens INTEGER',
+  'ALTER TABLE routines ADD COLUMN hook TEXT', 'ALTER TABLE routines ADD COLUMN watch TEXT', 'ALTER TABLE routines ADD COLUMN wstate TEXT',
+  'CREATE INDEX IF NOT EXISTS routine_hook ON routines(hook)'
 ];
 let schemaOk = false;
 async function ensureSchema(db) {
   if (schemaOk) return;
-  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress, tokens FROM jobs LIMIT 0').all(); schemaOk = true; return; } catch { }
+  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress, tokens FROM jobs LIMIT 0').all(); await db.prepare('SELECT hook, watch, wstate FROM routines LIMIT 0').all(); schemaOk = true; return; } catch { }
   for (const sql of MIGRATIONS) { try { await db.prepare(sql).run(); } catch { } }
   schemaOk = true;
 }
@@ -223,6 +225,45 @@ async function fireRoutines(env, db, userId, byHost) {
   }
   if (n) await bump(db, userId);
   return n;
+}
+
+// ---------- event triggers ----------
+// hook: a secret key → POST /api/hook/<key> starts the routine (LINE webhook, Zapier, forms…)
+// watch: {url, sel, every} → the host computer checks the page in the bot's browser and starts the routine when it changes
+function triggerFrom(body, old) {
+  const t = body.trigger;
+  if (t === 'hook') return { hook: old?.hook || randTok(), watch: null };
+  if (t === 'watch') {
+    let url = clean(body.watch?.url, 500);
+    if (url && !/^https?:\/\//.test(url)) url = 'https://' + url;
+    if (!url) throw new Error('要監看的網址要填');
+    const every = [5, 10, 15, 30, 60].includes(+body.watch?.every) ? +body.watch.every : 10;
+    return { hook: null, watch: JSON.stringify({ url, sel: clean(body.watch?.sel, 200), every }) };
+  }
+  return { hook: null, watch: null };
+}
+// a routine started by an event: if an earlier event is still waiting in line, add this one to it
+async function fireEvent(env, db, r, what) {
+  const pend = await db.prepare("SELECT id,prompt FROM jobs WHERE user_id=? AND conv=? AND status='pending' AND prompt LIKE ? ORDER BY id DESC LIMIT 1").bind(r.user_id, r.conv, `（例行任務「${r.name}」%`).first();
+  if (pend) { await db.prepare('UPDATE jobs SET prompt=? WHERE id=?').bind((pend.prompt + '\n\n（又來一個事件）\n' + what).slice(0, 20000), pend.id).run(); await bump(db, r.user_id); return 'merged'; }
+  const all = await loadAll(db, r.user_id);
+  const g = all.groups.find(x => x.id === r.conv), b = all.bots.find(x => x.id === r.conv);
+  if (!g && !b) return 'gone';
+  await addMsg(db, r.user_id, r.conv, 'sys', `⚡ 事件觸發：${r.name}`);
+  await addJob(db, r.user_id, r.conv, g ? g.members : [b.id], `（例行任務「${r.name}」由事件觸發）${r.prompt || '請執行你的指定任務，完成後回報結果。'}\n\n事件內容：\n${what}`.slice(0, 20000));
+  await bump(db, r.user_id);
+  return 'fired';
+}
+// LINE webhook body → readable lines
+function describeEvent(raw, body) {
+  if (body && Array.isArray(body.events)) {
+    return body.events.map(e => {
+      const who = e.source?.userId ? `（使用者 ${e.source.userId}）` : '';
+      if (e.type === 'message') return `LINE ${e.message?.type === 'text' ? '文字訊息' : e.message?.type || '訊息'}${who}：${e.message?.text || ''}`;
+      return `LINE 事件 ${e.type}${who}`;
+    }).join('\n');
+  }
+  return raw.slice(0, 4000);
 }
 
 // ---------- rate limiting (sign-in, password reset) ----------
@@ -681,8 +722,8 @@ async function route({ request: req, env, params }) {
   const path = (params.path || []).join('/');
   const m = req.method;
   const url = new URL(req.url);
-  let body = {};
-  if (m !== 'GET') { try { body = await req.json(); } catch { body = {}; } }
+  let body = {}, rawBody = '';
+  if (m !== 'GET') { rawBody = await req.text().catch(() => ''); try { body = rawBody ? JSON.parse(rawBody) : {}; } catch { body = {}; } }
 
   try {
     // ---------- public ----------
@@ -747,6 +788,21 @@ async function route({ request: req, env, params }) {
       if (!env.pairCheck) return err('這個版本不使用配對碼', 404);
       if (!env.pairCheck(String(body.code || ''))) return err('配對碼錯誤或已失效', 401);
       return J({ token: await newSession(db, 'local', 'web', 'phone', meta) });
+    }
+    if (path.startsWith('hook/')) {   // external event: LINE webhook, Zapier, a form…
+      const key = path.slice(5);
+      if (!/^[0-9a-f]{48}$/.test(key)) return err('找不到', 404);
+      const r = await db.prepare('SELECT * FROM routines WHERE hook=?').bind(key).first();
+      if (!r) return err('找不到', 404);
+      if (m === 'GET') return J({ ok: true, routine: r.name });   // lets services check the address
+      if (!r.enabled) return J({ ok: true, skipped: 'disabled' });
+      const raw = rawBody || '';
+      const what = describeEvent(raw, body);
+      if (Array.isArray(body.events) && !body.events.length) return J({ ok: true });   // LINE "Verify" sends no events
+      const lim = [['hook:' + key, 120]];
+      if (await blocked(db, lim)) return J({ ok: false, error: 'too many events' }, 429);
+      await failed(db, lim);   // counts events per 15 minutes
+      return J({ ok: true, result: await fireEvent(env, db, r, what || '（沒有內容）') });
     }
     if (path === 'cron') {   // called every few minutes (GitHub Actions); fires routines on time and tidies up
       const users = (await db.prepare('SELECT DISTINCT user_id FROM routines WHERE enabled=1').all()).results;
@@ -848,6 +904,23 @@ async function route({ request: req, env, params }) {
           await sleep(1000);
         }
       }
+      if (path === 'runner/watches' && m === 'POST') {   // pages the host should check for changes
+        const rows = (await db.prepare("SELECT r.id,r.conv,r.watch,g.members FROM routines r LEFT JOIN groups_ g ON g.id=r.conv WHERE r.user_id=? AND r.enabled=1 AND r.watch IS NOT NULL").bind(U).all()).results;
+        return J({ watches: rows.map(r => { const w = JSON.parse(r.watch); return { id: r.id, bot: r.members ? JSON.parse(r.members)[0] : r.conv, ...w }; }) });
+      }
+      if (path === 'runner/watched' && m === 'POST') {   // a checked page: start the routine when it changed
+        const r = await db.prepare('SELECT * FROM routines WHERE id=? AND user_id=?').bind(clean(body.id, 64), U).first();
+        if (!r || !r.watch) return J({ ok: true });
+        const text = clean(body.text, 8000), hash = clean(body.hash, 80);
+        const old = r.wstate ? JSON.parse(r.wstate) : null;
+        await db.prepare('UPDATE routines SET wstate=? WHERE id=?').bind(JSON.stringify({ hash, text, t: now() }), r.id).run();
+        if (!old || old.hash === hash || !hash) return J({ ok: true, changed: false });   // first look only remembers the page
+        const before = new Set(String(old.text || '').split('\n').map(x => x.trim()).filter(Boolean));
+        const added = text.split('\n').map(x => x.trim()).filter(x => x && !before.has(x)).slice(0, 40).join('\n');
+        const w = JSON.parse(r.watch);
+        const res = await fireEvent(env, db, r, `監看的網頁有變化：${w.url}\n新出現的內容：\n${added || '（版面有變動，請打開網頁確認）'}`);
+        return J({ ok: true, changed: true, result: res });
+      }
       if (path === 'runner/progress' && m === 'POST') {   // what the bot is doing now; also tells the computer if 停止 was pressed
         const r = await db.prepare("UPDATE jobs SET progress=? WHERE id=? AND user_id=? AND status='running'").bind(clean(body.text, 120), +body.id, U).run();
         if (!r.meta.changes) return J({ stop: true });
@@ -878,7 +951,7 @@ async function route({ request: req, env, params }) {
         const job = await db.prepare("SELECT * FROM jobs WHERE id=? AND user_id=? AND status='running'").bind(+body.id, U).first();
         if (!job) return err('找不到執行中的任務', 404);
         const good = body.ok !== false;
-        if (job.kind === 'test') {
+        if (job.kind === 'test' || job.kind === 'list') {
           await db.prepare('UPDATE jobs SET status=?, finished=?, result=? WHERE id=?').bind(good ? 'done' : 'error', now(), clean(body.text, 3000), job.id).run();
           return ok();
         }
@@ -903,6 +976,9 @@ async function route({ request: req, env, params }) {
         const plans = [];
         if (good && job.kind === 'chat') {
           text = text.replace(/^\s*⏰\s*例行任務[:：]\s*(.+?)\s*[｜|]\s*(.+?)\s*[｜|]\s*(.+)$/gm, (_, n, t, p) => {
+            const wm = String(t).match(/監看\s*(https?:\/\/\S+)/), every = (String(t).match(/每\s*(\d+)\s*分/) || [])[1];
+            if (wm) { plans.push({ name: clean(n, 40), times: [], prompt: clean(p, 2000), trigger: 'watch', watch: { url: wm[1], every: +every || 10 } }); return ''; }
+            if (/外部事件|webhook/i.test(t)) { plans.push({ name: clean(n, 40), times: [], prompt: clean(p, 2000), trigger: 'hook' }); return ''; }
             const times = cleanTimes(String(t).replace(/每\s*(\d+)\s*分(鐘)?/g, '*/$1').replace(/每\s*(\d+)\s*小時/g, (_, h) => '*/' + h * 60).split(/[,，、\s]+/).map(x => { if (/^\*\/\d+$/.test(x)) return x; const mm = x.match(/^(\d{1,2})[:：](\d{2})$/); return mm ? mm[1].padStart(2, '0') + ':' + mm[2] : ''; }));
             if (clean(n, 40) && times.length) plans.push({ name: clean(n, 40), times, prompt: clean(p, 2000) });
             return '';
@@ -928,7 +1004,14 @@ async function route({ request: req, env, params }) {
           if (remember.length) await addMsg(db, U, job.conv, 'sys', `已記住：${remember.join('；').slice(0, 200)}`);
           for (const k of skillsNew) await addMsg(db, U, job.conv, 'sys', `已存成技能「${k.name}」，輸入 / 就能叫它`);
         }
-        for (const r of plans.slice(0, 5)) {
+        for (const r of plans.filter(x => x.trigger).slice(0, 3)) {   // event-triggered routines the bot set up
+          const old = await db.prepare('SELECT * FROM routines WHERE user_id=? AND conv=? AND name=?').bind(U, job.conv, r.name).first();
+          let trig; try { trig = triggerFrom(r, old); } catch { continue; }
+          if (old) await db.prepare('UPDATE routines SET prompt=?,enabled=1,hook=?,watch=?,wstate=NULL WHERE id=?').bind(r.prompt, trig.hook, trig.watch, old.id).run();
+          else await db.prepare("INSERT INTO routines (id,user_id,conv,name,prompt,times,enabled,fired,created,hook,watch) VALUES (?,?,?,?,?,'[]',1,'{}',?,?,?)").bind('r-' + uid(), U, job.conv, r.name, r.prompt, now(), trig.hook, trig.watch).run();
+          await addMsg(db, U, job.conv, 'sys', r.trigger === 'watch' ? `已設定例行任務「${r.name}」：網頁 ${r.watch.url} 有變化時開始（每 ${r.watch.every || 10} 分鐘檢查）` : `已設定例行任務「${r.name}」：外部事件觸發。觸發網址在任務設定 → 例行任務裡`);
+        }
+        for (const r of plans.filter(x => !x.trigger).slice(0, 5)) {
           const { date, hm } = localNow(env);
           const fired = JSON.stringify(Object.fromEntries(r.times.filter(t => !isEvery(t) && t <= hm).map(t => [t, date])));   // times already past today start tomorrow
           const old = await db.prepare('SELECT id FROM routines WHERE user_id=? AND conv=? AND name=?').bind(U, job.conv, r.name).first();
@@ -1177,12 +1260,14 @@ async function route({ request: req, env, params }) {
       const { bots, groups } = await loadAll(db, U);
       const conv = clean(body.conv, 64), name = clean(body.name, 40), times = cleanTimes(body.times);
       if (!bots.some(b => b.id === conv) && !groups.some(g => g.id === conv)) return err('找不到對話', 404);
-      if (!name || !times.length) return err('名稱和時間都要填');
+      let trig; try { trig = triggerFrom(body); } catch (e) { return err(e.message); }
+      if (!name || (!times.length && !trig.hook && !trig.watch)) return err('名稱和時間（或觸發方式）都要填');
       const { date, hm } = localNow(env);   // times already past today start tomorrow
       const fired = Object.fromEntries(times.filter(t => !isEvery(t) && t <= hm).map(t => [t, date]));
-      await db.prepare('INSERT INTO routines (id,user_id,conv,name,prompt,times,enabled,fired,created) VALUES (?,?,?,?,?,?,1,?,?)')
-        .bind('r-' + uid(), U, conv, name, clean(body.prompt, 2000), JSON.stringify(times), JSON.stringify(fired), now()).run();
-      return ok();
+      const id = 'r-' + uid();
+      await db.prepare('INSERT INTO routines (id,user_id,conv,name,prompt,times,enabled,fired,created,hook,watch) VALUES (?,?,?,?,?,?,1,?,?,?,?)')
+        .bind(id, U, conv, name, clean(body.prompt, 2000), JSON.stringify(times), JSON.stringify(fired), now(), trig.hook, trig.watch).run();
+      return ok({ id, hook: trig.hook });
     }
     if (path.startsWith('routines/')) {
       const id = path.slice(9);
@@ -1190,16 +1275,18 @@ async function route({ request: req, env, params }) {
       if (!r) return err('找不到例行任務', 404);
       if (m === 'PUT') {
         const name = clean(body.name ?? r.name, 40), times = body.times ? cleanTimes(body.times) : JSON.parse(r.times);
-        if (!name || !times.length) return err('名稱和時間都要填');
+        let trig = { hook: r.hook, watch: r.watch };
+        if (body.trigger !== undefined) { try { trig = triggerFrom(body, r); } catch (e) { return err(e.message); } }
+        if (!name || (!times.length && !trig.hook && !trig.watch)) return err('名稱和時間（或觸發方式）都要填');
         const enabled = body.enabled === undefined ? r.enabled : body.enabled ? 1 : 0;
         let fired = r.fired;
         if (enabled && !r.enabled || body.times) {   // turning on or changing times: don't fire times already past today
           const { date, hm } = localNow(env);
           fired = JSON.stringify(Object.fromEntries(times.filter(t => !isEvery(t) && t <= hm).map(t => [t, date])));
         }
-        await db.prepare('UPDATE routines SET name=?,prompt=?,times=?,enabled=?,fired=? WHERE id=?')
-          .bind(name, body.prompt === undefined ? r.prompt : clean(body.prompt, 2000), JSON.stringify(times), enabled, fired, id).run();
-        return ok();
+        await db.prepare('UPDATE routines SET name=?,prompt=?,times=?,enabled=?,fired=?,hook=?,watch=?,wstate=? WHERE id=?')
+          .bind(name, body.prompt === undefined ? r.prompt : clean(body.prompt, 2000), JSON.stringify(times), enabled, fired, trig.hook, trig.watch, trig.watch === r.watch ? r.wstate : null, id).run();
+        return ok({ hook: trig.hook });
       }
       if (m === 'DELETE') { await db.prepare('DELETE FROM routines WHERE id=?').bind(id).run(); return ok(); }
     }
@@ -1233,6 +1320,10 @@ async function route({ request: req, env, params }) {
       ]);
       await addMsg(db, U, conv, 'sys', '對話紀錄已清空');
       return ok();
+    }
+    if (path === 'grokbot/list' && m === 'POST') {   // ask the host computer for the bots in the user's Grok Bot
+      const r = await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url) VALUES (?,'__test','list:grokbot','[]','',?,'list','grokbot')").bind(U, now()).run();
+      return ok({ id: r.meta.last_row_id });
     }
     if (path === 'engine-test' && m === 'POST') {
       const engine = engineOk(body.engine);
@@ -1441,6 +1532,7 @@ async function nextWork(env, db, U, slots) {
 }
 async function jobPayload(env, db, U, job) {
   if (job.kind === 'test') return { id: job.id, kind: 'test', engine: engineOk(job.url), prompt: job.prompt };
+  if (job.kind === 'list') return { id: job.id, kind: 'list', what: job.url };
   const { bots, groups, folders } = await loadAll(db, U);
   const name = id => id === 'me' ? '使用者' : id === 'sys' ? '系統' : (bots.find(b => b.id === id)?.name || '已刪除的機器人');
   const bot = bots.find(b => b.id === job.bot_id);

@@ -842,3 +842,60 @@ T.update({
 })
 P.extend([(r'^已記住：(.+)$', 'Remembered: $1', '記憶しました：$1'), (r'^已存成技能「(.+)」，輸入 / 就能叫它$', 'Saved as skill “$1” — type / to use it', 'スキル「$1」として保存しました。/ で呼び出せます')])
 T.update({'打開 OCTA 後會出現設定指引。選你已經有帳號的 AI（例如 Claude 或 ChatGPT），按「一鍵安裝並登入」，再按「測試」。沒有付費帳號可以用 Gemini 的免費額度，或 Ollama 本機模型。': ('OCTA opens a setup guide. Pick an AI you already have an account for (e.g. Claude or ChatGPT), press “Install & sign in”, then “Test”. No paid plan? Use Gemini’s free quota or an Ollama local model.', 'OCTA を開くと設定ガイドが表示されます。アカウントを持っている AI（Claude や ChatGPT など）を選び「インストールしてログイン」→「テスト」。有料プランがなければ Gemini の無料枠か Ollama のローカルモデルを使えます。')})
+
+T.update({
+ 'Claude · ChatGPT · Gemini · Grok · GitHub Copilot · Cursor · 通義千問 · Ollama 本機模型': ('Claude · ChatGPT · Gemini · Grok · GitHub Copilot · Cursor · Qwen · Ollama local models', 'Claude · ChatGPT · Gemini · Grok · GitHub Copilot · Cursor · Qwen · Ollama ローカルモデル'),
+ 'Grok（xAI Grok CLI）': ('Grok (xAI Grok CLI)', 'Grok（xAI Grok CLI）'),
+ '即時資訊與 X（Twitter）趨勢、網路研究、推理與寫作、程式開發': ('Real-time info and X (Twitter) trends, web research, reasoning and writing, coding', 'リアルタイム情報と X（Twitter）のトレンド、調査、推論と文章、開発'),
+ '有 X Premium／SuperGrok 等 Grok 方案': ('anyone with a Grok plan such as X Premium or SuperGrok', 'X Premium／SuperGrok などの Grok プランをお持ちの方'),
+ '用你的 Grok 帳號；依 xAI 方案': ('Uses your Grok account; depends on your xAI plan', 'Grok アカウントを使用。xAI のプランによります'),
+ '瀏覽器會打開，用你的 X／Grok 帳號登入': ('A browser opens — sign in with your X / Grok account', 'ブラウザが開くので X／Grok アカウントでログイン'),
+})
+
+T.update({
+ '外部事件觸發': ('Triggered by an external event', '外部イベントで起動'),
+ '網頁有變化時': ('When a page changes', 'ページが変わったとき'),
+ '檢查': (' check', ' 確認'),
+ '什麼時候開始': ('When to start', '開始のタイミング'),
+ '固定時間／每隔一段時間': ('Fixed times / every so often', '決まった時刻／一定間隔'),
+ '網頁有變化時（例如有新訊息、新訂單）': ('When a page changes (e.g. new messages, new orders)', 'ページが変わったとき（新着メッセージ・新規注文など）'),
+ '外部事件（LINE、表單、Zapier 呼叫網址）': ('External event (LINE, forms, Zapier call a URL)', '外部イベント（LINE・フォーム・Zapier が URL を呼び出す）'),
+ '要監看的網址（機器人瀏覽器裡已登入的頁面）': ('Page to watch (signed in, in the bot’s browser)', '監視するページ（ボットのブラウザでログイン済み）'),
+ '只看頁面的某一塊（選填，CSS 選擇器）': ('Only part of the page (optional, CSS selector)', 'ページの一部だけ（任意・CSS セレクター）'),
+ '多久檢查一次': ('Check every', '確認の間隔'),
+ '主機電腦會用這個機器人的瀏覽器在背景打開網頁比對，不花 AI 流量；內容有變化才叫機器人開始，並告訴它多了什麼。第一次只會記住目前的內容。': ('The host computer opens the page in this bot’s browser in the background and compares it — no AI usage. Only when it changes is the bot started and told what’s new. The first check just remembers the current content.', 'ホストパソコンがこのボットのブラウザで裏でページを開いて比較します（AI は使いません）。変化があったときだけボットを起動し、増えた内容を伝えます。初回は現在の内容を記録するだけです。'),
+ '觸發網址（任何服務呼叫它就會開始）': ('Trigger URL (any service calling it starts the routine)', '起動 URL（どのサービスからでも呼び出すと開始）'),
+ 'LINE 官方帳號：到 LINE Developers → 你的 Messaging API channel → Webhook URL 貼上這個網址並開啟「Use webhook」，客人一傳訊息就會觸發，訊息內容會交給機器人。其他服務（Google 表單、Zapier、IFTTT）用 POST 呼叫這個網址即可。網址等同鑰匙，不要公開。': ('LINE official account: in LINE Developers → your Messaging API channel → Webhook URL, paste this URL and turn on “Use webhook”. Each customer message then starts the routine and the bot gets the message. Other services (Google Forms, Zapier, IFTTT) just POST to this URL. Treat the URL like a key — don’t share it.', 'LINE 公式アカウント：LINE Developers → Messaging API チャネル → Webhook URL にこの URL を貼り「Webhook の利用」をオンにすると、お客様のメッセージごとに起動し内容がボットに渡ります。他のサービス（Google フォーム・Zapier・IFTTT）はこの URL に POST するだけです。URL は鍵と同じなので公開しないでください。'),
+ '儲存後會產生一個專屬的觸發網址。': ('A private trigger URL is created when you save.', '保存すると専用の起動 URL が作られます。'),
+ '已建立觸發網址': ('Trigger URL created', '起動 URL を作成しました'),
+})
+P.extend([(r'^⚡ 事件觸發：(.+)$', '⚡ Event trigger: $1', '⚡ イベントで起動：$1')])
+
+T.update({
+ 'Grok Bot（帶入你在 Grok Bot 的機器人）': ('Grok Bot (bring in your Grok Bot bots)', 'Grok Bot（Grok Bot のボットを取り込む）'),
+ '第三方': ('Third party', 'サードパーティ'),
+ '把 Grok Bot 裡設定好的機器人帶進 OCTA：它在 xAI 的雲端電腦上工作，OCTA 負責排程、事件觸發、核准和通知': ('Bring bots you set up in Grok Bot into OCTA: they work on xAI’s cloud computer while OCTA handles routines, event triggers, approvals and notifications', 'Grok Bot で設定したボットを OCTA に取り込み：作業は xAI のクラウドで行い、OCTA が定期タスク・イベント起動・承認・通知を担当'),
+ '有 Grok Bot（SuperGrok 或 Cursor 方案），並在這台電腦裝好、登入 Grok Bot 桌面 App': ('anyone with Grok Bot (SuperGrok or Cursor plan) and the Grok Bot desktop app installed and signed in on this computer', 'Grok Bot（SuperGrok か Cursor プラン）があり、このパソコンに Grok Bot デスクトップアプリを入れてログイン済みの方'),
+ '用你的 Grok Bot 方案。透過開源工具 grok-bot-cli 連接（第三方，不是 xAI 官方），它會使用這台電腦上 Grok Bot App 的登入狀態': ('Uses your Grok Bot plan. Connected through the open-source grok-bot-cli (third party, not by xAI), which uses the Grok Bot app’s sign-in on this computer', 'Grok Bot のプランを使用。オープンソースの grok-bot-cli（xAI 公式ではないサードパーティ）で接続し、このパソコンの Grok Bot アプリのログイン状態を使います'),
+ '先在這台電腦安裝並登入 Grok Bot 桌面 App，裝好會列出你的 Grok Bot 機器人': ('install and sign in to the Grok Bot desktop app on this computer first; your Grok Bot bots are then listed', '先にこのパソコンに Grok Bot デスクトップアプリを入れてログインしてください。ボット一覧が表示されます'),
+ '讀不到 Grok Bot 機器人，先到 AI 連線測試': ('Can’t read Grok Bot bots — test it in AI connections first', 'Grok Bot のボットを読めません。先に AI 接続でテストしてください'),
+ '帶入 Grok Bot 的機器人…': ('Bring in Grok Bot bots…', 'Grok Bot のボットを取り込む…'),
+ '帶入 Grok Bot 的機器人': ('Bring in Grok Bot bots', 'Grok Bot のボットを取り込む'),
+ '重新安裝': ('Reinstall', '再インストール'),
+ '正在讀取你在 Grok Bot 的機器人（主機電腦要開著）…': ('Reading your Grok Bot bots (the host computer must be on)…', 'Grok Bot のボットを読み込み中（ホストパソコンが必要）…'),
+ '一分半內沒有回應，請確認主機電腦開著': ('No answer within 90 seconds — check that the host computer is on', '90 秒以内に応答がありません。ホストパソコンを確認してください'),
+ '沒有找到任何 Grok Bot 機器人': ('No Grok Bot bots found', 'Grok Bot のボットが見つかりません'),
+ '請先在主機電腦安裝並登入 Grok Bot 桌面 App，再到「AI 連線 → Grok Bot」按「一鍵安裝並登入」。': ('Install and sign in to the Grok Bot desktop app on the host computer, then press “Install & sign in” under AI connections → Grok Bot.', 'ホストパソコンに Grok Bot デスクトップアプリを入れてログインし、「AI 接続 → Grok Bot」で「インストールしてログイン」を押してください。'),
+ '勾選要帶進 OCTA 的機器人。帶進來後在 OCTA 傳訊息給它，會轉交給 Grok Bot 裡的它在雲端完成，再把回覆帶回來；排程、事件觸發、核准和通知都用 OCTA 的。': ('Tick the bots to bring into OCTA. Messages you send them in OCTA go to the bot in Grok Bot, which does the work in the cloud and replies back here; routines, event triggers, approvals and notifications are OCTA’s.', 'OCTA に取り込むボットを選んでください。OCTA で送ったメッセージは Grok Bot のボットに渡され、クラウドで作業して返信が戻ります。定期タスク・イベント起動・承認・通知は OCTA が担当します。'),
+ '已帶入': ('Imported', '取り込み済み'),
+ '帶入選取的機器人': ('Bring in selected bots', '選んだボットを取り込む'),
+})
+
+T.update({
+ 'Claude · ChatGPT · Gemini · Grok · GitHub Copilot · Cursor · 通義千問 · Ollama 本機模型': ('Claude · ChatGPT · Gemini · Grok · GitHub Copilot · Cursor · Qwen · Ollama local models', 'Claude · ChatGPT · Gemini · Grok · GitHub Copilot · Cursor · Qwen · Ollama ローカルモデル'),
+ '測試任務': ('Test task', 'テストタスク'),
+ '即時資訊與 X（Twitter）趨勢、網路研究、推理與寫作、程式開發': ('Real-time info and X (Twitter) trends, web research, reasoning and writing, coding', 'リアルタイム情報と X（Twitter）トレンド、ウェブ調査、推論と文章作成、プログラミング'),
+ '有 X Premium／SuperGrok 等 Grok 方案': ('anyone with a Grok plan such as X Premium or SuperGrok', 'X Premium／SuperGrok などの Grok プランがある方'),
+ '用你的 Grok 帳號；依 xAI 方案': ('Uses your Grok account; limits follow your xAI plan', 'あなたの Grok アカウントを使用。上限は xAI のプランによります'),
+ '瀏覽器會打開，用你的 X／Grok 帳號登入': ('a browser opens — sign in with your X / Grok account', 'ブラウザが開くので X／Grok アカウントでログイン'),
+})
