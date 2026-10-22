@@ -180,6 +180,7 @@ function buildPrompt(job, here) {
     '- 需要使用者核准才能做的事，在回覆最後單獨一行寫「✅待確認：要做的事（一句話）」（「✅待確認：」這幾個字照抄，不要翻譯），然後停下。使用者回「核准：…」後才執行。',
     ...(job.allowed?.length ? ['- 使用者已經「一律允許」你做下面這些事：遇到同一類的事直接做，不用再寫 ✅待確認，做完在回覆裡清楚列出做了什麼（對象、數量、內容）。只限這些事本身，不要擴大解讀；付款、刪除資料、更改帳號設定仍然每次都要問：', ...job.allowed.map(t => '  · ' + t)] : []),
     '- 只回報實際完成的事，做不到就直說。',
+    `- 自動排程：使用者要你每天固定時間做某件事時，不要叫他自己去設定，在回覆最後加一行「⏰例行任務：名稱｜時間｜每次要做的事」，時間用 24 小時制，多個時間用逗號，例如「⏰例行任務：早上整理入住｜08:00,13:30｜整理今天的入住名單並回報」（「⏰例行任務：」和「｜」照抄）。系統會自動建立；同名的會更新。目前只能設定每天固定時間。${job.routines?.length ? '這個對話已經有的例行任務：' + job.routines.map(r => `${r.name}（每天 ${r.times.join('、')}${r.enabled ? '' : '，已停用'}）`).join('；') + '。' : ''}`,
     '- 自動整理指定任務：當使用者在對話中說明你長期要負責的工作、固定做法、規則或排程（不是一次性的小請求）時，在回覆最後加上：「📝任務更新：」換行後寫出完整、更新後的指定任務（把原本的任務和新的說明合併成一份，條列清楚：負責什麼、去哪裡做、怎麼做、結果怎麼回報、要注意的規則），最後一行寫「📝結束」。這兩個標記照抄。沒有新的長期工作說明就不要寫。',
     job.bot.livePort ? '' : '- 若這次有用瀏覽器：結束前用 browser_take_screenshot 截目前畫面（type 設 jpeg，filename 設 last.jpeg），並在回覆最後一行寫「📍 目前頁面：網址」。',
     '',
@@ -190,12 +191,19 @@ function buildPrompt(job, here) {
     const recent = i >= job.history.length - 4, t = recent || h.text.length <= 600 ? h.text : h.text.slice(0, 600) + '…（較早的訊息，已截短）';
     lines.push(`【${h.who}】${t}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   });
-  lines.push('', '先判斷這則指示的類型：如果只是問問題、要你確認、複述或說明（例如「重新看一下任務」「你在做什麼」「方案是哪種」），直接根據上面的資料回答，不要打開瀏覽器、不要讀寫檔案、不要開始做任務。需要實際做事時才使用工具。', '', '現在請處理這則指示：', job.prompt);
+  lines.push('', ...tabsNow(job), '', '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。', '', '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
 
 // what the bot runs on and how much of the plan is left, for the prompt
 const PLAN_NOTE = { gemini: '個人 Google 帳號的免費額度約每天 1000 次（Google 沒有提供剩餘量查詢）', copilot: 'GitHub Copilot 訂閱（GitHub 沒有提供剩餘量查詢）', cursor: 'Cursor 訂閱（Cursor 沒有提供剩餘量查詢）', qwen: 'Qwen 帳號（官方沒有提供剩餘量查詢）', opencode: '電腦本機的 Ollama 模型，免費、沒有流量限制' };
+// the tabs open in the bot's browser right now (the user may have just opened or signed in to one)
+function tabsNow(job) {
+  const t = job.bot.tabs;
+  if (!t) return [];
+  if (!t.length) return ['你的瀏覽器目前沒有開著的網頁。'];
+  return ['你的瀏覽器目前開著的分頁（使用者可能剛幫你打開或登入好）：', ...t.map((x, i) => `${i + 1}. ${x.title || '(無標題)'} — ${x.url}`)];
+}
 function aboutMe(job) {
   const e = job.bot.engine || 'claude', E = ENGINES[e] || ENGINES.claude, u = usageNow[e];
   const out = [`- AI：${E.label}${job.bot.model ? `，模型 ${job.bot.model}` : '（該工具的預設模型）'}；在使用者的主機電腦「${os.hostname()}」上執行，透過 OCTA 執行器 v${VERSION}。`];
@@ -439,6 +447,7 @@ async function chatJob(job) {
   const start = Date.now() - 1000;
   log(`▶ ${job.bot.name}［${job.bot.engine || 'claude'}］${job.group ? ' @' + job.group.name : ''}：${job.prompt.slice(0, 40)}`);
   job.bot.livePort = port;
+  if (port) { try { job.bot.tabs = await cdp(port, async send => (await pagesOf(send)).filter(p => !/^(about:blank|chrome:)/.test(p.url)).slice(0, 6).map(p => ({ title: p.title.slice(0, 80), url: p.url.slice(0, 200) }))); } catch { } }
   // live progress (at most every 4 s); if the user pressed 停止, the server says so and the run is stopped
   const ctl = {};
   let lastSent = 0, pendingText = '', timerP = null;
@@ -524,7 +533,7 @@ async function warmClaude(job, b, here, live) {
     // only what happened since the last turn, then the new instruction
     const fresh = job.history.filter(h => (h.id || 0) > s.lastId && !(h.who === '使用者' && h.text === job.prompt));
     text = [fresh.length ? '（上次之後的新對話）\n' + fresh.map(h => `【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : '')).join('\n') : '',
-      '先判斷這則指示的類型：只是問問題或要你確認時直接回答，不要使用工具。', '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
+      tabsNow(job).join('\n'), '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。', '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
     log(`⚡ ${job.bot.name}：AI 待機中，直接接續`);
   } else {
     if (s) closeSession(job.bot.id);

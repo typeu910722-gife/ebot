@@ -772,3 +772,4 @@ T.update({
  '名稱要填': ('Enter a name', '名前を入力してください'),
 })
 P.append((r'^已自動更新「(.+)」的指定任務，可在任務設定修改$', 'Updated $1’s task automatically — edit it in bot settings', '$1 のタスクを自動更新しました（タスク設定で変更できます）'))
+P.extend([(r'^已新增例行任務「(.+)」：每天 (.+)$', 'Added routine “$1”: every day at $2', '定期タスク「$1」を追加：毎日 $2'), (r'^已更新例行任務「(.+)」：每天 (.+)$', 'Updated routine “$1”: every day at $2', '定期タスク「$1」を更新：毎日 $2')])

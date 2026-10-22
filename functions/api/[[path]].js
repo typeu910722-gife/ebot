@@ -874,6 +874,15 @@ async function route({ request: req, env, params }) {
           learned = clean(tm[1], 4000);
           text = clean(text.replace(tm[0], ''), 20000) || '（已更新指定任務）';
         }
+        // ⏰例行任務：名稱｜08:00,13:30｜要做的事 — the bot sets up a daily routine the user asked for
+        const plans = [];
+        if (good && job.kind === 'chat') {
+          text = text.replace(/^\s*⏰\s*例行任務[:：]\s*(.+?)\s*[｜|]\s*(.+?)\s*[｜|]\s*(.+)$/gm, (_, n, t, p) => {
+            const times = cleanTimes(String(t).split(/[,，、\s]+/).map(x => { const mm = x.match(/^(\d{1,2})[:：](\d{2})$/); return mm ? mm[1].padStart(2, '0') + ':' + mm[2] : ''; }));
+            if (clean(n, 40) && times.length) plans.push({ name: clean(n, 40), times, prompt: clean(p, 2000) });
+            return '';
+          }).trim() || '（已設定例行任務）';
+        }
         await db.prepare('UPDATE jobs SET status=?, finished=? WHERE id=?').bind(good ? 'done' : 'error', now(), job.id).run();
         // files the bot made in its 輸出 folder become attachments of the reply
         const outs = [];
@@ -885,6 +894,14 @@ async function route({ request: req, env, params }) {
           outs.push({ id, name, mime });
         }
         await addMsg(db, U, job.conv, job.bot_id, text, outs);
+        for (const r of plans.slice(0, 5)) {
+          const { date, hm } = localNow(env);
+          const fired = JSON.stringify(Object.fromEntries(r.times.filter(t => t <= hm).map(t => [t, date])));   // times already past today start tomorrow
+          const old = await db.prepare('SELECT id FROM routines WHERE user_id=? AND conv=? AND name=?').bind(U, job.conv, r.name).first();
+          if (old) await db.prepare('UPDATE routines SET times=?,prompt=?,enabled=1,fired=? WHERE id=?').bind(JSON.stringify(r.times), r.prompt, fired, old.id).run();
+          else await db.prepare('INSERT INTO routines (id,user_id,conv,name,prompt,times,enabled,fired,created) VALUES (?,?,?,?,?,?,1,?,?)').bind('r-' + uid(), U, job.conv, r.name, r.prompt, JSON.stringify(r.times), fired, now()).run();
+          await addMsg(db, U, job.conv, 'sys', `已${old ? '更新' : '新增'}例行任務「${r.name}」：每天 ${r.times.join('、')}`);
+        }
         if (learned && learned.length >= 4) {
           const cur = await db.prepare('SELECT task FROM bots WHERE id=? AND user_id=?').bind(job.bot_id, U).first();
           if (cur && cur.task !== learned) {
@@ -1390,6 +1407,7 @@ async function jobPayload(env, db, U, job) {
   const usageToday = (await db.prepare("SELECT COUNT(*) AS n FROM jobs j JOIN bots b ON b.id=j.bot_id WHERE j.user_id=? AND j.kind='chat' AND j.created>=? AND IFNULL(b.engine,'claude')=?").bind(U, dayStart, bot.engine || 'claude').first())?.n ?? null;
   return {
     id: job.id, kind: job.kind, url: job.url, prompt: job.prompt, usageToday, warm: WARM.includes(+st.warm) ? +st.warm : 120, allowed: (st.allow || {})[bot.id] || [],
+    routines: (await db.prepare('SELECT name,times,enabled FROM routines WHERE user_id=? AND conv=?').bind(U, job.conv).all()).results.map(r => ({ name: r.name, times: JSON.parse(r.times), enabled: !!r.enabled })),
     canAsk: job.depth < MAX_ASK_DEPTH,
     conv: { id: conv.id, name: conv.name },
     bot: { id: bot.id, name: bot.name, task: bot.task, page: bot.page, engine: bot.engine || 'claude', model: bot.model || '', browser: bot.browser === 'mine' ? 'mine' : 'own' },
