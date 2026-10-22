@@ -1,5 +1,21 @@
 [
  {
+  "v": "2.2.10",
+  "date": "2026-10-22",
+  "notes": [
+   "Grok Bot：改成直接連 Grok Bot 帳號讀取機器人；找不到 Grok Bot App 的登入資料時會說明位置與解法，也會自動尋找放在其他位置的登入資料",
+   "傳給 Grok Bot 的訊息有換行或引號時不會再被截斷"
+  ],
+  "notes_en": [
+   "Grok Bot: reads your bots straight from your Grok Bot account; if the app’s sign-in can’t be found, OCTA says where it looked and what to do, and also searches other locations",
+   "Messages to Grok Bot with line breaks or quotes are no longer cut off"
+  ],
+  "notes_ja": [
+   "Grok Bot：アカウントから直接ボットを読み込みます。アプリのログイン情報が見つからない場合は場所と対処法を表示し、別の場所も自動で探します",
+   "改行や引用符を含む Grok Bot へのメッセージが途切れなくなりました"
+  ]
+ },
+ {
   "v": "2.2.9",
   "date": "2026-10-22",
   "notes": [
