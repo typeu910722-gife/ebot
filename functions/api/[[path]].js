@@ -1037,6 +1037,18 @@ async function route({ request: req, env, params }) {
         return ok();
       }
       if (m === 'DELETE') {   // files stay on the host computer; only the records go
+        // take the bot out of its groups; a group left with nobody is removed too
+        const { groups } = await loadAll(db, U);
+        for (const g of groups.filter(x => x.members.includes(id))) {
+          const left = g.members.filter(x => x !== id);
+          if (left.length) await db.prepare('UPDATE groups_ SET members=? WHERE id=? AND user_id=?').bind(JSON.stringify(left), g.id, U).run();
+          else await db.batch([
+            db.prepare('DELETE FROM groups_ WHERE id=? AND user_id=?').bind(g.id, U),
+            db.prepare('DELETE FROM routines WHERE conv=? AND user_id=?').bind(g.id, U),
+            db.prepare('DELETE FROM messages WHERE conv=? AND user_id=?').bind(g.id, U),
+            db.prepare("DELETE FROM jobs WHERE conv=? AND user_id=? AND status='pending'").bind(g.id, U)
+          ]);
+        }
         await db.batch([
           db.prepare('DELETE FROM shots WHERE bot_id=? AND user_id=?').bind(id, U),
           db.prepare('DELETE FROM routines WHERE conv=? AND user_id=?').bind(id, U),
@@ -1134,6 +1146,17 @@ async function route({ request: req, env, params }) {
         chain = named.length ? named : group.members;
       }
       await addJob(db, U, conv, chain, text || '請處理我傳的附件。');
+      return ok();
+    }
+    if (path === 'clear' && m === 'POST') {   // empty one conversation's history
+      const conv = clean(body.conv, 64);
+      const { bots, groups } = await loadAll(db, U);
+      if (!bots.some(b => b.id === conv) && !groups.some(g => g.id === conv)) return err('找不到對話', 404);
+      await db.batch([
+        db.prepare('DELETE FROM messages WHERE conv=? AND user_id=?').bind(conv, U),
+        db.prepare("DELETE FROM jobs WHERE conv=? AND user_id=? AND status='pending'").bind(conv, U)
+      ]);
+      await addMsg(db, U, conv, 'sys', '對話紀錄已清空');
       return ok();
     }
     if (path === 'engine-test' && m === 'POST') {

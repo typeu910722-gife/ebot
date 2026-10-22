@@ -1,5 +1,39 @@
 [
  {
+  "v": "2.0.1",
+  "date": "2026-10-22",
+  "notes": [
+   "機器人和群組可以直接刪除：清單或對話右上角的 ⋯ →「刪除」，會先告訴你哪些東西會一起刪除",
+   "新增「清空對話紀錄」",
+   "修正：在機器人的瀏覽器輸入帳號密碼時視窗被關掉；現在打開後機器人會等你關掉視窗才繼續",
+   "機器人需要你登入時，訊息下面會出現「在電腦上打開它的瀏覽器登入」按鈕",
+   "刪除機器人時會自動從群組移除",
+   "群組成員可以用 ↑↓ 調整執行順序",
+   "主機離線時對話上方會顯示提示；手機上的對話標題不再被按鈕擠掉",
+   "網頁版設定指引改成先下載桌面版"
+  ],
+  "notes_en": [
+   "Bots and groups can be deleted from the ⋯ menu in the list or chat, with a summary of what goes with them",
+   "New: clear chat history",
+   "Fixed: the bot's browser window closing while you typed a login; the bot now waits until you close the window",
+   "When a bot needs you to sign in, its message shows an “Open its browser on the computer” button",
+   "Deleting a bot removes it from its groups",
+   "Reorder group members with ↑↓",
+   "A banner shows when the host is offline; chat titles on phones are no longer squeezed",
+   "The web setup guide now starts with downloading the desktop app"
+  ],
+  "notes_ja": [
+   "ボットとグループを一覧やチャットの ⋯ メニューから削除可能（一緒に消えるものを事前に表示）",
+   "チャット履歴の消去を追加",
+   "修正：ボットのブラウザでログイン入力中にウィンドウが閉じる問題。ウィンドウを閉じるまでボットは待機",
+   "ログインが必要なとき、メッセージに「パソコンでブラウザを開いてログイン」ボタンを表示",
+   "ボット削除時にグループから自動で外す",
+   "グループメンバーを ↑↓ で並べ替え",
+   "ホスト未接続時にチャット上部へ案内を表示。スマホでタイトルがボタンに押されないよう改善",
+   "Web 版の設定ガイドはデスクトップ版のダウンロードから開始"
+  ]
+ },
+ {
   "v": "2.0.0",
   "date": "2026-10-22",
   "notes": [

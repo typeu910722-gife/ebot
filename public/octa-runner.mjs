@@ -14,12 +14,12 @@
 // Requires: Node 18+, at least one AI CLI (Claude Code, Codex, Gemini…), Google Chrome.
 
 import { spawn, spawnSync, execFile } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync, renameSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync, renameSync, copyFileSync, openSync, closeSync, lstatSync } from 'node:fs';
 import { dirname, join, extname, basename, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 
-export const VERSION = '10.0';
+export const VERSION = '10.1';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -172,7 +172,7 @@ function buildPrompt(job, here) {
       ? '- 需要操作網站時，用 browser 工具。這是使用者自己的 Chrome（有他已登入的網站和已儲存的密碼）。只在你自己的分頁群組裡操作，不要關閉或改動使用者其他分頁。遇到登入頁時，點帳號欄位，從 Chrome 跳出的已儲存帳號中選一個讓它自動填入；不要自己猜或輸入密碼。'
       : '- 需要操作網站時，用 browser 工具。這是你專屬的瀏覽器（獨立設定檔，登入狀態會保留），不會影響其他機器人。',
     job.bot.page ? `- 你上次停在：${job.bot.page}` : '',
-    '- 遇到登入頁、驗證碼、或需要輸入密碼時，停止並回報「需要使用者在電腦上登入」。',
+    '- 遇到登入頁、驗證碼、或需要輸入密碼時，停止並回報「需要使用者在電腦上登入」（照抄這幾個字）。使用者會在 OCTA 按「在電腦上打開瀏覽器」，在另一個不會被關掉的視窗登入，登入狀態會保存給你用；不要請使用者在你正在操作的視窗裡輸入。',
     '- 發訊息給任何人、付款、刪除資料、更改帳號設定：除非使用者在對話中明確下令，否則只準備好內容並請使用者確認，不要執行。',
     '- 需要使用者核准才能做的事，在回覆最後單獨一行寫「✅待確認：要做的事（一句話）」（「✅待確認：」這幾個字照抄，不要翻譯），然後停下。使用者回「核准：…」後才執行。',
     '- 只回報實際完成的事，做不到就直說。',
@@ -387,26 +387,39 @@ async function testJob(job) {
   await api('runner/done', { id: job.id, ok: res.ok, text: res.text });
 }
 
+// Is a Chrome window still using this profile? (Windows keeps "lockfile" open; macOS/Linux keep a SingletonLock link)
+function profileInUse(profile) {
+  if (WIN) {
+    const f = join(profile, 'lockfile');
+    if (!existsSync(f)) return false;
+    try { closeSync(openSync(f, 'r+')); return false; } catch (e) { return ['EBUSY', 'EPERM', 'EACCES'].includes(e.code); }
+  }
+  try { lstatSync(join(profile, 'SingletonLock')); return true; } catch { return false; }
+}
+const pause = ms => new Promise(r => setTimeout(r, ms));
+// The window stays the user's until they close it: the bot doesn't touch this browser meanwhile,
+// so typing a password or a code there is never interrupted.
 function openJob(job) {
-  return new Promise(resolve => {
+  return new Promise(async resolve => {
     const { profile } = botDir(job.bot.id);
     const chrome = findChrome();
-    if (!chrome) {
-      api('runner/done', { id: job.id, ok: false, text: '⚠ 找不到 Chrome。請在 octa-runner.json 加上 "chrome": "Chrome 執行檔路徑"。' }).finally(resolve);
-      return;
-    }
-    // no address given: bring back the page the bot was last on (or Chrome's last session for this profile)
-    const target = job.url || job.bot.page;
+    const done = (ok, text) => { log(`🌐 ${job.bot.name}：${text}`); api('runner/done', { id: job.id, ok, text }).catch(() => { }).finally(resolve); };
+    if (!chrome) return done(false, '⚠ 找不到 Chrome。請在 octa-runner.json 加上 "chrome": "Chrome 執行檔路徑"。');
+    // the bot's own automated Chrome may still be closing after its last job: wait so the window isn't shut under you
+    for (let i = 0; i < 15 && profileInUse(profile); i++) await pause(1000);
+    const target = job.url || job.bot.page;   // no address: the page the bot was last on, or Chrome's last session
     const args = [`--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...(target ? ['--new-window', target] : ['--restore-last-session'])];
     log(`🌐 開啟 ${job.bot.name} 的瀏覽器${target ? '：' + target : '（上次的畫面）'}`);
-    const t0 = Date.now();
-    const child = spawn(chrome, args, { stdio: 'ignore', windowsHide: false });
-    child.on('error', e => api('runner/done', { id: job.id, ok: false, text: '⚠ 無法開啟 Chrome：' + e.message }).finally(resolve));
-    child.on('exit', () => {
-      // a quick exit means the window was handed to a copy that was already open
-      const text = Date.now() - t0 < 4000 ? '已在電腦上叫出我的瀏覽器視窗。' : '你關掉了我的瀏覽器，登入狀態已保存，我可以繼續工作了。';
-      api('runner/done', { id: job.id, ok: true, text }).finally(resolve);
-      log(`🌐 ${job.bot.name}：${text}`);
+    let child;
+    try { child = spawn(chrome, args, { stdio: 'ignore', windowsHide: false }); } catch (e) { return done(false, '⚠ 無法開啟 Chrome：' + e.message); }
+    child.on('error', e => done(false, '⚠ 無法開啟 Chrome：' + e.message));
+    child.on('exit', async () => {
+      // Chrome often hands the window to another process and exits right away; keep the job
+      // (and so the bot) waiting until no window uses the profile any more
+      await pause(2000);
+      const t0 = Date.now();
+      while (profileInUse(profile) && Date.now() - t0 < 3 * 3600000 && !stopped) await pause(3000);
+      done(true, '你關掉了我的瀏覽器，登入狀態已保存，我可以繼續工作了。');
     });
   });
 }
