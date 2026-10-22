@@ -6,12 +6,11 @@
   const LANGS = { 'zh-TW': '繁體中文', en: 'English', 'zh-CN': '简体中文', ja: '日本語' };
   const pick = () => {
     try { const s = localStorage.getItem('octa_lang'); if (s && LANGS[s]) return s; } catch (e) { }
-    // nothing chosen yet: Traditional Chinese, unless the system is Simplified Chinese or Japanese
-    // (English only when picked in 設定 → 語言)
     const n = (navigator.language || 'zh-TW').toLowerCase();
-    if (/^zh-(cn|sg)|hans/.test(n)) return 'zh-CN';
+    if (/^zh-(tw|hk|mo)|hant/.test(n)) return 'zh-TW';
+    if (n.startsWith('zh')) return 'zh-CN';
     if (n.startsWith('ja')) return 'ja';
-    return 'zh-TW';
+    return 'en';
   };
   let lang = pick(), busy = false;
   const D = () => (window.OCTA_I18N || {})[lang] || null;
@@ -75,7 +74,6 @@
   window.I18N = {
     langs: LANGS,
     get lang() { return lang; },
-    chosen: () => { try { return !!localStorage.getItem('octa_lang'); } catch (e) { return false; } },
     t: s => (lang === 'zh-TW' ? s : tr(s)),
     set(l) { if (!LANGS[l]) return; lang = l; try { localStorage.setItem('octa_lang', l); } catch (e) { } apply(); window.dispatchEvent(new Event('octa-lang')); },
     select(id) { return `<select id="${id}" class="langsel" data-u aria-label="Language">${Object.entries(LANGS).map(([k, v]) => `<option value="${k}" ${k === lang ? 'selected' : ''}>${v}</option>`).join('')}</select>`; }
