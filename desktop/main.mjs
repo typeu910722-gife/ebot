@@ -2,10 +2,10 @@
 // Signed in: the window shows the OCTA website (same account as the web version, everything syncs)
 // and this computer runs that account's bots. Offline mode: everything stays on this computer.
 import { app, BrowserWindow, Tray, Menu, Notification, shell, nativeImage, dialog, ipcMain } from 'electron';
-import { join, dirname } from 'node:path';
+import { join, dirname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { startServer } from './server.mjs';
@@ -169,7 +169,7 @@ handle('octa:update-install', () => {
   if (upd.state === 'ready') {
     quitting = true; stopRunner();
     cfg = { ...cfg, updating: { to: upd.version, from: app.getVersion(), at: Date.now() } }; writeCfg(cfg);
-    setTimeout(() => { freeInstallDir(); autoUpdater.quitAndInstall(true, true); }, 800);
+    setTimeout(() => { freeInstallDir(); reopenAfterUpdate(); autoUpdater.quitAndInstall(true, true); }, 800);
   }
   return upd;
 });
@@ -183,6 +183,16 @@ function freeInstallDir() {
     `$ids=@(Kids $me) + @($all | ? { $_.ExecutablePath -and $_.ExecutablePath.StartsWith('${dir}', 'OrdinalIgnoreCase') -and $_.ProcessId -ne $me } | % { $_.ProcessId }); ` +
     `$ids | Select-Object -Unique | % { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }`;
   try { execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { timeout: 15000, windowsHide: true }); } catch (e) { logError('free-install-dir', e); }
+}
+// the silent installer doesn't always start OCTA again: a small background helper waits for the installer
+// to finish, then opens OCTA if it isn't running
+function reopenAfterUpdate() {
+  if (process.platform !== 'win32') return;
+  const exe = process.execPath.replace(/'/g, "''");
+  const ps = `Start-Sleep 6; $end=(Get-Date).AddMinutes(6); ` +
+    `while ((Get-Date) -lt $end -and (Get-Process | ? { $_.ProcessName -like '*octa*setup*' -or $_.ProcessName -like 'Un_A*' })) { Start-Sleep 2 }; ` +
+    `Start-Sleep 3; if (-not (Get-Process -Name '${basename(process.execPath, '.exe').replace(/'/g, "''")}' -ErrorAction SilentlyContinue)) { Start-Process -FilePath '${exe}' }`;
+  try { spawn('powershell', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref(); } catch (e) { logError('reopen', e); }
 }
 // tell the user when the last silent update didn't go through, and offer the installer
 function checkLastUpdate() {

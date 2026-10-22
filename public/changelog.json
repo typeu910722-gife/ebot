@@ -1,5 +1,18 @@
 [
  {
+  "v": "2.2.8",
+  "date": "2026-10-22",
+  "notes": [
+   "修正更新完成後 OCTA 沒有自己重新打開、要手動點開的問題"
+  ],
+  "notes_en": [
+   "Fixed OCTA not reopening by itself after an update"
+  ],
+  "notes_ja": [
+   "更新後に OCTA が自動で再起動しない問題を修正"
+  ]
+ },
+ {
   "v": "2.2.7",
   "date": "2026-10-22",
   "notes": [
