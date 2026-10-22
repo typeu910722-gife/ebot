@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '12.0';
+export const VERSION = '12.1';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -30,7 +30,7 @@ let cfg = {}, workDir = '', MAX = 3, log = (...a) => console.log(new Date().toLo
 
 // tools installed after the app started aren't on its PATH yet; add the usual install folders
 if (WIN) {
-  const add = [join(os.homedir(), '.local', 'bin'), join(process.env.APPDATA || '', 'npm'), join(process.env.LOCALAPPDATA || '', 'Programs', 'Ollama')];
+  const add = [join(os.homedir(), '.local', 'bin'), join(process.env.APPDATA || '', 'npm'), join(process.env.LOCALAPPDATA || '', 'Programs', 'Ollama'), join(process.env.ProgramFiles || 'C:\\Program Files', 'nodejs')];
   process.env.PATH = [...add.filter(p => !(process.env.PATH || '').includes(p)), process.env.PATH].join(';');
 }
 

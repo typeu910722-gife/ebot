@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=13"></script>
+<script src="/i18n-dict.js?v=14"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -1468,7 +1468,13 @@ async function start(){$('login').hidden=true;$('home').hidden=true;
   await refresh();
   if(cur)await loadMsgs(cur,'first').catch(()=>{});
   boot.set(100,'完成');$('app').hidden=false;boot.hide();render(true);live();
-  let g=null;try{g=localStorage.getItem('ebot_guided')}catch(e){}if(!S.bots.length&&!g)openGuide()}
+  let g=null;try{g=localStorage.getItem('ebot_guided')}catch(e){}if(!S.bots.length&&!g)openGuide();else whatsNew()}
+// once after every update: show what the latest version added
+async function whatsNew(){const log=await changelog(),x=log[0];if(!x)return;let seen=null;try{seen=localStorage.getItem('octa_seen_v');localStorage.setItem('octa_seen_v',x.v)}catch(e){return}
+  if(seen===x.v||(!seen&&!S.bots.length)||!$('veil').hidden)return;
+  const ns=(I18N.lang==='en'&&x.notes_en)||(I18N.lang==='ja'&&x.notes_ja)||x.notes;
+  subSheet('更新完成',`<p>OCTA 已更新到 <b data-u>v${esc(x.v)}</b>，這次新增了：</p><ul class="chg" data-u>${ns.map(n=>`<li>${esc(n)}</li>`).join('')}</ul><div class="row2"><button class="ghost" id="wnAll">看全部更新內容</button></div>`,{back:closeSheet});
+  $('wnAll').onclick=openVersion}
 (async()=>{mountLang();boot.set(25,'連線中…');
   try{CFG=await (await fetch('/api/config')).json()}catch(e){}
   boot.set(45,'載入介面…');

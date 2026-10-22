@@ -1,5 +1,24 @@
 [
  {
+  "v": "2.2.1",
+  "date": "2026-10-22",
+  "notes": [
+   "修正 Windows 上「一鍵安裝並登入」視窗出現亂碼錯誤、裝不起來的問題（改用 PowerShell 執行）",
+   "需要 Node.js 的 AI（Grok Bot、ChatGPT、Gemini 等）會自動先安裝 Node.js",
+   "每次更新後，主畫面會顯示一次這次更新新增了什麼"
+  ],
+  "notes_en": [
+   "Fixed the Windows “Install & sign in” window failing with garbled errors (now runs in PowerShell)",
+   "AIs that need Node.js (Grok Bot, ChatGPT, Gemini…) now install Node.js automatically first",
+   "After every update, the home screen shows once what the update added"
+  ],
+  "notes_ja": [
+   "Windows の「インストールしてログイン」画面が文字化けエラーで失敗する問題を修正（PowerShell で実行）",
+   "Node.js が必要な AI（Grok Bot、ChatGPT、Gemini など）は先に Node.js を自動インストール",
+   "更新のたびに、ホーム画面で今回の新機能を一度だけ表示"
+  ]
+ },
+ {
   "v": "2.2.0",
   "date": "2026-10-22",
   "notes": [

@@ -899,3 +899,10 @@ T.update({
  '用你的 Grok 帳號；依 xAI 方案': ('Uses your Grok account; limits follow your xAI plan', 'あなたの Grok アカウントを使用。上限は xAI のプランによります'),
  '瀏覽器會打開，用你的 X／Grok 帳號登入': ('a browser opens — sign in with your X / Grok account', 'ブラウザが開くので X／Grok アカウントでログイン'),
 })
+
+T.update({
+ '更新完成': ('Updated', '更新しました'),
+ 'OCTA 已更新到': ('OCTA has been updated to', 'OCTA を更新しました：'),
+ '，這次新增了：': ('. What’s new:', '。今回の新機能：'),
+ '看全部更新內容': ('See all release notes', 'すべての更新内容を見る'),
+})

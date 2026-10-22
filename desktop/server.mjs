@@ -243,7 +243,7 @@ export async function startServer(opts = {}) {
 
   const hooks = {
     loginClaude: () => {
-      if (WIN) spawn('cmd', ['/c', 'start', 'cmd', '/k', 'echo 在下面輸入 /login 登入 Claude，完成後關掉這個視窗 && claude'], { detached: true, stdio: 'ignore' }).unref();
+      if (WIN) spawn('cmd', ['/c', 'start', '', 'powershell', '-NoProfile', '-NoExit', '-Command', "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Write-Host 'Type /login to sign in to Claude, then close this window.'; claude"], { detached: true, stdio: 'ignore' }).unref();
       else if (process.platform === 'darwin') spawn('osascript', ['-e', 'tell application "Terminal" to do script "claude"']).unref();
       else spawn('x-terminal-emulator', ['-e', 'claude'], { detached: true, stdio: 'ignore' }).unref();
     },
@@ -255,15 +255,20 @@ export async function startServer(opts = {}) {
       const dir = join(dataDir, 'bin'); mkdirSync(dir, { recursive: true });
       const install = e.npm ? `npm install -g ${e.npm}` : e.install[WIN ? 'win' : 'mac'];
       const pre = e.pre ? e.pre[WIN ? 'win' : 'mac'] : '';
-      if (WIN) {
-        const f = join(dir, `install-${key}.cmd`);
-        writeFileSync(f, ['@echo off', 'chcp 65001 >nul', `title 安裝 ${e.label}`,
-          e.npm ? 'where npm >nul 2>nul || (echo 需要先安裝 Node.js：https://nodejs.org ，裝好後重新按一次「安裝並登入」 & start https://nodejs.org & pause & exit /b)' : '',
-          `echo 正在安裝 ${e.label}…`, pre, install,
-          e.paths ? `set "PATH=${e.paths.win};%PATH%"` : '',
-          'echo.', `echo 安裝完成。接著登入：${e.loginHint}`, 'echo.', e.login,
-          'echo.', 'echo 完成後可以關掉這個視窗，回到 OCTA 按「測試」。', 'pause'].filter(Boolean).join('\r\n'));
-        spawn('cmd', ['/c', 'start', '', f], { detached: true, stdio: 'ignore', windowsHide: false }).unref();
+      if (WIN) {   // PowerShell script saved as UTF-8 with BOM: cmd batch files mangle Chinese text ("'◆' is not recognized")
+        const q = t => "'" + String(t).replace(/'/g, "''") + "'";
+        const say = t => `Write-Host ${q(t)}`;
+        const f = join(dir, `install-${key}.ps1`);
+        writeFileSync(f, '\ufeff' + ['[Console]::OutputEncoding = [Text.Encoding]::UTF8', `$Host.UI.RawUI.WindowTitle = ${q('安裝 ' + e.label)}`,
+          '$ErrorActionPreference = "Continue"',
+          e.npm ? `if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { ${say('先安裝 Node.js（安裝 AI 工具需要它）…')}; winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements; $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User') }` : '',
+          e.npm ? `if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { ${say('無法自動安裝 Node.js，請到 https://nodejs.org 安裝後重新按一次「安裝並登入」')}; Start-Process 'https://nodejs.org'; Read-Host ${q('按 Enter 關閉')}; exit }` : '',
+          say(`正在安裝 ${e.label}…`), pre, install,
+          e.paths ? `$env:Path = [Environment]::ExpandEnvironmentVariables(${q(e.paths.win)}) + ';' + $env:Path` : '',
+          e.npm ? `$env:Path = (npm prefix -g) + ';' + $env:Path` : '',
+          "Write-Host ''", say(`安裝完成。接著登入：${e.loginHint}`), "Write-Host ''", e.login,
+          "Write-Host ''", `Read-Host ${q('完成後按 Enter 關閉這個視窗，回到 OCTA 按「測試」')}`].filter(Boolean).join('\r\n'));
+        spawn('cmd', ['/c', 'start', '', 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', f], { detached: true, stdio: 'ignore', windowsHide: false }).unref();
       } else {
         const f = join(dir, `install-${key}.command`);
         writeFileSync(f, ['#!/bin/bash', e.npm ? 'command -v npm >/dev/null || { echo "需要先安裝 Node.js：https://nodejs.org"; read -p "按 Enter 關閉"; exit; }' : '',
