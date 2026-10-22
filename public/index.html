@@ -537,7 +537,7 @@ async function api(path,method='GET',body){
 async function api_(path,method,body){
   if(path.startsWith('desktop/')&&window.octaDesktop&&!CFG.local)return window.octaDesktop.call(path.slice(8),method==='GET'?undefined:(body||{}));
   const r=await fetch('/api/'+path,{method,headers:{'content-type':'application/json',...(TOKEN?{authorization:'Bearer '+TOKEN}:{})},body:body?JSON.stringify(body):undefined});
-  const d=await r.json().catch(()=>({error:'網路錯誤'}));
+  const d=await r.json().catch(()=>({error:I18N.t('網路錯誤')+`（HTTP ${r.status}${r.headers.get('cf-mitigated')?' · Cloudflare 驗證':''}）`}));   // the status tells what went wrong (e.g. a Cloudflare check page)
   if(r.status===401&&!/^(login|pair|reset)/.test(path)){if(TOKEN)logout(true,true);throw new Error(d.error)}
   if(!r.ok)throw new Error(d.error||'發生錯誤');
   return d;
