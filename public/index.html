@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=8"></script>
+<script src="/i18n-dict.js?v=9"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -361,6 +361,7 @@ pre.notes{margin:0;white-space:pre-wrap;font:inherit;font-size:13px;color:var(--
 .bub.long{max-height:380px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 75%,transparent);mask-image:linear-gradient(#000 75%,transparent)}
 .more3{border:0;background:none;color:var(--gold2);font-size:12px;padding:4px 2px}
 .el{font-variant-numeric:tabular-nums;color:var(--gold2)}
+.tlearn{color:var(--faint)}
 .prog{margin-left:8px;color:var(--mute)}
 .prog::before{content:'· '}
 .quick{display:flex;gap:6px;flex-wrap:wrap;padding:0 20px 6px}
@@ -716,7 +717,7 @@ function render(scroll){
   $('psub').innerHTML=(fn?`<span data-u>${esc(fn)}</span> · `:'')+(g?`<span data-u>${esc(c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'))}</span>`:esc((ENG[c.engine]||ENG.claude).n)+(c.model?` <span data-u>${esc(c.model)}</span>`:''))+(rn?` · <span>${esc(I18N.t('例行任務'))} ${rn}</span>`:'');
   const off=!S.runnerOnline&&!CFG.local;$('offb').hidden=!off;
   if(off)setHTML($('offb'),`<span>⚠ 主機電腦離線，訊息會先排隊，電腦連上後自動處理。</span><button type="button" class="ghost" onclick="openGuide()">怎麼連上？</button>`);
-  setHTML($('task'),'<em>'+(g?'協作規則':'指定任務')+'</em><span data-u>'+esc(c.task)+'</span>');
+  setHTML($('task'),'<em>'+(g?'協作規則':'指定任務')+'</em>'+(c.task?'<span data-u>'+esc(c.task)+'</span>':'<span class="tlearn">還沒有指定任務：直接傳訊息告訴它要做什麼，它會自己整理並填進來。</span>'));
   $('msg').placeholder=I18N.t(g?'輸入指示，可用 @ 指定誰做':'輸入指示…');
   const qk=(S.quick||{})[cur]||[];
   setHTML($('quick'),qk.length?qk.map((q,i)=>`<button type="button" data-q="${i}" title="${esc(q)}" data-u>⚡ ${esc(q.length>24?q.slice(0,24)+'…':q)}</button>`).join(''):'');
@@ -869,7 +870,7 @@ function sheet(kind,edit){
   $('veil').innerHTML=`<form class="sheet" id="sf"><h2>${edit?'任務設定':g?'新群組':'新機器人'}</h2>
   <label class="field">名稱<input id="sn" required maxlength="20" value="${c?esc(c.name):''}" placeholder="${g?'例如：退房檢查':'例如：評論員'}"></label>
   ${g?`<div class="field">成員（由上到下依序執行，用 ↑↓ 調整順序）<div class="picks" id="picks">${(c?[...c.members.filter(bot),...S.bots.map(b=>b.id).filter(x=>!c.members.includes(x))]:S.bots.map(b=>b.id)).map(id=>{const b=bot(id);return `<label class="pick"><input type="checkbox" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm" data-u>${avOf(b.id)}</span><span data-u style="flex:1">${esc(b.name)}</span><button type="button" class="mv" data-up aria-label="往上">↑</button><button type="button" class="mv" data-down aria-label="往下">↓</button></label>`}).join('')}</div></div>`:''}
-  <label class="field">${g?'協作規則':'指定任務'}<textarea id="st" required maxlength="4000" placeholder="${g?'誰先做、做完交給誰':'要做什麼、去哪個網站、結果怎麼回報'}">${c?esc(c.task):''}</textarea></label>
+  <label class="field">${g?'協作規則':'指定任務（選填）'}<textarea id="st" ${g?'required':''} maxlength="4000" placeholder="${g?'誰先做、做完交給誰':'可以先不填：建立後直接傳訊息告訴它要做什麼，它會自己整理成指定任務'}">${c?esc(c.task):''}</textarea></label>
   ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
   ${g?'':`<div class="field">頭貼<div class="emos" id="sf_av" data-u>${['',...EMOJIS].map(e=>`<button type="button" class="emo-b${(c?.avatar||'')===e?' on':''}" data-emo="${e}" aria-label="${e||'文字'}">${e||esc((($('sn')?.value)||c?.name||'字').slice(0,1))}</button>`).join('')}<input id="sf_avc" class="emo-in" maxlength="8" placeholder="其他" value="${c?.avatar&&!EMOJIS.includes(c.avatar)?esc(c.avatar):''}" aria-label="自訂 Emoji"></div></div>
   <div class="field">瀏覽器<div class="bchoice" id="sf_b">

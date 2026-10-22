@@ -866,7 +866,14 @@ async function route({ request: req, env, params }) {
           await db.prepare('UPDATE jobs SET status=?, finished=?, result=? WHERE id=?').bind(good ? 'done' : 'error', now(), clean(body.text, 3000), job.id).run();
           return ok();
         }
-        const text = clean(body.text, 20000) || (good ? '（完成，無回覆內容）' : '⚠ 執行失敗');
+        let text = clean(body.text, 20000) || (good ? '（完成，無回覆內容）' : '⚠ 執行失敗');
+        // 📝任務更新：… 📝結束 — the bot learned what its standing job is; save it as its 指定任務
+        let learned = null;
+        const tm = good && job.kind === 'chat' ? text.match(/📝\s*任務更新[:：]\s*([\s\S]*?)(?:📝\s*結束|$)/) : null;
+        if (tm) {
+          learned = clean(tm[1], 4000);
+          text = clean(text.replace(tm[0], ''), 20000) || '（已更新指定任務）';
+        }
         await db.prepare('UPDATE jobs SET status=?, finished=? WHERE id=?').bind(good ? 'done' : 'error', now(), job.id).run();
         // files the bot made in its 輸出 folder become attachments of the reply
         const outs = [];
@@ -878,6 +885,13 @@ async function route({ request: req, env, params }) {
           outs.push({ id, name, mime });
         }
         await addMsg(db, U, job.conv, job.bot_id, text, outs);
+        if (learned && learned.length >= 4) {
+          const cur = await db.prepare('SELECT task FROM bots WHERE id=? AND user_id=?').bind(job.bot_id, U).first();
+          if (cur && cur.task !== learned) {
+            await db.prepare('UPDATE bots SET task=? WHERE id=? AND user_id=?').bind(learned, job.bot_id, U).run();
+            await addMsg(db, U, job.conv, 'sys', `已自動更新「${(await db.prepare('SELECT name FROM bots WHERE id=?').bind(job.bot_id).first())?.name || '機器人'}」的指定任務，可在任務設定修改`);
+          }
+        }
         if (job.kind === 'chat') {
           const st = await getSettings(db, U);
           const who = (await db.prepare('SELECT name FROM bots WHERE id=?').bind(job.bot_id).first())?.name || '機器人';
@@ -1025,19 +1039,19 @@ async function route({ request: req, env, params }) {
     // bots
     if (path === 'bots' && m === 'POST') {
       const name = clean(body.name, 20), task = clean(body.task, 4000);
-      if (!name || !task) return err('名稱和任務都要填');
+      if (!name) return err('名稱要填');   // the task may be empty: the bot learns it from the chat
       const { folders, bots } = await loadAll(db, U);
       if (bots.some(b => b.name === name)) return err('已經有同名的機器人，名字要不同才能用 @ 叫它');
       const id = uid(), engine = engineOk(body.engine);
       await db.prepare('INSERT INTO bots (id,user_id,name,task,folder,engine,model,avatar,browser,created) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(id, U, name, task, folderOk(folders, body.folder), engine, modelOk(engine, body.model), avatarOk(body.avatar), body.browser === 'mine' ? 'mine' : null, now()).run();
-      await addMsg(db, U, id, 'sys', '機器人已建立');
+      await addMsg(db, U, id, 'sys', task ? '機器人已建立' : '機器人已建立：直接傳訊息告訴它要做什麼，它會自己整理成指定任務');
       return ok({ id });
     }
     if (path.startsWith('bots/')) {
       const id = path.slice(5);
       if (m === 'PUT') {
         const name = clean(body.name, 20), task = clean(body.task, 4000);
-        if (!name || !task) return err('名稱和任務都要填');
+        if (!name) return err('名稱要填');   // the task may be empty: the bot learns it from the chat
         const { folders, bots } = await loadAll(db, U);
         if (bots.some(b => b.name === name && b.id !== id)) return err('已經有同名的機器人');
         const engine = engineOk(body.engine);

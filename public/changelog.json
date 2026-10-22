@@ -3,12 +3,15 @@
   "v": "2.0.4",
   "date": "2026-10-22",
   "notes": [
+   "建立機器人可以不先寫任務：直接傳訊息告訴它要做什麼，它會自己整理並自動填入「指定任務」，之後補充做法也會自動更新",
    "安裝或更新後預設開機自動啟動（自己在設定關掉過的會尊重你的選擇）"
   ],
   "notes_en": [
+   "Bots no longer need a task up front: tell it what to do in the chat and it writes and keeps its own task up to date",
    "Starts with Windows by default after installing or updating (unless you turned it off yourself)"
   ],
   "notes_ja": [
+   "ボットは最初にタスクを書かなくて OK：チャットで伝えると自分でタスクにまとめ、追加の説明も自動で反映",
    "インストール・更新後は既定で Windows 起動時に自動起動（自分でオフにした場合はそのまま）"
   ]
  },

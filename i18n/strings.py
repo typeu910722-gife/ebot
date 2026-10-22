@@ -763,3 +763,12 @@ T.update({
  '目前只有 Claude 支援待機；其他 AI 每次都會重新啟動。改了任務設定、共用資料或分區資料時，AI 會自動重新開始，讀到最新內容。': ('Only Claude supports standby for now; other AIs restart every time. Changing a bot’s settings, shared info or section info restarts its AI so it reads the latest.', '待機は現在 Claude のみ対応で、他の AI は毎回起動します。タスク設定・共有情報・セクション情報を変えると、AI は最新内容で起動し直します。'),
 })
 P.extend([(r'^(\d+) 秒$', '$1 seconds', '$1 秒'), (r'^(\d+) 分鐘$', '$1 minutes', '$1 分')])
+
+T.update({
+ '指定任務（選填）': ('Task (optional)', 'タスク（任意）'),
+ '可以先不填：建立後直接傳訊息告訴它要做什麼，它會自己整理成指定任務': ('You can leave this empty: after creating the bot, just message it what to do and it writes its own task', '空欄でも OK：作成後にやることをメッセージで伝えれば、ボットが自分でタスクにまとめます'),
+ '還沒有指定任務：直接傳訊息告訴它要做什麼，它會自己整理並填進來。': ('No task yet: just message it what to do and it will write the task itself.', 'タスクはまだありません：やることをメッセージで伝えれば、ボットが自分でまとめて記入します。'),
+ '機器人已建立：直接傳訊息告訴它要做什麼，它會自己整理成指定任務': ('Bot created: message it what to do and it will write its own task', 'ボットを作成しました：やることを伝えれば、自分でタスクにまとめます'),
+ '名稱要填': ('Enter a name', '名前を入力してください'),
+})
+P.append((r'^已自動更新「(.+)」的指定任務，可在任務設定修改$', 'Updated $1’s task automatically — edit it in bot settings', '$1 のタスクを自動更新しました（タスク設定で変更できます）'))
