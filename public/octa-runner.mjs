@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '12.1';
+export const VERSION = '12.2';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -30,7 +30,7 @@ let cfg = {}, workDir = '', MAX = 3, log = (...a) => console.log(new Date().toLo
 
 // tools installed after the app started aren't on its PATH yet; add the usual install folders
 if (WIN) {
-  const add = [join(os.homedir(), '.local', 'bin'), join(process.env.APPDATA || '', 'npm'), join(process.env.LOCALAPPDATA || '', 'Programs', 'Ollama'), join(process.env.ProgramFiles || 'C:\\Program Files', 'nodejs')];
+  const add = [join(os.homedir(), '.local', 'bin'), join(process.env.APPDATA || '', 'npm'), join(process.env.LOCALAPPDATA || '', 'Programs', 'Ollama'), join(process.env.ProgramFiles || 'C:\\Program Files', 'nodejs'), join(process.env.LOCALAPPDATA || '', 'cursor-agent')];
   process.env.PATH = [...add.filter(p => !(process.env.PATH || '').includes(p)), process.env.PATH].join(';');
 }
 
@@ -241,7 +241,8 @@ export const ENGINES = {
   gemini: { label: 'Gemini CLI', bin: 'gemini', site: 'https://github.com/google-gemini/gemini-cli', npm: '@google/gemini-cli', login: 'gemini', loginHint: '選「Login with Google」，登入後輸入 /quit 離開' },
   copilot: { label: 'GitHub Copilot CLI', bin: 'copilot', site: 'https://github.com/github/copilot-cli', npm: '@github/copilot', login: 'copilot', loginHint: '視窗出現後輸入 /login，用 GitHub 帳號登入' },
   cursor: { label: 'Cursor CLI', bin: 'agent', site: 'https://cursor.com/cli', login: 'agent login', loginHint: '瀏覽器會打開，用 Cursor 帳號登入',
-    install: { win: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm \'https://cursor.com/install?win32=true\' | iex"', mac: 'curl https://cursor.com/install -fsS | bash' } },
+    install: { win: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm \'https://cursor.com/install?win32=true\' | iex"', mac: 'curl https://cursor.com/install -fsS | bash' },
+    paths: { win: '%LOCALAPPDATA%\\cursor-agent', mac: '$HOME/.local/bin' } },
   qwen: { label: 'Qwen Code', bin: 'qwen', site: 'https://github.com/QwenLM/qwen-code', npm: '@qwen-code/qwen-code', login: 'qwen', loginHint: '依畫面選擇登入方式，完成後輸入 /quit 離開' },
   // local open models only — no paid API keys. OpenCode drives the model and the browser tool; Ollama runs the model.
   grok: { label: 'Grok CLI（xAI）', bin: 'grok', site: 'https://docs.x.ai/build/overview', login: 'grok login', loginHint: '瀏覽器會打開，用你的 X／Grok 帳號登入',

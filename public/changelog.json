@@ -1,5 +1,33 @@
 [
  {
+  "v": "2.2.3",
+  "date": "2026-10-22",
+  "notes": [
+   "修正 AI 連線狀態在「已連接／未接上」之間跳來跳去，以及剛裝好的 AI 測試時被說沒安裝",
+   "Windows 安裝視窗下載變快（關掉 PowerShell 會拖慢下載的進度條）；安裝失敗會自動再試一次",
+   "安裝視窗改在你的使用者資料夾執行，Claude 不會再問要不要信任 OCTA 的程式資料夾",
+   "AI 連線頁在測試或更新後，保留你展開的項目和捲動位置",
+   "ChatGPT 免費方案的額度改顯示正確的週期（例如本月），不再都寫成 5 小時",
+   "Cursor CLI 安裝位置加入搜尋，裝好不用重開 OCTA"
+  ],
+  "notes_en": [
+   "Fixed AI connections flipping between connected and not connected, and freshly installed AIs being reported as missing",
+   "Faster downloads in the Windows install window (PowerShell’s progress bar slowed them down); failed installs retry once",
+   "Install windows now start in your user folder, so Claude no longer asks to trust OCTA’s program folder",
+   "The AI connections page keeps your opened items and scroll position after tests and updates",
+   "ChatGPT free-plan quota shows its real period (e.g. this month) instead of always “5 hours”",
+   "Cursor CLI’s install folder is now searched, no restart needed"
+  ],
+  "notes_ja": [
+   "AI 接続が「接続済み／未接続」を行き来する問題と、入れたばかりの AI が未インストール扱いになる問題を修正",
+   "Windows のインストール画面のダウンロードを高速化（PowerShell の進行バーが原因）。失敗時は自動で 1 回再試行",
+   "インストール画面はユーザーフォルダで開くため、Claude が OCTA のフォルダを信頼するか聞かなくなりました",
+   "AI 接続ページはテストや更新後も開いた項目とスクロール位置を保持",
+   "ChatGPT 無料プランの上限を正しい期間（今月など）で表示",
+   "Cursor CLI のインストール先を検索対象に追加（再起動不要）"
+  ]
+ },
+ {
   "v": "2.2.2",
   "date": "2026-10-22",
   "notes": [
