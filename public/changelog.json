@@ -1,5 +1,18 @@
 [
  {
+  "v": "2.2.5",
+  "date": "2026-10-22",
+  "notes": [
+   "修正帶入 Grok Bot 機器人時讀不到清單卻只顯示「沒有找到」：等待時間拉長到 90 秒，讀取失敗會顯示真正的原因；Grok Bot 的群組也能帶入"
+  ],
+  "notes_en": [
+   "Fixed Grok Bot import showing only “none found” when reading failed: it now waits up to 90 seconds and shows the real reason; Grok Bot groups can be imported too"
+  ],
+  "notes_ja": [
+   "Grok Bot の取り込みで読み込み失敗時に「見つかりません」としか出ない問題を修正：最大 90 秒待ち、失敗時は実際の原因を表示。グループも取り込めます"
+  ]
+ },
+ {
   "v": "2.2.4",
   "date": "2026-10-22",
   "notes": [

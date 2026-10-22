@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '12.3';
+export const VERSION = '12.4';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -555,11 +555,16 @@ async function chatJob(job) {
 // ---------- Grok Bot (through grok-bot-cli) ----------
 function jsonOut(text) { const t = String(text || '').trim(); const i = t.search(/[[{]/); if (i < 0) return null; try { return JSON.parse(t.slice(i)); } catch { return null; } }
 const pickArr = o => (Array.isArray(o) ? o : o && (o.bots || o.items || o.entries || o.thread || o.messages || o.data || o.results)) || [];
-async function grokBots() {   // [{name, description}]
-  const out = await runText('gbot', ['bots', 'list', '--json']);
-  const j = jsonOut(out);
-  if (j) return pickArr(j).map(b => ({ name: String(b.name || b.title || b.displayName || ''), description: String(b.description || b.instructions || b.label || '') })).filter(b => b.name);
-  return out.split('\n').map(l => l.replace(/\x1b\[[0-9;]*m/g, '').trim()).filter(l => l && !/^(name|bots?)\b/i.test(l)).map(l => ({ name: l.split(/\s{2,}|\t/)[0], description: '' })).filter(b => b.name);
+// gbot reads the Grok Bot app's session and asks xAI's gateway: the first call can take a while, and its errors matter
+const runGbot = args => new Promise(ok => execFile('gbot', args, { shell: WIN, windowsHide: true, timeout: 90000, encoding: 'utf8', maxBuffer: 8 << 20 },
+  (e, out, err) => ok({ code: e ? (e.code ?? 1) : 0, out: String(out || ''), err: String(err || '') + (e?.killed ? '\n（超過 90 秒沒有回應）' : '') })));
+const gbotError = r => (r.err || r.out).replace(/\x1b\[[0-9;]*m/g, '').trim().split('\n').slice(-6).join('\n').slice(0, 600) || ('結束碼 ' + r.code);
+async function grokBots() {   // [{name, description}] — groups included (they take messages too)
+  const r = await runGbot(['bots', 'list', '--json']);
+  const j = jsonOut(r.out);
+  if (j) return pickArr(j).map(b => ({ name: String(b.name || b.title || b.displayName || ''), description: (b.isGroup ? '（群組）' : '') + String(b.description || b.instructions || b.label || '') })).filter(b => b.name);
+  if (r.code !== 0) throw new Error('grok-bot-cli 讀取失敗：' + gbotError(r));
+  return r.out.split('\n').map(l => l.replace(/\x1b\[[0-9;]*m/g, '').trim()).filter(l => l && !/^(name|bots?)\b/i.test(l)).map(l => ({ name: l.split(/\s{2,}|\t/)[0], description: '' })).filter(b => b.name);
 }
 const entryText = e => typeof e === 'string' ? e : e.text || e.body || e.markdown || e.message?.text || (Array.isArray(e.content) ? e.content.map(c => c.text || '').join('') : typeof e.content === 'string' ? e.content : '');
 const fromUser = e => /^(user|me|human|you)$/i.test(String(e.role || e.author?.type || e.author || e.from || e.sender || e.kind || ''));
@@ -567,7 +572,7 @@ async function runGrokBot(job, live) {
   const name = job.bot.model;
   if (!(await has('gbot'))) return { ok: false, text: '⚠ 這台電腦還沒安裝 grok-bot-cli。請到「AI 連線 → Grok Bot」安裝。' };
   if (!name) return { ok: false, text: '⚠ 這個機器人還沒選擇要帶入的 Grok Bot 機器人，請到任務設定的「模型」選一個。' };
-  let cursor = jsonOut(await runText('gbot', ['thread', name, '--json']))?.cursor;
+  let cursor = jsonOut((await runGbot(['thread', name, '--json'])).out)?.cursor;
   const msg = [job.prompt, ...job.history.slice(-1).flatMap(h => h.paths?.length ? ['（附件在使用者電腦上：' + h.paths.join('、') + '）'] : [])].join('\n');
   live.progress?.('交給 Grok Bot「' + name + '」處理');
   const sent = await spawnCli('gbot', ['send', name, msg], storeDir(), '', { ctl: live.ctl });
@@ -576,7 +581,7 @@ async function runGrokBot(job, live) {
   let quiet = 0;
   while (Date.now() - t0 < JOB_TIMEOUT_MS && !stopped) {
     await pause(5000);
-    const j = jsonOut(await runText('gbot', ['thread', name, ...(cursor ? ['--after', String(cursor)] : []), '--json']));
+    const j = jsonOut((await runGbot(['thread', name, ...(cursor ? ['--after', String(cursor)] : []), '--json'])).out);
     if (!j) continue;
     if (j.cursor) cursor = j.cursor;
     const fresh = pickArr(j).filter(e => !fromUser(e)).map(entryText).filter(x => x && x.trim() && x.trim() !== msg.trim());
@@ -601,8 +606,8 @@ async function installJob(job) {
 }
 async function listJob(job) {
   let result;
-  try { result = JSON.stringify(await grokBots()); } catch (e) { result = JSON.stringify({ error: e.message }); }
-  if (!(await has('gbot'))) result = JSON.stringify({ error: '這台電腦還沒安裝 grok-bot-cli' });
+  if (!(await has('gbot', true))) result = JSON.stringify({ error: '這台電腦還沒安裝 grok-bot-cli，請先在「AI 連線 → Grok Bot」按安裝' });
+  else try { result = JSON.stringify(await grokBots()); } catch (e) { result = JSON.stringify({ error: e.message }); }
   await api('runner/done', { id: job.id, ok: true, text: result });
 }
 
@@ -682,9 +687,11 @@ async function warmClaude(job, b, here, live) {
 
 async function testJob(job) {
   if (job.engine === 'grokbot') {
-    const ok = await has('gbot', true), bots = ok ? await grokBots().catch(() => []) : [];
+    const ok = await has('gbot', true);
+    let bots = [], why = '';
+    if (ok) try { bots = await grokBots(); } catch (e) { why = e.message; }
     lastReport = 0; lastModels = 0;
-    return api('runner/done', { id: job.id, ok: ok && bots.length > 0, text: !ok ? '這台電腦還沒安裝 grok-bot-cli' : bots.length ? `連上了，找到 ${bots.length} 個 Grok Bot 機器人：${bots.map(b => b.name).join('、')}` : '讀不到 Grok Bot 機器人：請確認這台電腦已安裝並登入 Grok Bot 桌面 App' });
+    return api('runner/done', { id: job.id, ok: ok && bots.length > 0, text: !ok ? '這台電腦還沒安裝 grok-bot-cli' : bots.length ? `連上了，找到 ${bots.length} 個 Grok Bot 機器人：${bots.map(b => b.name).join('、')}` : why || 'Grok Bot 裡沒有任何機器人（請確認 Grok Bot 桌面 App 已登入）' });
   }
   const b = botDir('_test-' + job.engine);
   log(`🔌 測試 ${ENGINES[job.engine]?.label || job.engine}`);
