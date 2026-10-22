@@ -1,5 +1,21 @@
 [
  {
+  "v": "2.2.2",
+  "date": "2026-10-22",
+  "notes": [
+   "修正按「更新」後沒有更新成功、OCTA 也沒有自動重新開啟的問題：更新前會先結束所有還在使用 OCTA 檔案的背景程式",
+   "如果更新沒有完成，下次打開會告訴你，並提供直接下載安裝檔"
+  ],
+  "notes_en": [
+   "Fixed “Update” sometimes not applying and OCTA not reopening: background processes still using OCTA’s files are now ended first",
+   "If an update doesn’t complete, OCTA tells you next time and offers the installer"
+  ],
+  "notes_ja": [
+   "「更新」が反映されず OCTA が再起動しない問題を修正：更新前に OCTA のファイルを使っているバックグラウンド処理を終了します",
+   "更新が完了しなかった場合は次回起動時に知らせ、インストーラーを案内します"
+  ]
+ },
+ {
   "v": "2.2.1",
   "date": "2026-10-22",
   "notes": [

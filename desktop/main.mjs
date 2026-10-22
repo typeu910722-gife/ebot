@@ -5,6 +5,7 @@ import { app, BrowserWindow, Tray, Menu, Notification, shell, nativeImage, dialo
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 import { existsSync, appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { startServer } from './server.mjs';
@@ -14,7 +15,7 @@ const { autoUpdater } = createRequire(import.meta.url)('electron-updater');
 let upd = { state: 'idle', version: '', percent: 0, error: '' };   // idle | checking | available | none | downloading | ready | error
 function setUpd(u) { upd = { ...upd, ...u }; win?.webContents.send('octa:update', upd); }
 autoUpdater.autoDownload = false;                 // ask first: the user presses 更新
-autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.autoInstallOnAppQuit = false;   // install only when the user presses the button (after freeing the install folder)
 autoUpdater.on('checking-for-update', () => setUpd({ state: 'checking', error: '' }));
 const plainNotes = n => (Array.isArray(n) ? n.map(x => x.note || '').join('\n') : String(n || '')).replace(/<\/(p|li|h\d)>/g, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\n{3,}/g, '\n\n').trim().slice(0, 3000);
 autoUpdater.on('update-available', i => setUpd({ state: 'available', version: i.version, notes: plainNotes(i.releaseNotes), date: i.releaseDate || '' }));
@@ -164,7 +165,35 @@ handle('octa:offline', async () => {
 handle('octa:update-status', () => upd);
 handle('octa:update-check', () => { checkUpdates(); return upd; });
 handle('octa:update-download', () => { if (upd.state === 'available' || upd.state === 'error') { setUpd({ state: 'downloading', percent: 0 }); autoUpdater.downloadUpdate().catch(() => { }); } return upd; });
-handle('octa:update-install', () => { if (upd.state === 'ready') { quitting = true; stopRunner(); setImmediate(() => autoUpdater.quitAndInstall(true, true)); } return upd; });
+handle('octa:update-install', () => {
+  if (upd.state === 'ready') {
+    quitting = true; stopRunner();
+    cfg = { ...cfg, updating: { to: upd.version, from: app.getVersion(), at: Date.now() } }; writeCfg(cfg);
+    setTimeout(() => { freeInstallDir(); autoUpdater.quitAndInstall(true, true); }, 800);
+  }
+  return upd;
+});
+// a silent update fails if anything still runs from the install folder (bot browsers' helpers, AI sessions,
+// OCTA.exe copies running as node) — end them all first
+function freeInstallDir() {
+  if (process.platform !== 'win32') return;
+  const dir = dirname(process.execPath).replace(/'/g, "''");
+  const ps = `$me=${process.pid}; $all=Get-CimInstance Win32_Process; ` +
+    `function Kids($p){ $all | ? { $_.ParentProcessId -eq $p } | % { Kids $_.ProcessId; $_.ProcessId } }; ` +
+    `$ids=@(Kids $me) + @($all | ? { $_.ExecutablePath -and $_.ExecutablePath.StartsWith('${dir}', 'OrdinalIgnoreCase') -and $_.ProcessId -ne $me } | % { $_.ProcessId }); ` +
+    `$ids | Select-Object -Unique | % { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }`;
+  try { execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { timeout: 15000, windowsHide: true }); } catch (e) { logError('free-install-dir', e); }
+}
+// tell the user when the last silent update didn't go through, and offer the installer
+function checkLastUpdate() {
+  const u = cfg.updating; if (!u) return;
+  cfg = { ...cfg, updating: null }; writeCfg(cfg);
+  if (u.to === app.getVersion() || Date.now() - u.at > 7 * 864e5) return;
+  logError('update', `update to ${u.to} did not complete (still ${app.getVersion()})`);
+  const r = dialog.showMessageBoxSync(win, { type: 'warning', title: 'OCTA', message: `更新到 v${u.to} 沒有完成，目前還是 v${app.getVersion()}。`,
+    detail: '可能有程式還在使用 OCTA 的檔案。按「下載安裝檔」直接安裝最新版（你的機器人和設定都會保留）。', buttons: ['下載安裝檔', '稍後'], defaultId: 0, cancelId: 1 });
+  if (r === 0) shell.openExternal('https://github.com/typeu910722-gife/octa/releases/latest/download/OCTA-Setup.exe');
+}
 handle('octa:cloud', async () => {
   cfg = { ...cfg, mode: 'cloud' }; writeCfg(cfg);
   stopRunner(); await showSplash(); progress(60, '重新連線…'); await loadMain(); return { ok: true };
@@ -229,6 +258,7 @@ async function start() {
   tray.on('click', showWindow);
 
   await loadMain();
+  setTimeout(checkLastUpdate, 3000);
   setTimeout(checkUpdates, 8000);                       // look for a new version shortly after start…
   setInterval(checkUpdates, 6 * 3600 * 1000);           // …and every six hours
   if (hiddenStart) new Notification({ title: 'OCTA', body: '已在背景啟動，點右下角章魚圖示打開。', icon: icon() }).on('click', showWindow).show();
