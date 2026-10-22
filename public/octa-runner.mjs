@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '12.2';
+export const VERSION = '12.3';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -585,6 +585,20 @@ async function runGrokBot(job, live) {
   }
   return got.length ? { ok: true, text: got.join('\n\n') } : { ok: false, text: '⚠ Grok Bot 在時間內沒有回覆，可以在 Grok Bot App 裡看看它的狀況。' };
 }
+// started from any device (phone, web): open the install window on this computer, then watch for the tool
+async function installJob(job) {
+  const E = ENGINES[job.engine];
+  if (!E || !cfg.openInstall) return api('runner/done', { id: job.id, ok: false, text: '這台主機不是 OCTA 桌面版，無法自動安裝，請在主機電腦上手動安裝。' });
+  try { await cfg.openInstall(job.engine); } catch (e) { return api('runner/done', { id: job.id, ok: false, text: '無法打開安裝視窗：' + e.message }); }
+  log(`🧩 已打開 ${E.label} 的安裝視窗`);
+  await api('runner/done', { id: job.id, ok: true, text: `已在主機電腦「${os.hostname()}」打開 ${E.label} 的安裝視窗。` });
+  // report as soon as it's installed (checks every 10 seconds for up to 15 minutes)
+  const t0 = Date.now();
+  const tick = setInterval(async () => {
+    if (await engineReady(job.engine, true)) { clearInterval(tick); lastReport = 0; lastModels = 0; lastUsage = 0; log(`✓ ${E.label} 已安裝`); }
+    else if (Date.now() - t0 > 15 * 60000) clearInterval(tick);
+  }, 10000);
+}
 async function listJob(job) {
   let result;
   try { result = JSON.stringify(await grokBots()); } catch (e) { result = JSON.stringify({ error: e.message }); }
@@ -840,7 +854,7 @@ let active = 0, failures = 0, stopped = true, onFatal = null, polling = false, s
 const fileWork = new Set();
 function runJob(job) {
   active++;
-  (job.kind === 'open' ? openJob(job) : job.kind === 'test' ? testJob(job) : job.kind === 'list' ? listJob(job) : chatJob(job))
+  (job.kind === 'open' ? openJob(job) : job.kind === 'test' ? testJob(job) : job.kind === 'list' ? listJob(job) : job.kind === 'install' ? installJob(job) : chatJob(job))
     .catch(e => { log('任務錯誤：' + e.message); return api('runner/done', { id: job.id, ok: false, text: '⚠ ' + e.message }).catch(() => { }); })
     .finally(() => { active--; kick(); });
 }
@@ -875,7 +889,7 @@ async function loop() {
   polling = false;
 }
 
-// opts: { url, token, home, max, chrome, pwCli, nodeBin, nodeEnv, log, onFatal, onDone, onStandby, getStore, getExtToken, appVersion }
+// opts: { url, token, home, max, chrome, pwCli, nodeBin, nodeEnv, log, onFatal, onDone, onStandby, getStore, getExtToken, appVersion, openInstall(engine) }
 export function startRunner(opts) {
   cfg = { ...opts, url: opts.url.replace(/\/+$/, '') };
   workDir = join(opts.home, 'work');

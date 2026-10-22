@@ -368,10 +368,10 @@ export async function startServer(opts = {}) {
   let bundled = {};
   try { bundled = { pwCli: join(dirname(require.resolve('@playwright/mcp/package.json')), 'cli.js'), nodeBin: process.execPath }; } catch { }
   // the desktop app runs the runner itself when signed in to the cloud; local mode runs it here
-  const runner = opts.runner === false ? { stop() { } } : startRunner({ url: `http://127.0.0.1:${localPort}`, token: '', home: dataDir, getExtToken: () => hooks.getExtToken(), getStore: () => hooks.getStore(), ...bundled, ...opts.runnerOpts });
+  const runner = opts.runner === false ? { stop() { } } : startRunner({ url: `http://127.0.0.1:${localPort}`, token: '', home: dataDir, getExtToken: () => hooks.getExtToken(), getStore: () => hooks.getStore(), openInstall: k => hooks.installEngine(k), ...bundled, ...opts.runnerOpts });
 
   return {
-    url: `http://127.0.0.1:${localPort}`, dataDir, webDir: WEB, desktopApi: (p, body) => callDesktop(p, body), getStore: () => hooks.getStore(),
+    url: `http://127.0.0.1:${localPort}`, dataDir, webDir: WEB, desktopApi: (p, body) => callDesktop(p, body), getStore: () => hooks.getStore(), installEngine: k => hooks.installEngine(k),
     async close() { runner.stop(); remote.proc?.kill(); db.save(); local.close(); remoteSrv.close(); }
   };
 }

@@ -860,6 +860,7 @@ async function route({ request: req, env, params }) {
         const merged = { ...old, ...Object.fromEntries(Object.entries(info).filter(([, v]) => v !== undefined)) };
         if (now() - (me.seen || 0) > 4 * MIN || JSON.stringify(merged) !== JSON.stringify(old))
           await db.prepare('UPDATE sessions SET seen=?, info=? WHERE token=?').bind(now(), JSON.stringify(merged), me.token).run();
+        if (info.engines && JSON.stringify(info.engines) !== JSON.stringify(old.engines || null)) await bump(db, U);   // an AI got installed or removed: open pages update
       }
       if (me.kind === 'local' && body.engines && typeof body.engines === 'object')
         await db.prepare('UPDATE users SET engines=? WHERE id=?').bind(JSON.stringify(Object.fromEntries(ENGINES.map(k => [k, !!body.engines[k]]))), U).run();
@@ -951,7 +952,7 @@ async function route({ request: req, env, params }) {
         const job = await db.prepare("SELECT * FROM jobs WHERE id=? AND user_id=? AND status='running'").bind(+body.id, U).first();
         if (!job) return err('找不到執行中的任務', 404);
         const good = body.ok !== false;
-        if (job.kind === 'test' || job.kind === 'list') {
+        if (job.kind === 'test' || job.kind === 'list' || job.kind === 'install') {
           await db.prepare('UPDATE jobs SET status=?, finished=?, result=? WHERE id=?').bind(good ? 'done' : 'error', now(), clean(body.text, 3000), job.id).run();
           return ok();
         }
@@ -1325,6 +1326,16 @@ async function route({ request: req, env, params }) {
       const r = await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url) VALUES (?,'__test','list:grokbot','[]','',?,'list','grokbot')").bind(U, now()).run();
       return ok({ id: r.meta.last_row_id });
     }
+    if (path === 'engine-install' && m === 'POST') {   // from any device: the host computer opens the install window
+      const engine = engineOk(body.engine);
+      const h = env.isLocal ? null : await hostInfo(db, U);
+      if (h && !h.online) return err('主機電腦離線，請先打開主機電腦上的 OCTA', 409);
+      const hs = h && h.runners.find(r => (r.label || 'runner') === h.hostLabel), hv = hs?.info ? JSON.parse(hs.info).app || '' : '';
+      if (h && hv && hv.split('.').map(Number).reduce((a, n) => a * 1000 + n, 0) < 2002004) return err('主機電腦的 OCTA 版本太舊，請先更新到 v2.2.4 以上', 409);
+      const r = await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url) VALUES (?,'__test',?,'[]','',?,'install',?)")
+        .bind(U, 'install:' + engine, now(), engine).run();
+      return ok({ id: r.meta.last_row_id });
+    }
     if (path === 'engine-test' && m === 'POST') {
       const engine = engineOk(body.engine);
       const r = await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url) VALUES (?,'__test',?,'[]',?,?,'test',?)")
@@ -1533,6 +1544,7 @@ async function nextWork(env, db, U, slots) {
 async function jobPayload(env, db, U, job) {
   if (job.kind === 'test') return { id: job.id, kind: 'test', engine: engineOk(job.url), prompt: job.prompt };
   if (job.kind === 'list') return { id: job.id, kind: 'list', what: job.url };
+  if (job.kind === 'install') return { id: job.id, kind: 'install', engine: engineOk(job.url) };
   const { bots, groups, folders } = await loadAll(db, U);
   const name = id => id === 'me' ? '使用者' : id === 'sys' ? '系統' : (bots.find(b => b.id === id)?.name || '已刪除的機器人');
   const bot = bots.find(b => b.id === job.bot_id);

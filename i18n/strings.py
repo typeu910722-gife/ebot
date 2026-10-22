@@ -908,3 +908,16 @@ T.update({
 })
 
 T.update({'本月': ('This month', '今月')})
+
+T.update({
+ '在主機電腦一鍵安裝': ('Install on the host computer', 'ホストパソコンにインストール'),
+ '在主機電腦重新安裝': ('Reinstall on the host computer', 'ホストパソコンに再インストール'),
+ '主機電腦會自動打開安裝視窗並安裝，裝好這裡會變成「已連接」。登入步驟要在主機電腦上完成：': ('The host computer opens an install window and installs it; this turns “Connected” when done. Sign-in happens on the host computer: ', 'ホストパソコンでインストール画面が開き自動でインストールされ、完了すると「接続済み」になります。ログインはホストパソコンで行います：'),
+ '主機電腦連上 OCTA 後才能安裝和測試。': ('Installing and testing need the host computer connected to OCTA.', 'インストールとテストにはホストパソコンの接続が必要です。'),
+ '改成手動安裝': ('Install manually instead', '手動でインストール'),
+ '正在通知主機電腦…': ('Telling the host computer…', 'ホストパソコンに通知中…'),
+ '一分鐘內沒有回應，請確認主機電腦上的 OCTA 開著': ('No answer within a minute — check that OCTA is open on the host computer', '1 分以内に応答がありません。ホストパソコンの OCTA が開いているか確認してください'),
+ '主機電腦離線，請先打開主機電腦上的 OCTA': ('The host computer is offline — open OCTA on it first', 'ホストパソコンがオフラインです。先に OCTA を開いてください'),
+ '主機電腦的 OCTA 版本太舊，請先更新到 v2.2.4 以上': ('OCTA on the host computer is too old — update it to v2.2.4 or later', 'ホストパソコンの OCTA が古いため、v2.2.4 以降に更新してください'),
+})
+P.extend([(r'^已在主機電腦「(.+)」打開 (.+) 的安裝視窗。$', 'Opened the $2 install window on the host computer “$1”.', 'ホストパソコン「$1」で $2 のインストール画面を開きました。')])

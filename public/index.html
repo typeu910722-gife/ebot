@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=15"></script>
+<script src="/i18n-dict.js?v=16"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -582,7 +582,7 @@ function logout(silent,keep){ if(!silent&&TOKEN)api('logout','POST').catch(()=>{
 // one light request for the lists; messages are fetched per conversation
 async function refresh(){
   try{const d=await api('state');if(!S.loaded)boot.set(85,'整理畫面…');
-    const prevTop=S.loaded?topBotId():null;
+    const prevTop=S.loaded?topBotId():null,prevEng=JSON.stringify(S.engines||null);
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
       last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120,tokens:d.tokens||{},models:d.models||{},pins:d.pins||[],mute:d.mute||{},memory:d.memory||{},skills:d.skills||{}});
     if(cur&&!conv(cur))cur=null;
@@ -590,6 +590,7 @@ async function refresh(){
     if(prevTop!==null)notifyNew(prevTop);
     S.loaded=true;
     render(false);
+    if(prevEng!==JSON.stringify(S.engines)&&!$('veil').hidden&&$('veil').querySelector('.ais'))openAI();   // an AI just got installed on the host
   }catch(e){}
 }
 // live updates: the server answers as soon as anything changes (long-poll)
@@ -1330,7 +1331,7 @@ async function openLogs(){
   subSheet('工作紀錄',`<div class="logs">${d.logs.length?d.logs.map(l=>`<div class="log"><span class="pill st ${stc[l.status]?.[0]||''}">${stc[l.status]?.[1]||l.status}</span><b style="font-weight:500"><span data-u>${esc(l.kind==='test'?(ENG[l.url]?.n||l.url):l.bot)}</span>${l.kind==='open'?'（開瀏覽器）':l.kind==='test'?'（連線測試）':''}</b><span style="font-size:12px;color:var(--faint)">${when(l.created)} ${dur(l)}</span><small data-u>${esc(l.convName)}${l.convName?'：':''}${esc(l.prompt)}</small></div>`).join(''):'<p>還沒有紀錄</p>'}</div>`)}
 
 /* ---------- AI connections ---------- */
-const aiTests={};
+const aiTests={},rmsgs={};
 function aiInstallCmd(e,os){return e.npm?`npm install -g ${e.npm}`:e[os]}
 function copyBtn(text){return `<button type="button" class="ghost" data-copy="${esc(text)}">複製</button>`}
 const pct=n=>Math.max(0,Math.min(100,Math.round(n)));
@@ -1357,9 +1358,11 @@ async function openAI(focus){
     const imp=k==='grokbot'?`<button class="btn" data-gbimport ${online?'':'disabled'}>帶入 Grok Bot 的機器人…</button>`:'';
     const steps=desk?`<div class="row2"><button class="btn" data-install="${k}">${stt==='ok'?'重新安裝':'一鍵安裝並登入'}</button><button class="ghost" data-test="${k}" ${online?'':'disabled'}>測試</button>${imp}</div>
       <p>${stt==='ok'?'已安裝。如果測試失敗，按「重新登入」。':'會打開一個黑色視窗自動安裝，接著：'+esc(e.hint)+'。'}${e.npm?' 這個工具需要先裝 <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a>。':''}</p>`
-     :`<ol class="ol">${pre}<li>安裝（PowerShell）：<pre class="code">${esc(aiInstallCmd(e,'win'))}</pre>${e.npm?'':`<small>Mac：<code>${esc(aiInstallCmd(e,'mac'))}</code></small>`}</li>
+     :`<div class="row2"><button class="btn" data-rinstall="${k}" ${online?'':'disabled'}>${stt==='ok'?'在主機電腦重新安裝':'在主機電腦一鍵安裝'}</button><button class="ghost" data-test="${k}" ${online?'':'disabled'}>測試</button>${imp}</div>
+      <p>${online?'主機電腦會自動打開安裝視窗並安裝，裝好這裡會變成「已連接」。登入步驟要在主機電腦上完成：'+esc(e.hint)+'。':'主機電腦連上 OCTA 後才能安裝和測試。'}</p><p class="fade" data-rmsg="${k}">${esc(rmsgs[k]||'')}</p>
+      <details class="manual"><summary>改成手動安裝</summary><ol class="ol">${pre}<li>安裝（PowerShell）：<pre class="code">${esc(aiInstallCmd(e,'win'))}</pre>${e.npm?'':`<small>Mac：<code>${esc(aiInstallCmd(e,'mac'))}</code></small>`}</li>
       <li>${e.pre?'下載模型':'登入'}：輸入 <code>${esc(e.login)}</code>，${esc(e.hint)}</li>
-      <li>回到這裡按「測試」<div class="row2" style="margin-top:6px"><button class="ghost" data-test="${k}" ${online?'':'disabled'}>測試</button>${imp}${online?'':'<small>主機電腦連上 OCTA 後才能測試</small>'}</div></li></ol>`;
+      <li>回到這裡按「測試」</li></ol></details>`;
     const res=t?(t==='run'?'<p class="fade">測試中，第一次可能要一分鐘…</p>':t.ok?'<p class="p-ok">成功！這個 AI 可以用了。</p>':`<p class="errmsg">${esc(t.text)}</p>`):'';
     return `<details class="aic" data-k="${k}" ${focus===k?'open':''}><summary><span class="ait"><b>${e.n}</b>${e.tag?` <span class="pill p-pr" style="color:var(--gold2)">${e.tag}</span>`:''} ${badge}<small class="aigood">${esc(e.good)}</small><span class="aiq">${quotaHtml(k,U)}</span></span></summary>
       <div class="aib"><p>適合：${esc(e.who)}。${esc(e.cost)}。</p>${steps}${res}<p><a href="${e.site}" target="_blank" rel="noopener">官方說明</a></p></div></details>`};
@@ -1370,6 +1373,10 @@ async function openAI(focus){
   $('veil').querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.copy).then(()=>b.textContent=I18N.t('已複製 ✓')).catch(()=>{})});
   $('veil').querySelectorAll('[data-install]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('desktop/install','POST',{engine:b.dataset.install});b.textContent=I18N.t('已打開安裝視窗')}catch(e){b.disabled=false;alertSheet('無法開啟',e.message)}});
   $('veil').querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>testAI(b.dataset.test));
+  $('veil').querySelectorAll('[data-rinstall]').forEach(b=>b.onclick=async()=>{const k=b.dataset.rinstall,say=t=>{rmsgs[k]=t;const m=$('veil').querySelector(`[data-rmsg="${k}"]`);if(m)m.textContent=t};b.disabled=true;say(I18N.t('正在通知主機電腦…'));
+    try{const {id}=await api('engine-install','POST',{engine:k});const t0=Date.now();let j=null;
+      while(Date.now()-t0<60000){await new Promise(r=>setTimeout(r,2000));j=await api('job/'+id);if(j.status==='done'||j.status==='error')break}
+      say(j&&(j.status==='done'||j.status==='error')?(j.result||''):I18N.t('一分鐘內沒有回應，請確認主機電腦上的 OCTA 開著'))}catch(e){say(e.message)}b.disabled=false});
   $('veil').querySelectorAll('[data-gbimport]').forEach(b=>b.onclick=grokImport);
   if(again){keepOpen.forEach(k=>{const d=$('veil').querySelector(`.aic[data-k="${k}"]`);if(d)d.open=true});const sh=$('veil').querySelector('.sheet');if(sh)sh.scrollTop=keepTop}
 }

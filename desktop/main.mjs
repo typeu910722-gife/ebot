@@ -118,7 +118,7 @@ async function startRunnerFor(url, token) {
   if (runner && runnerFor === url + token) return;
   stopRunner();
   const { startRunner } = await import(pathToFileURL(join(server.webDir, 'octa-runner.mjs')).href);
-  runner = startRunner({ url, token, ...(await bundledRunnerOpts()) });
+  runner = startRunner({ url, token, openInstall: k => server.installEngine(k), ...(await bundledRunnerOpts()) });
   runnerFor = url + token;
 }
 

@@ -1,5 +1,18 @@
 [
  {
+  "v": "2.2.4",
+  "date": "2026-10-22",
+  "notes": [
+   "在手機或網頁版的「AI 連線」按「在主機電腦一鍵安裝」，主機電腦會自動打開安裝視窗安裝；裝好後頁面自動變成「已連接」（登入步驟仍要在主機電腦上完成）"
+  ],
+  "notes_en": [
+   "In AI connections on your phone or the web, “Install on the host computer” makes the host computer open the install window and install it; the page turns “Connected” when done (sign-in still happens on the host computer)"
+  ],
+  "notes_ja": [
+   "スマホやウェブ版の「AI 接続」で「ホストパソコンにインストール」を押すと、ホストパソコンでインストール画面が開いて自動インストールされ、完了すると「接続済み」になります（ログインはホストパソコンで行います）"
+  ]
+ },
+ {
   "v": "2.2.3",
   "date": "2026-10-22",
   "notes": [
