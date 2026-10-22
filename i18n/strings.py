@@ -934,3 +934,5 @@ T.update({
  'Claude · ChatGPT · Gemini · Grok Bot · Ollama 本機模型': ('Claude · ChatGPT · Gemini · Grok Bot · Ollama local models', 'Claude · ChatGPT · Gemini · Grok Bot · Ollama ローカルモデル'),
  '這個 AI 暫時不開放連接': ('This AI isn’t available to connect for now', 'この AI は現在接続できません'),
 })
+
+T.update({'在資料夾中顯示': ('Show in folder', 'フォルダーで表示')})

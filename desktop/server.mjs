@@ -5,7 +5,7 @@
 // Can run inside Electron (main.mjs) or on its own: `node server.mjs`.
 
 import http from 'node:http';
-import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, chmodSync, cpSync, rmSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, chmodSync, cpSync, rmSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, extname, normalize } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn, spawnSync, execFile } from 'node:child_process';
@@ -330,6 +330,22 @@ export async function startServer(opts = {}) {
       if (p === 'login-claude') { hooks.loginClaude(); return json(res, { ok: true }); }
       if (p === 'install') { await hooks.installEngine(String(body.engine || '')); return json(res, { ok: true }); }
       if (p === 'open-folder') { hooks.openFolder(); return json(res, { ok: true }); }
+      // files that live on this computer: read, show or open them here instead of fetching a copy through the cloud
+      if (p === 'file' || p === 'show-file' || p === 'open-file') {
+        const rel = String(body.path || '').replace(/\\/g, '/');
+        if (!rel || rel.split('/').includes('..') || /^([a-z]:|\/)/i.test(rel)) return json(res, { error: '路徑不正確' }, 400);
+        const full = join(hooks.getStore(), ...rel.split('/'));
+        if (!existsSync(full)) return json(res, { missing: true });
+        if (p === 'show-file') {
+          if (WIN) spawn('explorer', ['/select,', full], { detached: true, stdio: 'ignore' }).unref();
+          else if (process.platform === 'darwin') spawn('open', ['-R', full], { detached: true, stdio: 'ignore' }).unref();
+          else openExternal(dirname(full));
+          return json(res, { ok: true });
+        }
+        if (p === 'open-file') { openExternal(full); return json(res, { ok: true }); }
+        if (statSync(full).size > 40 * 1024 * 1024) return json(res, { tooBig: true });
+        return json(res, { data: readFileSync(full).toString('base64') });
+      }
       if (p === 'autostart') { hooks.setAutostart(!!body.on); return json(res, { ok: true }); }
       if (p === 'store') {   // where attachments, screenshots and outputs are kept
         const cur = hooks.getStore(), def = join(dataDir, 'files'), gd = googleDrive();

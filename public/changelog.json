@@ -1,5 +1,24 @@
 [
  {
+  "v": "2.2.11",
+  "date": "2026-10-22",
+  "notes": [
+   "看圖片不會再下載一次：圖片改在 OCTA 裡直接放大檢視，要存檔再按「下載」",
+   "在主機電腦上，機器人做好的檔案直接從電腦讀取，不再繞雲端；可以「在資料夾中顯示」，其他檔案用電腦預設程式打開",
+   "手機和網頁版看過的檔案會留在瀏覽器，再看一次不用重新下載"
+  ],
+  "notes_en": [
+   "Viewing a picture no longer downloads it again: pictures open right inside OCTA; press Download only if you want a copy",
+   "On the host computer, files bots made are read straight from disk instead of through the cloud; “Show in folder” is available and other files open in their usual app",
+   "On phones and the web, files you’ve viewed stay in the browser, so opening them again needs no new download"
+  ],
+  "notes_ja": [
+   "画像を見るたびにダウンロードされなくなりました：OCTA 内で拡大表示し、保存したいときだけ「ダウンロード」",
+   "ホストパソコンでは、ボットが作ったファイルをクラウド経由ではなくディスクから直接読み込み、「フォルダーで表示」が使えます。その他のファイルは既定のアプリで開きます",
+   "スマホやウェブ版で一度見たファイルはブラウザに残り、再表示時にダウンロード不要"
+  ]
+ },
+ {
   "v": "2.2.10",
   "date": "2026-10-22",
   "notes": [

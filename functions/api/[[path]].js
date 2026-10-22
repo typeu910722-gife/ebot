@@ -820,8 +820,10 @@ async function route({ request: req, env, params }) {
     // ---------- files ----------
     if (path.startsWith('file/') && m === 'GET') {
       const id = path.slice(5);
-      let f = await db.prepare('SELECT id,name,mime,data,loc,want FROM files WHERE id=? AND user_id=?').bind(id, U).first();
+      let f = await db.prepare('SELECT id,name,mime,data,loc,want,path,size FROM files WHERE id=? AND user_id=?').bind(id, U).first();
       if (!f) return err('找不到檔案', 404);
+      // where the file is: the desktop app on the host computer reads it from its own disk instead of through the cloud
+      if (url.searchParams.has('meta')) return J({ name: f.name, mime: f.mime, loc: f.loc || (f.data ? 'db' : 'cloud'), path: f.loc === 'pc' ? f.path : null, size: f.size || null });
       if (f.data) return J({ name: f.name, mime: f.mime, data: f.data });   // older files kept in the database
       if (f.loc === 'pc' && f.want !== -1) {
         // the file is on the host computer: ask it for a temporary copy and wait

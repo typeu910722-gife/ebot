@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=18"></script>
+<script src="/i18n-dict.js?v=19"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -281,6 +281,10 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
 @keyframes rise{from{opacity:0;transform:translateY(6px)}}
 @keyframes pop{from{opacity:0;transform:translate(-50%,6px)}}
 .veil{animation:fadein .16s ease}
+.lbox{position:relative;width:min(1100px,100%);height:min(92vh,100%);display:grid;grid-template-rows:1fr auto;gap:10px}
+.lbox img{width:100%;height:100%;object-fit:contain;min-height:0;border-radius:10px;background:#000}
+.lbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--ink);font-size:13px}
+.lbar a.ghost{text-decoration:none}
 .veil .sheet{animation:sheetin .22s cubic-bezier(.2,.8,.2,1)}
 @keyframes fadein{from{opacity:0}}
 @keyframes sheetin{from{opacity:0;transform:translateY(14px) scale(.98)}}
@@ -652,12 +656,31 @@ function notifyNew(prevTop){
     if(notiOn()&&'Notification' in window&&Notification.permission==='granted'&&(document.hidden||c!==cur)){
       try{const n=new Notification('OCTA · '+who,{body:l.text.replace(/\s+/g,' ').slice(0,180),icon:'/icon.png?v=octopus',tag:'octa-'+c});
         n.onclick=()=>{window.focus();window.octaDesktop?.show?.();openConv(c);n.close()}}catch(e){}}}}
-const fileCache={};
-async function fileData(id){const p=fileCache[id]||(fileCache[id]=api('file/'+id));p.catch(()=>delete fileCache[id]);return p}
+const fileCache={},fileMeta={},FCACHE='octa-files-v1';
+// files never change once saved: keep a copy in the browser so opening one again doesn't download it again
+async function cacheGet(id){try{if(!window.caches)return null;const r=await (await caches.open(FCACHE)).match('/__octa_file/'+id);return r?await r.json():null}catch(e){return null}}
+async function cachePut(id,d){try{if(!window.caches||!d?.data||d.data.length>12e6)return;await (await caches.open(FCACHE)).put('/__octa_file/'+id,new Response(JSON.stringify(d),{headers:{'content-type':'application/json'}}))}catch(e){}}
+function metaOf(id){return fileMeta[id]||(fileMeta[id]=api('file/'+id+'?meta=1').catch(e=>{delete fileMeta[id];throw e}))}
+async function loadFile(id){
+  if(DESK()){   // the desktop app on the host computer reads its own copy straight from disk
+    try{const m=await metaOf(id);if(m.path){const r=await api('desktop/file','POST',{path:m.path});if(r.data)return {name:m.name,mime:m.mime,data:r.data,local:m.path}}}catch(e){}}
+  const hit=await cacheGet(id);if(hit)return hit;
+  const d=await api('file/'+id);cachePut(id,d);return d}
+async function fileData(id){const p=fileCache[id]||(fileCache[id]=loadFile(id));p.catch(()=>delete fileCache[id]);return p}
 function filesHtml(fs){if(!fs||!fs.length)return '';return `<div class="files">${fs.map(f=>/^image\//.test(f.mime)?`<img class="thumb" data-file="${esc(f.id)}" alt="${esc(f.name)}">`:`<button type="button" class="fchip" data-open-file="${esc(f.id)}">📎 ${esc(f.name)}</button>`).join('')}</div>`}
 function loadThumbs(root){root.querySelectorAll('img[data-file]:not([src]):not([data-err])').forEach(im=>fileData(im.dataset.file).then(d=>im.src=`data:${d.mime};base64,${d.data}`).catch(e=>{im.dataset.err=1;im.replaceWith(Object.assign(document.createElement('button'),{type:'button',className:'fchip',textContent:'🖼 '+(im.alt||'')+' · '+I18N.t('點一下重新載入'),onclick(){openFile(im.dataset.file)}}))}))}
-async function openFile(id){toast(I18N.t('讀取檔案中…'));try{const d=await fileData(id);const b=await (await fetch(`data:${d.mime};base64,${d.data}`)).blob();
-  const u=URL.createObjectURL(b);if(/^(image|text)\/|pdf$/.test(d.mime))window.open(u,'_blank');else{const a=document.createElement('a');a.href=u;a.download=d.name;a.click()}}catch(e){toast(e.message)}}
+async function openFile(id){const t=setTimeout(()=>toast(I18N.t('讀取檔案中…')),400);
+  try{const d=await fileData(id);clearTimeout(t);const u=URL.createObjectURL(await (await fetch(`data:${d.mime};base64,${d.data}`)).blob());
+    if(/^image\//.test(d.mime))return viewImage(d,u);
+    if(d.local&&!/^text\/|pdf$/.test(d.mime)){await api('desktop/open-file','POST',{path:d.local});return}   // on the host: open with its usual app
+    if(/^text\/|pdf$/.test(d.mime))window.open(u,'_blank');else{const a=document.createElement('a');a.href=u;a.download=d.name;a.click()}}
+  catch(e){clearTimeout(t);toast(e.message)}}
+// pictures open inside OCTA (no new window, no download); download only when you ask
+function viewImage(d,u){
+  $('veil').innerHTML=`<div class="lbox"><img src="${u}" alt=""><div class="lbar"><span data-u>${esc(d.name)}</span><span style="flex:1"></span>
+    <a class="ghost" href="${u}" download="${esc(d.name)}">下載</a>${d.local?'<button type="button" class="ghost" id="lbShow">在資料夾中顯示</button>':''}<button type="button" class="btn" id="lbX">關閉</button></div></div>`;
+  $('veil').hidden=false;$('lbX').onclick=closeSheet;if($('lbShow'))$('lbShow').onclick=()=>api('desktop/show-file','POST',{path:d.local}).catch(e=>toast(e.message));
+  $('veil').querySelector('.lbox').onclick=e=>{if(e.target.classList.contains('lbox'))closeSheet()}}
 const APPR=/^✅\s*待確認[:：]\s*(.+)$/m;
 const OPENED=new Set();
 // a failed reply: offer to send the same instruction again
