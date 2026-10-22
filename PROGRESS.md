@@ -51,7 +51,7 @@
 - [x] 公版清理：範本改通用（助理、研究、門市、民宿），移除個人化字樣；加入「設定指引」（無機器人時自動開啟，可試跑）；README 重寫
 - [x] 倉庫已公開；Release v1.5.0 自動發布 OCTA-Setup.exe（固定網址 releases/latest/download/OCTA-Setup.exe）
 - [x] 網頁版首頁（未登入顯示）：介紹、下載按鈕、三步驟、功能、支援的 AI、常見問題
-## v2.2.0（分支 v2.2.0，未上線）
+## v2.2.0（2026-10-22 已上線：網站＋桌面版 Release）
 - [x] 例行任務事件觸發：網頁監看（runner/watches、runner/watched，CDP 背景讀頁比對雜湊）、外部事件網址 /api/hook/<key>（LINE events 解析、合併待處理工作、限流）；⏰ 標記支援「監看 url」「外部事件」
 - [x] Grok 引擎（官方 Grok CLI）；Grok Bot 引擎（grok-bot-cli / gbot）＋帶入機器人（grokbot/list、kind=list 工作）
 - [x] 測試：webhook、監看、gbot 假 CLI 端對端、UI（觸發表單、帶入）、API 31 項
