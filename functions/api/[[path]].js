@@ -1231,10 +1231,11 @@ async function route({ request: req, env, params }) {
       const conv = clean(body.conv, 64);
       if (!bot || !(conv === bot.id || groups.some(g => g.id === conv))) return err('找不到機器人', 404);
       let link = clean(body.url, 500);
-      if (link && !/^https?:\/\//.test(link)) link = 'https://' + link;
+      if (body.hide) link = 'octa:hide';   // put the window back in the background
+      else if (link && !/^https?:\/\//.test(link)) link = 'https://' + link;
       // don't stack duplicates if the button is pressed again before the computer picks it up
       if (await db.prepare("SELECT 1 FROM jobs WHERE user_id=? AND bot_id=? AND kind='open' AND status='pending'").bind(U, bot.id).first()) return J({ ok: true, queued: true });
-      await addMsg(db, U, conv, 'sys', `請電腦開啟「${bot.name}」的瀏覽器${link ? '：' + link : '（上次的畫面）'}`);
+      await addMsg(db, U, conv, 'sys', body.hide ? `把「${bot.name}」的瀏覽器收到背景` : `在電腦上顯示「${bot.name}」的瀏覽器${link ? '：' + link : ''}`);
       await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url) VALUES (?,?,?,'[]','',?,'open',?)").bind(U, conv, bot.id, now(), link || null).run();
       return ok();
     }
@@ -1326,10 +1327,10 @@ async function nextWork(env, db, U, slots) {
   const pull = files.filter(f => f.loc === 'pc').map(f => ({ id: f.id, path: f.path }));
   let job = null;
   if (slots > 0) {
-    // one job per bot at a time, so each bot keeps its own browser to itself
+    // one task per bot at a time; showing its browser on screen ('open') never waits
     const j = await db.prepare(`SELECT * FROM jobs j WHERE user_id=? AND status='pending'
-      AND NOT EXISTS (SELECT 1 FROM jobs r WHERE r.user_id=j.user_id AND r.bot_id=j.bot_id AND r.status='running')
-      ORDER BY id LIMIT 1`).bind(U).first();
+      AND (j.kind='open' OR NOT EXISTS (SELECT 1 FROM jobs r WHERE r.user_id=j.user_id AND r.bot_id=j.bot_id AND r.status='running' AND r.kind<>'open'))
+      ORDER BY (j.kind='open') DESC, id LIMIT 1`).bind(U).first();
     if (j) {
       const claimed = await db.prepare("UPDATE jobs SET status='running', started=? WHERE id=? AND status='pending'").bind(now(), j.id).run();
       if (claimed.meta.changes) { await bump(db, U); job = await jobPayload(env, db, U, j); }

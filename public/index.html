@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=4"></script>
+<script src="/i18n-dict.js?v=5"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -643,12 +643,12 @@ async function openFile(id){toast(I18N.t('讀取檔案中…'));try{const d=awai
 const APPR=/^✅\s*待確認[:：]\s*(.+)$/m;
 const OPENED=new Set();
 // a failed reply: offer to send the same instruction again
-function retryHtml(m){if(!/^⚠/.test(m.text))return '';const ms=convMsgs(m.conv);if(ms.some(x=>x.id>m.id&&!x.tmp&&x.by!=='sys'))return '';
+function retryHtml(m){if(!/^⚠/.test(m.text)||NEEDLOGIN.test(m.text))return '';const ms=convMsgs(m.conv);if(ms.some(x=>x.id>m.id&&!x.tmp&&x.by!=='sys'))return '';
   return `<div class="appr"><button type="button" class="no" data-retry="${m.id}">↻ 重試</button></div>`}
 const NEEDLOGIN=/需要使用者在電腦上登入|需要.{0,6}登入/;
 function loginHtml(m){const b=bot(m.by);if(!b||b.browser==='mine'||!NEEDLOGIN.test(m.text))return '';
   if(convMsgs(m.conv).some(x=>x.id>m.id&&x.by===m.by))return '';
-  return `<div class="appr"><button type="button" class="btn" data-openb="${esc(m.by)}">🖥 在電腦上打開它的瀏覽器登入</button><small class="hint2">在跳出的視窗登入，完成後關掉視窗，機器人就能接著做。</small></div>`}
+  return `<div class="appr"><button type="button" class="btn" data-openb="${esc(m.by)}">🖥 在電腦上顯示它的瀏覽器</button><button type="button" class="no" data-retry="${m.id}">✓ 登入好了，繼續</button><small class="hint2">機器人停在登入頁。在電腦上顯示的視窗裡登入（不用關掉），再按「登入好了，繼續」。</small></div>`}
 function apprHtml(m){const a=m.text.match(APPR);if(!a)return '';
   const later=convMsgs(m.conv).some(x=>x.id>m.id&&(x.by==='me'||x.by===m.by));
   if(later)return '';
@@ -730,7 +730,7 @@ function render(scroll){
     return `<div class="m"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
   const bz=busyIn(cur);
   if(bz.length){const run=bz.find(b=>b.status==='running');
-    mh+=`<div class="work"><span class="fade">${run&&run.kind==='chat'&&run.started?`<span class="el" data-since="${run.started}">${elapsed(run.started)}</span> `:''}${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器在電腦上開著，你可以放心輸入；關掉視窗後機器人才會繼續':esc(nameOf(run.bot_id))+' 處理中…'):S.runnerOnline?'排隊中…':'等待主機電腦上線…'}</span><button id="stop">停止</button></div>`}
+    mh+=`<div class="work"><span class="fade">${run&&run.kind==='chat'&&run.started?`<span class="el" data-since="${run.started}">${elapsed(run.started)}</span> `:''}${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器正在顯示…':esc(nameOf(run.bot_id))+' 處理中…'):S.runnerOnline?'排隊中…':'等待主機電腦上線…'}</span><button id="stop">停止</button></div>`}
   const changed=setHTML(box,mh);if(changed)loadThumbs(box);
   if(switched||scroll){box.scrollTop=box.scrollHeight;$('jump').hidden=true}
   else if(changed){if(atBottom)box.scrollTo({top:box.scrollHeight,behavior:'smooth'});else $('jump').hidden=false}
@@ -903,35 +903,35 @@ function sheet(kind,edit){
 function alertSheet(t,p){$('veil').innerHTML=`<div class="sheet"><h2>${esc(t)}</h2><p>${esc(p)}</p><div class="acts"><button class="btn" id="sx">知道了</button></div></div>`;$('veil').hidden=false;$('sx').onclick=closeSheet}
 const ago=t=>{const m=Math.round((Date.now()-t)/60000),rt=new Intl.RelativeTimeFormat(I18N.lang,{numeric:'auto'});return m<60?rt.format(-m,'minute'):m<1440?rt.format(-Math.round(m/60),'hour'):rt.format(-Math.round(m/1440),'day')};
 /* ---------- bot browsers ---------- */
-async function openBrowser(id,url){const b=bot(id);if(!b)return;
-  if(S.busy.some(x=>x.bot_id===id&&x.status==='running'&&x.kind!=='open'))toast(I18N.t('機器人做完手上的工作後就會打開'));
-  try{await api('open','POST',{bot:id,conv:cur,url:url||''});toast(I18N.t(S.runnerOnline?'已叫出，請看電腦畫面':'電腦離線，連上後就會打開'));refresh()}
+async function openBrowser(id,url,hide){const b=bot(id);if(!b)return;
+  try{await api('open','POST',{bot:id,conv:cur,url:url||'',hide:!!hide});toast(I18N.t(!S.runnerOnline?'主機電腦離線，連上後就會處理':hide?'已收到背景':'已在電腦上顯示，請看電腦畫面'));refresh()}
   catch(e){toast(e.message)}}
 $('browser').onclick=e=>{
   const c=conv(cur);if(!c)return;e.stopPropagation();
   const ids=isG(cur)?c.members.filter(bot):[cur];
   const one=id=>{const b=bot(id);return b.browser==='mine'
     ?`<div class="lab" data-u>${esc(b.name)}</div><button data-a="note" data-v="${id}"><span class="ck">ⓘ</span>使用你的 Chrome（在 Chrome 看它的分頁群組）</button>`
-    :`${isG(cur)?`<div class="lab" data-u>${esc(b.name)}</div>`:''}<button data-a="open" data-v="${id}"><span class="ck">🖥</span>在電腦上叫出上次的畫面</button>${isG(cur)?'':`<button data-a="url" data-v="${id}"><span class="ck">🔗</span>打開其他網址…</button>`}`};
+    :`${isG(cur)?`<div class="lab" data-u>${esc(b.name)}</div>`:''}<button data-a="open" data-v="${id}"><span class="ck">🖥</span>在電腦上顯示它的瀏覽器</button><button data-a="hide" data-v="${id}"><span class="ck">⤓</span>收到背景</button>${isG(cur)?'':`<button data-a="url" data-v="${id}"><span class="ck">🔗</span>讓它打開網址…</button>`}`};
   popMenu($('browser'),ids.map(one).join('<hr>')+`<hr><button data-a="shots"><span class="ck">🖼</span>看最後的畫面（截圖）</button>`,
-    {open:id=>openBrowser(id),url:id=>urlSheet(id),shots:()=>shotSheet(ids),note:()=>toast(I18N.t('這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。'))})};
+    {open:id=>openBrowser(id),hide:id=>openBrowser(id,'',true),url:id=>urlSheet(id),shots:()=>shotSheet(ids),note:()=>toast(I18N.t('這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。'))})};
 function urlSheet(id){const b=bot(id);
-  $('veil').innerHTML=`<form class="sheet" id="uf"><h2>打開網址</h2><p>在電腦上用「<span data-u>${esc(b.name)}</span>」的瀏覽器打開：</p>
+  $('veil').innerHTML=`<form class="sheet" id="uf"><h2>讓它打開網址</h2><p>在電腦上用「<span data-u>${esc(b.name)}</span>」的瀏覽器打開：</p>
   <label class="field">網址<input id="uu" required placeholder="https://" value="${esc(b.page||'')}"></label>
   <div class="acts"><button type="button" class="no" id="sx">取消</button><button class="btn">在電腦上開啟</button></div></form>`;
   $('veil').hidden=false;$('uu').focus();$('uu').select();$('sx').onclick=closeSheet;
   $('uf').onsubmit=ev=>{ev.preventDefault();const u=$('uu').value.trim();closeSheet();openBrowser(id,u)}}
 function shotSheet(ids){
   $('veil').innerHTML=`<div class="sheet"><h2>機器人的瀏覽器</h2>
-  <p>每個機器人在你電腦上有自己的瀏覽器（獨立的分頁、登入和 Cookie），可以同時工作、互不干擾。第一次用某個網站前，先在電腦上幫它登入一次，之後會記住。</p>
+  <p>每個機器人在主機電腦上有一個自己的瀏覽器，平常在背景開著（獨立的分頁、登入和 Cookie），上次的分頁會留著接著用。按「在電腦上顯示」就會跳到螢幕上，你可以看它在做什麼、幫它登入；看完按「收到背景」。</p>
   ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
     ${b.shot_ts?`<img class="shot" alt="${esc(b.name)}" id="img_${id}"><div class="meta">截圖：${ago(b.shot_ts)}${b.page?' · <span data-u>'+esc(b.page)+'</span>':''}</div>`:`<div class="noshot">還沒有畫面。機器人用過瀏覽器後，這裡會顯示它最後停在哪一頁。</div>`}
-    ${b.browser==='mine'?`<div class="meta">這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。</div>`:`<div class="row2"><button class="btn" data-open="${id}">在電腦上叫出上次的畫面</button><button class="ghost" data-url="${id}">打開其他網址…</button></div>`}</div>`}).join('')}
+    ${b.browser==='mine'?`<div class="meta">這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。</div>`:`<div class="row2"><button class="btn" data-open="${id}">在電腦上顯示</button><button class="ghost" data-hide="${id}">收到背景</button><button class="ghost" data-url="${id}">讓它打開網址…</button></div>`}</div>`}).join('')}
   <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
   $('veil').hidden=false;$('sx').onclick=closeSheet;
   ids.forEach(id=>{if(bot(id).shot_ts)api('shot/'+id).then(d=>d.file?fileData(d.file):d).then(d=>{const im=$('img_'+id);if(im&&d.data)im.src=`data:${d.mime};base64,${d.data}`}).catch(e=>{const im=$('img_'+id);if(im)im.replaceWith(Object.assign(document.createElement('div'),{className:'noshot',textContent:e.message}))})});
   $('veil').querySelectorAll('[data-open]').forEach(x=>x.onclick=()=>{closeSheet();openBrowser(x.dataset.open)});
   $('veil').querySelectorAll('[data-url]').forEach(x=>x.onclick=()=>urlSheet(x.dataset.url));
+  $('veil').querySelectorAll('[data-hide]').forEach(x=>x.onclick=()=>{closeSheet();openBrowser(x.dataset.hide,'',true)});
   $('veil').querySelectorAll('.shot').forEach(im=>im.onclick=()=>{const id=im.id.slice(4);closeSheet();openBrowser(id)});
 }
 /* ---------- menus ---------- */

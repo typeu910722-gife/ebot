@@ -3,6 +3,12 @@
   "v": "2.0.2",
   "date": "2026-10-22",
   "notes": [
+   "瀏覽器邏輯重做：每個機器人有一個一直開著的瀏覽器（平常在背景），上次的分頁留著接著用，不再每次跳出新視窗又關掉",
+   "「在電腦上顯示它的瀏覽器」把同一個視窗叫到螢幕上，可以看它工作、直接幫它登入，不用關掉；「收到背景」收起來",
+   "機器人停在登入頁時，登入好了按「登入好了，繼續」就會接著做",
+   "每次工作完由 OCTA 自動截圖、記下目前網址",
+   "閒置 30 分鐘、沒在螢幕上的機器人瀏覽器會自動關閉省記憶體，下次會恢復分頁",
+   "更新不再跳出安裝精靈：按更新後自動安裝並重新開啟（從這版之後的更新開始生效）",
    "機器人知道自己用哪個 AI、哪個方案和剩餘流量，問它就會回答",
    "AI 連線頁顯示方案名稱（Claude Max／Pro、ChatGPT Plus／Pro）",
    "機器人的回覆支援表格、清單、粗體、程式碼（可一鍵複製）",
@@ -16,6 +22,12 @@
    "桌面版第一次關閉視窗時提醒仍在背景工作"
   ],
   "notes_en": [
+   "Browser logic redone: each bot has one browser that stays open (in the background), keeping its tabs between tasks instead of popping a new window each time",
+   "“Show its browser on the computer” brings that same window on screen to watch or sign in for it, no need to close it; “Send to background” puts it away",
+   "When a bot stops at a sign-in page, sign in and press “Signed in, continue”",
+   "OCTA takes the screenshot and records the current page itself after each task",
+   "Bot browsers idle for 30 minutes and off screen close automatically to save memory; tabs come back next time",
+   "Updates no longer show the installer wizard: they install and reopen automatically (from the update after this one)",
    "Bots know which AI, plan and remaining quota they run on, and answer when asked",
    "The AI connections page shows the plan name (Claude Max/Pro, ChatGPT Plus/Pro)",
    "Bot replies show tables, lists, bold text and code (with a copy button)",
@@ -29,6 +41,12 @@
    "The desktop app explains it keeps working in the background the first time you close the window"
   ],
   "notes_ja": [
+   "ブラウザの仕組みを刷新：各ボットに常に開いている専用ブラウザ（普段はバックグラウンド）があり、タブを次の作業でも使い続けます",
+   "「パソコンでブラウザを表示」で同じウィンドウを画面に出し、作業を見たりそのままログインできます（閉じる必要なし）。「バックグラウンドへ」で戻します",
+   "ボットがログインページで止まったら、ログイン後「ログインした・続ける」を押すだけ",
+   "作業後のスクリーンショットと現在の URL は OCTA が自動で記録",
+   "30 分使われず画面外のブラウザはメモリ節約のため自動で閉じ、次回タブを復元",
+   "更新時にインストーラー画面が出なくなり、自動でインストール・再起動（この次の更新から有効）",
    "ボットが自分の AI・プラン・残り使用量を把握し、聞かれたら答えます",
    "AI 接続ページにプラン名を表示（Claude Max／Pro、ChatGPT Plus／Pro）",
    "ボットの返信で表・リスト・太字・コード（コピーボタン付き）を表示",

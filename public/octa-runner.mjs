@@ -90,13 +90,15 @@ async function sendCopy(f) {
 const extToken = () => (cfg.getExtToken ? cfg.getExtToken() : cfg.extToken) || '';
 // mode 'own': the bot's own Chrome profile (separate logins). mode 'mine': the user's real Chrome through the
 // Playwright Extension, so saved logins and passwords work; each bot gets its own tab group there.
-function botDir(id, mode = 'own') {
+function botDir(id, mode = 'own', port = 0) {
   const safe = String(id).replace(/[^\w-]/g, '');
   const dir = join(workDir, 'bots', safe);
   mkdirSync(join(dir, 'shots'), { recursive: true });
   const profile = join(dir, 'profile');
   const mine = mode === 'mine';
-  const pwArgs = mine ? ['--extension', '--output-dir', join(dir, 'shots')] : ['--browser', 'chrome', '--user-data-dir', profile, '--output-dir', join(dir, 'shots')];
+  const pwArgs = mine ? ['--extension', '--output-dir', join(dir, 'shots')]
+    : port ? ['--cdp-endpoint', `http://127.0.0.1:${port}`, '--output-dir', join(dir, 'shots')]   // the bot's own browser that stays open
+    : ['--browser', 'chrome', '--user-data-dir', profile, '--output-dir', join(dir, 'shots')];
   const env = { ...(cfg.pwCli ? cfg.nodeEnv || {} : {}), ...(mine && extToken() ? { PLAYWRIGHT_MCP_EXTENSION_TOKEN: extToken() } : {}) };
   const server = cfg.pwCli
     ? { command: cfg.nodeBin || process.execPath, args: [cfg.pwCli, ...pwArgs], env }   // bundled (desktop app)
@@ -171,13 +173,13 @@ function buildPrompt(job, here) {
     `- 用${({ 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', en: '英文（English）', ja: '日文（日本語）' })[job.lang] || '繁體中文'}回覆，簡潔、先給結果。你的最後輸出會原封不動顯示成聊天訊息。`,
     job.bot.browser === 'mine'
       ? '- 需要操作網站時，用 browser 工具。這是使用者自己的 Chrome（有他已登入的網站和已儲存的密碼）。只在你自己的分頁群組裡操作，不要關閉或改動使用者其他分頁。遇到登入頁時，點帳號欄位，從 Chrome 跳出的已儲存帳號中選一個讓它自動填入；不要自己猜或輸入密碼。'
-      : '- 需要操作網站時，用 browser 工具。這是你專屬的瀏覽器（獨立設定檔，登入狀態會保留），不會影響其他機器人。',
+      : '- 需要操作網站時，用 browser 工具。這是你專屬、一直開著的瀏覽器（獨立的登入和分頁，上次開的分頁都還在，可以接著用），不會影響其他機器人。使用者有時會在同一個視窗旁觀或幫你登入。',
     job.bot.page ? `- 你上次停在：${job.bot.page}` : '',
-    '- 遇到登入頁、驗證碼、或需要輸入密碼時，停止並回報「需要使用者在電腦上登入」（照抄這幾個字）。使用者會在 OCTA 按「在電腦上打開瀏覽器」，在另一個不會被關掉的視窗登入，登入狀態會保存給你用；不要請使用者在你正在操作的視窗裡輸入。',
+    '- 遇到登入頁、驗證碼、或需要輸入密碼時，停在那一頁，回報「需要使用者在電腦上登入」（照抄這幾個字）和要登入的網站。使用者會把你的瀏覽器叫到螢幕上幫你登入，再叫你繼續。',
     '- 發訊息給任何人、付款、刪除資料、更改帳號設定：除非使用者在對話中明確下令，否則只準備好內容並請使用者確認，不要執行。',
     '- 需要使用者核准才能做的事，在回覆最後單獨一行寫「✅待確認：要做的事（一句話）」（「✅待確認：」這幾個字照抄，不要翻譯），然後停下。使用者回「核准：…」後才執行。',
     '- 只回報實際完成的事，做不到就直說。',
-    '- 若這次有用瀏覽器：結束前用 browser_take_screenshot 截目前畫面（type 設 jpeg，filename 設 last.jpeg），並在回覆最後一行寫「📍 目前頁面：網址」。',
+    job.bot.livePort ? '' : '- 若這次有用瀏覽器：結束前用 browser_take_screenshot 截目前畫面（type 設 jpeg，filename 設 last.jpeg），並在回覆最後一行寫「📍 目前頁面：網址」。',
     '',
     '對話紀錄（舊到新）：'
   );
@@ -376,8 +378,12 @@ async function runEngine(engine, prompt, b, model) {
 
 // ---------- job handlers ----------
 async function chatJob(job) {
-  const b = botDir(job.bot.id, job.bot.browser), { dir } = b;
+  const own = job.bot.browser !== 'mine';
+  let port = 0;
+  if (own) { try { port = await ensureBrowser(job.bot); } catch (e) { log('瀏覽器：' + e.message); } }
+  const b = botDir(job.bot.id, job.bot.browser, port), { dir } = b;
   const here = convDir(job.conv || job.bot);
+  if (port) busyBots.add(job.bot.id);
   for (const h of job.history) {   // attachments: already in the folder, or saved there now
     h.paths = [];
     for (const f of h.files || []) {
@@ -390,17 +396,23 @@ async function chatJob(job) {
   }
   const start = Date.now() - 1000;
   log(`▶ ${job.bot.name}［${job.bot.engine || 'claude'}］${job.group ? ' @' + job.group.name : ''}：${job.prompt.slice(0, 40)}`);
-  const res = await runEngine(job.bot.engine || 'claude', buildPrompt(job, here), b, job.bot.model);
-  const shot = newestImage(dir, start);
-  if (shot) {   // keep the screenshot in the conversation's 截圖 folder; only its location goes to the cloud
-    try {
-      const d = new Date(), z = n => String(n).padStart(2, '0'), stamp = `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`;
-      const p = freeName(join(here, '截圖'), safeName(job.bot.name) + '-' + stamp + extname(shot.p).toLowerCase());
-      copyFileSync(shot.p, p);
-      await api('runner/shot', { id: job.id, path: rel(p), name: basename(p), size: shot.size });
-    } catch (e) { log('截圖儲存失敗：' + e.message); }
-  }
-  const page = (res.text.match(/📍\s*目前頁面[:：]\s*(\S+)/) || [])[1];
+  job.bot.livePort = port;
+  let res;
+  try { res = await runEngine(job.bot.engine || 'claude', buildPrompt(job, here), b, job.bot.model); }
+  finally { busyBots.delete(job.bot.id); if (port) touchBrowser(job.bot.id); }
+  // what the browser shows now: taken by OCTA itself (no need for the bot to remember)
+  let page = (res.text.match(/📍\s*目前頁面[:：]\s*(\S+)/) || [])[1];
+  const d = new Date(), z = n => String(n).padStart(2, '0'), stamp = `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`;
+  const saveShot = async (buf, ext) => {
+    const p = freeName(join(here, '截圖'), safeName(job.bot.name) + '-' + stamp + ext);
+    writeFileSync(p, buf);
+    await api('runner/shot', { id: job.id, path: rel(p), name: basename(p), size: buf.length });
+  };
+  try {
+    const live = port ? await browserSnapshot(port, start) : null;
+    if (live) { if (live.url && !/^(about:|chrome:)/.test(live.url)) page = live.url; if (live.jpeg) await saveShot(live.jpeg, '.jpeg'); }
+    else { const shot = newestImage(dir, start); if (shot) await saveShot(readFileSync(shot.p), extname(shot.p).toLowerCase()); }
+  } catch (e) { log('截圖儲存失敗：' + e.message); }
   await api('runner/done', { id: job.id, ok: res.ok, text: res.text, page, files: res.ok ? newFiles(join(here, '輸出'), start) : [] });
   log(`${res.ok ? '✓' : '✗'} ${job.bot.name}`);
   if (['claude', 'codex'].includes(job.bot.engine || 'claude')) lastUsage = 0;   // refresh how much is left
@@ -415,8 +427,13 @@ async function testJob(job) {
   await api('runner/done', { id: job.id, ok: res.ok, text: res.text });
 }
 
-// Is a Chrome window still using this profile? (Windows keeps "lockfile" open; macOS/Linux keep a SingletonLock link)
-function profileInUse(profile) {
+// ---------- each bot's own browser: one Chrome that stays open between jobs ----------
+// It starts in the background (off screen). The AI connects to it over CDP, so tabs and logins carry over.
+// 「在電腦上顯示」 brings the same window forward: you see what the bot sees, and can log in right there.
+const browsers = new Map();   // bot id → { port, last }
+const busyBots = new Set();
+const pause = ms => new Promise(r => setTimeout(r, ms));
+function profileInUse(profile) {   // a Chrome window (without the debugging port) still has this profile open
   if (WIN) {
     const f = join(profile, 'lockfile');
     if (!existsSync(f)) return false;
@@ -424,32 +441,111 @@ function profileInUse(profile) {
   }
   try { lstatSync(join(profile, 'SingletonLock')); return true; } catch { return false; }
 }
-const pause = ms => new Promise(r => setTimeout(r, ms));
-// The window stays the user's until they close it: the bot doesn't touch this browser meanwhile,
-// so typing a password or a code there is never interrupted.
-function openJob(job) {
-  return new Promise(async resolve => {
-    const { profile } = botDir(job.bot.id);
-    const chrome = findChrome();
-    const done = (ok, text) => { log(`🌐 ${job.bot.name}：${text}`); api('runner/done', { id: job.id, ok, text }).catch(() => { }).finally(resolve); };
-    if (!chrome) return done(false, '⚠ 找不到 Chrome。請在 octa-runner.json 加上 "chrome": "Chrome 執行檔路徑"。');
-    // the bot's own automated Chrome may still be closing after its last job: wait so the window isn't shut under you
-    for (let i = 0; i < 15 && profileInUse(profile); i++) await pause(1000);
-    const target = job.url || job.bot.page;   // no address: the page the bot was last on, or Chrome's last session
-    const args = [`--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...(target ? ['--new-window', target] : ['--restore-last-session'])];
-    log(`🌐 開啟 ${job.bot.name} 的瀏覽器${target ? '：' + target : '（上次的畫面）'}`);
-    let child;
-    try { child = spawn(chrome, args, { stdio: 'ignore', windowsHide: false }); } catch (e) { return done(false, '⚠ 無法開啟 Chrome：' + e.message); }
-    child.on('error', e => done(false, '⚠ 無法開啟 Chrome：' + e.message));
-    child.on('exit', async () => {
-      // Chrome often hands the window to another process and exits right away; keep the job
-      // (and so the bot) waiting until no window uses the profile any more
-      await pause(2000);
-      const t0 = Date.now();
-      while (profileInUse(profile) && Date.now() - t0 < 3 * 3600000 && !stopped) await pause(3000);
-      done(true, '你關掉了我的瀏覽器，登入狀態已保存，我可以繼續工作了。');
-    });
+function portOf(id) {   // a fixed local port per bot, kept in work/ports.json
+  const f = join(workDir, 'ports.json');
+  let m = {}; try { m = JSON.parse(readFileSync(f, 'utf8')); } catch { }
+  if (!m[id]) { const used = new Set(Object.values(m)); let p = 9311; while (used.has(p)) p++; m[id] = p; writeFileSync(f, JSON.stringify(m)); }
+  return m[id];
+}
+async function cdpInfo(port) {
+  try { const r = await fetch(`http://127.0.0.1:${port}/json/version`, { signal: AbortSignal.timeout(1500) }); return r.ok ? await r.json() : null; } catch { return null; }
+}
+async function cdp(port, fn) {   // a short CDP session on the browser
+  if (typeof WebSocket === 'undefined') throw new Error('需要 Node 22 以上');
+  const v = await cdpInfo(port);
+  if (!v) throw new Error('瀏覽器沒有開著');
+  const ws = new WebSocket(v.webSocketDebuggerUrl);
+  await new Promise((ok, no) => { ws.onopen = ok; ws.onerror = () => no(new Error('連不上瀏覽器')); setTimeout(() => no(new Error('連不上瀏覽器')), 5000); });
+  let n = 0; const wait = {};
+  ws.onmessage = e => { const m = JSON.parse(e.data); if (wait[m.id]) { wait[m.id](m); delete wait[m.id]; } };
+  const send = (method, params = {}, sessionId) => new Promise((ok, no) => {
+    const id = ++n; wait[id] = m => (m.error ? no(new Error(m.error.message)) : ok(m.result));
+    ws.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
+    setTimeout(() => { if (wait[id]) { delete wait[id]; no(new Error('瀏覽器沒有回應')); } }, 15000);
   });
+  try { return await fn(send); } finally { try { ws.close(); } catch { } }
+}
+const pagesOf = async send => (await send('Target.getTargets')).targetInfos.filter(t => t.type === 'page' && !t.url.startsWith('devtools://'));
+const touchBrowser = id => { const b = browsers.get(id); if (b) b.last = Date.now(); };
+export async function ensureBrowser(bot) {
+  const port = portOf(bot.id);
+  if (await cdpInfo(port)) { browsers.set(bot.id, { port, last: Date.now() }); return port; }
+  const chrome = findChrome();
+  if (!chrome) throw new Error('找不到 Google Chrome');
+  const { profile } = botDir(bot.id);
+  for (let i = 0; i < 10 && profileInUse(profile); i++) await pause(1000);   // an old window may still be closing
+  if (profileInUse(profile)) throw new Error('這個機器人的瀏覽器有一個舊視窗開著，請先關掉它');
+  const child = spawn(chrome, [`--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, '--no-first-run', '--no-default-browser-check',
+    '--restore-last-session', '--window-position=-32000,-32000', '--window-size=1280,860'], { detached: true, stdio: 'ignore', windowsHide: false });
+  child.on('error', () => { });
+  child.unref();
+  for (let i = 0; i < 40; i++) { if (await cdpInfo(port)) break; await pause(500); }
+  if (!(await cdpInfo(port))) throw new Error('Chrome 沒有啟動');
+  browsers.set(bot.id, { port, last: Date.now() });
+  log(`🌐 ${bot.name} 的瀏覽器已在背景開啟`);
+  // some systems pull an off-screen window back on screen: then keep it minimised instead
+  try {
+    await cdp(port, async send => {
+      const [p] = await pagesOf(send);
+      if (!p) return;
+      const { windowId, bounds } = await send('Browser.getWindowForTarget', { targetId: p.targetId });
+      if (bounds.left > -5000) await send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'minimized' } });
+    });
+  } catch { }
+  return port;
+}
+async function browserSnapshot(port, since) {   // screenshot + address of the tab the bot used last
+  return cdp(port, async send => {
+    const pages = await pagesOf(send);
+    if (!pages.length) return null;
+    const p = pages.find(x => x.attached) || pages[0];
+    const { sessionId } = await send('Target.attachToTarget', { targetId: p.targetId, flatten: true });
+    let jpeg = null;
+    try { jpeg = Buffer.from((await send('Page.captureScreenshot', { format: 'jpeg', quality: 70 }, sessionId)).data, 'base64'); } catch { }
+    await send('Target.detachFromTarget', { sessionId }).catch(() => { });
+    return { url: p.url, jpeg };
+  });
+}
+async function showBrowser(port, url, hide) {
+  return cdp(port, async send => {
+    let pages = await pagesOf(send), targetId = pages[0]?.targetId;
+    if (url || !targetId) targetId = (await send('Target.createTarget', { url: url || 'about:blank' })).targetId;
+    const { windowId } = await send('Browser.getWindowForTarget', { targetId });
+    if (hide) { await send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } }).catch(() => { }); await send('Browser.setWindowBounds', { windowId, bounds: { left: -32000, top: -32000 } }); return; }
+    await send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } }).catch(() => { });
+    await send('Browser.setWindowBounds', { windowId, bounds: { left: 60, top: 40, width: 1280, height: 860 } });
+    await send('Target.activateTarget', { targetId });
+  });
+}
+async function openJob(job) {
+  const done = (ok, text) => { log(`🌐 ${job.bot.name}：${text}`); return api('runner/done', { id: job.id, ok, text }).catch(() => { }); };
+  const hide = job.url === 'octa:hide';
+  try {
+    if (hide && !(await cdpInfo(portOf(job.bot.id)))) return done(true, '我的瀏覽器已經收起來了。');
+    const port = await ensureBrowser(job.bot);
+    await showBrowser(port, hide ? '' : job.url, hide);
+    touchBrowser(job.bot.id);
+    return done(true, hide ? '我的瀏覽器已收到背景，我會繼續在裡面工作。'
+      : busyBots.has(job.bot.id) ? '我的瀏覽器已經在電腦上顯示，我正在裡面工作，先別操作；要幫我登入請等我停下來。'
+      : '我的瀏覽器已經在電腦上顯示。需要登入就直接在裡面登入，好了回來按「登入好了，繼續」。');
+  } catch (e) { return done(false, '⚠ 無法打開瀏覽器：' + e.message); }
+}
+// browsers idle for 30 minutes and not on screen are closed to save memory (tabs come back next time)
+async function reapBrowsers(all) {
+  for (const [id, b] of browsers) {
+    if (busyBots.has(id)) continue;
+    if (!all && Date.now() - b.last < 30 * 60000) continue;
+    try {
+      await cdp(b.port, async send => {
+        if (!all) {
+          const [p] = await pagesOf(send);
+          if (p) { const { bounds } = await send('Browser.getWindowForTarget', { targetId: p.targetId }); if (bounds.left > -5000 && bounds.windowState !== 'minimized') return; }   // the user is looking at it
+        }
+        await send('Browser.close');
+      });
+      browsers.delete(id);
+    } catch { browsers.delete(id); }
+  }
 }
 
 // ---------- main loop: long-poll, so work starts the moment it's sent ----------
@@ -508,9 +604,10 @@ export function startRunner(opts) {
     spawnSync(WIN ? 'cmd' : 'npx', WIN ? ['/c', 'npx', '-y', PW_MCP, '--version'] : ['-y', PW_MCP, '--version'], { stdio: 'ignore', timeout: 180000 });
   }
   loop();
+  const reaper = setInterval(() => reapBrowsers(false).catch(() => { }), 5 * 60000);
   const myCfg = cfg;
   return {
-    stop: () => { stopped = true; poll?.abort(); if (myCfg.token) fetch(myCfg.url + '/api/runner/bye', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + myCfg.token }, body: '{}' }).catch(() => { }); },
+    stop: () => { stopped = true; poll?.abort(); clearInterval(reaper); reapBrowsers(true).catch(() => { }); if (myCfg.token) fetch(myCfg.url + '/api/runner/bye', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + myCfg.token }, body: '{}' }).catch(() => { }); },
     active: () => active, standby: () => standby
   };
 }

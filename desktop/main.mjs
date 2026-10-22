@@ -164,7 +164,7 @@ handle('octa:offline', async () => {
 handle('octa:update-status', () => upd);
 handle('octa:update-check', () => { checkUpdates(); return upd; });
 handle('octa:update-download', () => { if (upd.state === 'available' || upd.state === 'error') { setUpd({ state: 'downloading', percent: 0 }); autoUpdater.downloadUpdate().catch(() => { }); } return upd; });
-handle('octa:update-install', () => { if (upd.state === 'ready') { quitting = true; stopRunner(); setImmediate(() => autoUpdater.quitAndInstall(false, true)); } return upd; });
+handle('octa:update-install', () => { if (upd.state === 'ready') { quitting = true; stopRunner(); setImmediate(() => autoUpdater.quitAndInstall(true, true)); } return upd; });
 handle('octa:cloud', async () => {
   cfg = { ...cfg, mode: 'cloud' }; writeCfg(cfg);
   stopRunner(); await showSplash(); progress(60, '重新連線…'); await loadMain(); return { ok: true };

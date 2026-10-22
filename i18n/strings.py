@@ -706,3 +706,24 @@ T.update({
  'OCTA 還在背景工作': ('OCTA is still working in the background', 'OCTA はバックグラウンドで動作中'),
  '已複製': ('Copied', 'コピーしました'),
 })
+
+T.update({
+ '在電腦上顯示它的瀏覽器': ('Show its browser on the computer', 'パソコンでブラウザを表示'),
+ '收到背景': ('Send to background', 'バックグラウンドへ'),
+ '讓它打開網址…': ('Have it open a URL…', 'URL を開かせる…'),
+ '已收到背景': ('Moved to the background', 'バックグラウンドに移しました'),
+ '已在電腦上顯示，請看電腦畫面': ('Shown on the computer — check its screen', 'パソコンに表示しました。画面を確認してください'),
+ '主機電腦離線，連上後就會處理': ('The host computer is offline; this happens once it connects', 'ホストパソコンは未接続です。接続後に処理されます'),
+ '✓ 登入好了，繼續': ('✓ Signed in, continue', '✓ ログインした・続ける'),
+ '機器人停在登入頁。在電腦上顯示的視窗裡登入（不用關掉），再按「登入好了，繼續」。': ('The bot stopped at a sign-in page. Sign in in the window shown on the computer (no need to close it), then press “Signed in, continue”.', 'ボットはログインページで止まっています。パソコンに表示されたウィンドウでログインし（閉じなくて大丈夫）、「ログインした・続ける」を押してください。'),
+ '在電腦上顯示': ('Show on the computer', 'パソコンに表示'),
+ '每個機器人在主機電腦上有一個自己的瀏覽器，平常在背景開著（獨立的分頁、登入和 Cookie），上次的分頁會留著接著用。按「在電腦上顯示」就會跳到螢幕上，你可以看它在做什麼、幫它登入；看完按「收到背景」。': ('Each bot has its own browser on the host computer, kept open in the background (separate tabs, logins and cookies), so it picks up where it left off. “Show on the computer” brings it on screen so you can watch or sign in for it; “Send to background” puts it away.', '各ボットはホストパソコンに専用ブラウザがあり、普段はバックグラウンドで開いています（タブ・ログイン・Cookie は独立）。前回のタブはそのまま続きに使えます。「パソコンに表示」で画面に出して作業を見たりログインを手伝えます。見終わったら「バックグラウンドへ」。'),
+ '讓它打開網址': ('Have it open a URL', 'URL を開かせる'),
+ '在電腦上開啟': ('Open on the computer', 'パソコンで開く'),
+})
+P.extend([
+ (r'^(.+) 的瀏覽器正在顯示…$', 'Showing $1’s browser…', '$1 のブラウザを表示中…'),
+ (r'^在電腦上顯示「(.+)」的瀏覽器：(.+)$', 'Show $1’s browser on the computer: $2', 'パソコンで $1 のブラウザを表示：$2'),
+ (r'^在電腦上顯示「(.+)」的瀏覽器$', 'Show $1’s browser on the computer', 'パソコンで $1 のブラウザを表示'),
+ (r'^把「(.+)」的瀏覽器收到背景$', 'Send $1’s browser to the background', '$1 のブラウザをバックグラウンドへ'),
+])
