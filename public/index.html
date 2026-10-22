@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=7"></script>
+<script src="/i18n-dict.js?v=8"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -572,7 +572,7 @@ async function refresh(){
   try{const d=await api('state');if(!S.loaded)boot.set(85,'整理畫面…');
     const prevTop=S.loaded?topBotId():null;
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
-      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{}});
+      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120});
     if(cur&&!conv(cur))cur=null;
     if(cur)await loadMsgs(cur,'new');
     if(prevTop!==null)notifyNew(prevTop);
@@ -1060,6 +1060,7 @@ function openSettings(){
     ['acct','👤','帳號與裝置',CFG.local?'離線模式不使用帳號':esc(S.me)],
     ['pc','🖥','電腦與主機',S.runnerOnline?(CFG.local?'電腦在線':'主機在線'):(CFG.local?'電腦離線':'主機離線')],
     ['ai','🔌','AI 連線','連接 AI、查看剩餘流量'],
+    ['warm','⚡','AI 待機時間',warmText(S.warm??120)],
     ['noti','🔔','通知','這個裝置、Telegram、LINE'],
     ['sched','⏰','例行任務排程',S.sched==='pc'?'電腦排程':'雲端排程'],
     ['files','📁','檔案儲存','附件、截圖、機器人的輸出'],
@@ -1075,7 +1076,7 @@ function openSettings(){
   $('veil').hidden=false;$('sx').onclick=closeSheet;
   if($('lo'))$('lo').onclick=()=>{closeSheet();logoutAsk()};
   $('sLang').onchange=e=>setLang(e.target.value);
-  const go={acct:openAccount,pc:openComputers,ai:()=>openAI(),noti:openNotify,sched:openSched,files:openStore,notes:openNotes,tpl:openTpl,logs:openLogs,guide:openGuide,ver:openVersion};
+  const go={warm:openWarm,acct:openAccount,pc:openComputers,ai:()=>openAI(),noti:openNotify,sched:openSched,files:openStore,notes:openNotes,tpl:openTpl,logs:openLogs,guide:openGuide,ver:openVersion};
   $('veil').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>go[b.dataset.s]())}
 const when=t=>t?new Date(t).toLocaleString(I18N.lang,{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
 /* account & devices */
@@ -1169,6 +1170,14 @@ async function openNotify(){
   $('sSave').onclick=async()=>{try{await saveS();say(I18N.t('已儲存 ✓'))}catch(e){say(e.message)}};
   $('nTest').onclick=async()=>{try{await saveS();const r=await api('notify/test','POST');say(I18N.t('已送出：')+r.sent.join('、'))}catch(e){say(e.message)}};
   $('tgDet').onclick=async()=>{try{await saveS();const r=await api('notify/detect','POST');$('tgChat').value=r.chat;say(I18N.t('找到 Chat ID ✓'))}catch(e){say(e.message)}}}
+/* AI 待機: keep the AI running for a while after it replies, so the next message is fast */
+const WARMS=[0,30,60,120,300,600,-1];
+function warmText(v){return v===0?I18N.t('不待機'):v===-1?I18N.t('永不（一直待機）'):v<60?v+' '+I18N.t('秒'):v/60+' '+I18N.t('分鐘')}
+async function openWarm(){let st={warm:120};try{st=await api('settings')}catch(e){}S.warm=st.warm;
+  subSheet('AI 待機時間',`<p>機器人回覆完後，讓它的 AI 保持待機多久。待機中再傳訊息會直接接著做：不用重新啟動、不用重讀整包資料，回覆快很多。待機越久越省等待時間，但會一直佔用一點電腦記憶體。</p>
+  <div class="bchoice">${WARMS.map(v=>`<label class="bc"><input type="radio" name="wm" value="${v}" ${st.warm===v?'checked':''}><span><b>${warmText(v)}${v===120?' '+I18N.t('（建議）'):''}</b>${v===0?`<small>${I18N.t('每則訊息都重新啟動 AI（最省記憶體，最慢）')}</small>`:v===-1?`<small>${I18N.t('一直待機，回覆最快；電腦記憶體較少時不建議')}</small>`:''}</span></label>`).join('')}</div>
+  <p class="hmuted">目前只有 Claude 支援待機；其他 AI 每次都會重新啟動。改了任務設定、共用資料或分區資料時，AI 會自動重新開始，讀到最新內容。</p>`);
+  $('veil').querySelectorAll('input[name=wm]').forEach(r=>r.onchange=async()=>{try{await api('settings','PUT',{warm:+r.value});S.warm=+r.value;toast(I18N.t('已儲存 ✓'))}catch(e){toast(e.message)}})}
 /* routine schedule mode */
 function openSched(){
   const v=S.sched==='pc'?'pc':'cloud';

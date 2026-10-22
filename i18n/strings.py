@@ -749,3 +749,17 @@ T.update({
  '收回': ('Revoke', '取り消す'),
  '已收回': ('Revoked', '取り消しました'),
 })
+
+T.update({
+ 'AI 待機時間': ('AI standby time', 'AI の待機時間'),
+ '不待機': ('Off', '待機しない'),
+ '永不（一直待機）': ('Never (always on standby)', 'なし（常に待機）'),
+ '秒': ('seconds', '秒'),
+ '分鐘': ('minutes', '分'),
+ '（建議）': ('(recommended)', '（おすすめ）'),
+ '機器人回覆完後，讓它的 AI 保持待機多久。待機中再傳訊息會直接接著做：不用重新啟動、不用重讀整包資料，回覆快很多。待機越久越省等待時間，但會一直佔用一點電腦記憶體。': ('How long a bot’s AI stays on standby after it replies. Messages sent during standby continue right away — no restart and no re-reading everything — so replies are much faster. Longer standby means less waiting but keeps some memory in use.', '返信後にボットの AI を待機させる時間です。待機中に送ったメッセージは再起動や全データの読み直しなしで続けて処理され、返信がずっと速くなります。長くするほど待ち時間は減りますが、メモリを少し使い続けます。'),
+ '每則訊息都重新啟動 AI（最省記憶體，最慢）': ('Restart the AI for every message (least memory, slowest)', '毎回 AI を起動し直す（メモリ最小・最も遅い）'),
+ '一直待機，回覆最快；電腦記憶體較少時不建議': ('Always on standby, fastest replies; not recommended with little memory', '常に待機・最速。メモリが少ないパソコンにはおすすめしません'),
+ '目前只有 Claude 支援待機；其他 AI 每次都會重新啟動。改了任務設定、共用資料或分區資料時，AI 會自動重新開始，讀到最新內容。': ('Only Claude supports standby for now; other AIs restart every time. Changing a bot’s settings, shared info or section info restarts its AI so it reads the latest.', '待機は現在 Claude のみ対応で、他の AI は毎回起動します。タスク設定・共有情報・セクション情報を変えると、AI は最新内容で起動し直します。'),
+})
+P.extend([(r'^(\d+) 秒$', '$1 seconds', '$1 秒'), (r'^(\d+) 分鐘$', '$1 minutes', '$1 分')])

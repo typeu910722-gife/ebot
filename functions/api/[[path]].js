@@ -14,6 +14,7 @@ const sha = async s => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)))
 const randTok = () => hex(crypto.getRandomValues(new Uint8Array(24)));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const MIN = 60000, DAY = 86400000;
+const WARM = [0, 30, 60, 120, 300, 600, -1];   // AI 待機 seconds after a reply (0: off, -1: always)
 const MAX_ASK_DEPTH = 4;          // how many times bots may hand questions to each other in one run
 const HOST_ONLINE_MS = 6 * MIN;   // the host writes a heartbeat every ~4 minutes
 const WAIT_MS = 25000;            // long-poll length
@@ -954,7 +955,7 @@ async function route({ request: req, env, params }) {
         me: me.name, local: me.kind === 'local', rev: rev.results[0]?.rev ?? 0,
         engines: h ? h.engines : JSON.parse((await db.prepare('SELECT engines FROM users WHERE id=?').bind(U).first())?.engines || 'null'),
         runnerOnline: env.runnerOnline ? env.runnerOnline() : h.online,
-        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {},
+        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {}, warm: WARM.includes(+st.warm) ? +st.warm : 120,
         ...all, last: last.results, ur: ur.results.map(r => [r.conv, r.id]), busy: busy.results
       });
     }
@@ -1178,13 +1179,14 @@ async function route({ request: req, env, params }) {
     }
     if (path === 'settings' && m === 'GET') {
       const st = await getSettings(db, U);
-      return J({ notes: st.notes || '', notifyAll: !!st.notifyAll, sched: st.sched === 'pc' ? 'pc' : 'cloud', tg: { token: mask(st.tg?.token), chat: st.tg?.chat || '' }, line: { token: mask(st.line?.token), to: st.line?.to || '' } });
+      return J({ warm: WARM.includes(+st.warm) ? +st.warm : 120, notes: st.notes || '', notifyAll: !!st.notifyAll, sched: st.sched === 'pc' ? 'pc' : 'cloud', tg: { token: mask(st.tg?.token), chat: st.tg?.chat || '' }, line: { token: mask(st.line?.token), to: st.line?.to || '' } });
     }
     if (path === 'settings' && m === 'PUT') {
       const st = await getSettings(db, U);
       if (body.notes !== undefined) st.notes = clean(body.notes, 20000);
       if (body.notifyAll !== undefined) st.notifyAll = !!body.notifyAll;
       if (['cloud', 'pc'].includes(body.sched)) st.sched = body.sched;
+      if (body.warm !== undefined && WARM.includes(+body.warm)) st.warm = +body.warm;
       if (['zh-TW', 'zh-CN', 'en', 'ja'].includes(body.lang)) st.lang = body.lang;
       if (body.allow && typeof body.allow === 'object') {   // 一律允許: things a bot may do without asking each time
         const bid = clean(body.allow.bot, 64), list = (Array.isArray(body.allow.list) ? body.allow.list : []).map(x => clean(x, 120)).filter(Boolean).slice(0, 20);
@@ -1364,7 +1366,7 @@ async function jobPayload(env, db, U, job) {
   if (!bot) { await db.prepare("UPDATE jobs SET status='error' WHERE id=?").bind(job.id).run(); return null; }
   const group = groups.find(g => g.id === job.conv);
   const conv = group || bot;
-  const hist = (await db.prepare('SELECT by_,text,files FROM messages WHERE user_id=? AND conv=? ORDER BY id DESC LIMIT 30').bind(U, job.conv).all()).results.reverse();
+  const hist = (await db.prepare('SELECT id,by_,text,files FROM messages WHERE user_id=? AND conv=? ORDER BY id DESC LIMIT 30').bind(U, job.conv).all()).results.reverse();
   const fileIds = [...new Set(hist.flatMap(h => (h.files ? JSON.parse(h.files) : []).map(f => f.id)))];
   const where = fileIds.length ? (await db.prepare(`SELECT id,path FROM files WHERE user_id=? AND id IN (${fileIds.map(() => '?').join(',')})`).bind(U, ...fileIds).all()).results : [];
   const pathOf = id => where.find(w => w.id === id)?.path || null;
@@ -1373,7 +1375,7 @@ async function jobPayload(env, db, U, job) {
   const dayStart = Date.parse(date + 'T00:00:00Z') - (+env.TZ_OFFSET_MIN || 0) * 60000;
   const usageToday = (await db.prepare("SELECT COUNT(*) AS n FROM jobs j JOIN bots b ON b.id=j.bot_id WHERE j.user_id=? AND j.kind='chat' AND j.created>=? AND IFNULL(b.engine,'claude')=?").bind(U, dayStart, bot.engine || 'claude').first())?.n ?? null;
   return {
-    id: job.id, kind: job.kind, url: job.url, prompt: job.prompt, usageToday, allowed: (st.allow || {})[bot.id] || [],
+    id: job.id, kind: job.kind, url: job.url, prompt: job.prompt, usageToday, warm: WARM.includes(+st.warm) ? +st.warm : 120, allowed: (st.allow || {})[bot.id] || [],
     canAsk: job.depth < MAX_ASK_DEPTH,
     conv: { id: conv.id, name: conv.name },
     bot: { id: bot.id, name: bot.name, task: bot.task, page: bot.page, engine: bot.engine || 'claude', model: bot.model || '', browser: bot.browser === 'mine' ? 'mine' : 'own' },
@@ -1383,6 +1385,6 @@ async function jobPayload(env, db, U, job) {
     lang: st.lang || 'zh-TW',
     colleagues: bots.filter(b => b.id !== bot.id && (b.folder || null) === (bot.folder || null)).map(b => ({ id: b.id, name: b.name, task: b.task })),
     group: group ? { name: group.name, task: group.task, members: group.members.map(name) } : null,
-    history: hist.map(h => ({ who: name(h.by_), text: h.text, files: (h.files ? JSON.parse(h.files) : []).map(f => ({ ...f, path: pathOf(f.id) })) }))
+    history: hist.map(h => ({ id: h.id, who: name(h.by_), text: h.text, files: (h.files ? JSON.parse(h.files) : []).map(f => ({ ...f, path: pathOf(f.id) })) }))
   };
 }

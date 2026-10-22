@@ -446,7 +446,12 @@ async function chatJob(job) {
   progress('開始工作');
   const beat = setInterval(() => { if (!timerP) flush(); }, 15000);   // also notices 停止 for AIs that don't report progress
   let res;
-  try { res = await runEngine(job.bot.engine || 'claude', buildPrompt(job, here), b, job.bot.model, { progress, ctl }); }
+  const engine = job.bot.engine || 'claude';
+  try {
+    res = engine === 'claude' && job.warm && (await has('claude'))
+      ? await warmClaude(job, b, here, { progress, ctl })        // AI 待機: reuse the running Claude session
+      : await runEngine(engine, buildPrompt(job, here), b, job.bot.model, { progress, ctl });
+  }
   finally { clearTimeout(timerP); clearInterval(beat); busyBots.delete(job.bot.id); if (port) touchBrowser(job.bot.id); }
   // what the browser shows now: taken by OCTA itself (no need for the bot to remember)
   let page = (res.text.match(/📍\s*目前頁面[:：]\s*(\S+)/) || [])[1];
@@ -465,6 +470,80 @@ async function chatJob(job) {
   log(`${res.ok ? '✓' : '✗'} ${job.bot.name}`);
   if (['claude', 'codex'].includes(job.bot.engine || 'claude')) lastUsage = 0;   // refresh how much is left
   try { cfg.onDone?.(job, res); } catch { }
+}
+
+// ---------- AI 待機: keep a Claude Code session running between messages ----------
+// The first message sends everything; while the session waits, the next message only sends what's new,
+// so there is no restart and nothing to re-read. job.warm: seconds to keep waiting (-1: always).
+const sessions = new Map();   // bot id → { child, fp, lastId, turn, timer }
+function closeSession(id, why) {
+  const s = sessions.get(id);
+  if (!s) return;
+  sessions.delete(id);
+  clearTimeout(s.timer);
+  try { s.child.stdin.end(); } catch { }
+  setTimeout(() => { try { WIN ? spawn('taskkill', ['/pid', String(s.child.pid), '/t', '/f'], { windowsHide: true }) : s.child.kill(); } catch { } }, 4000);
+  if (why) log(`💤 ${why}`);
+}
+function startSession(job, b) {
+  const { dir } = b, m = job.bot.model ? ['--model', job.bot.model] : [];
+  const child = spawn('claude', (WIN ? a => a.map(q) : a => a)(['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose',
+    '--mcp-config', join(dir, 'mcp.json'), '--strict-mcp-config', '--add-dir', storeDir(), ...m,
+    '--allowedTools', 'mcp__browser,WebFetch,WebSearch,Read,Write,Edit,Glob,Grep']), { cwd: dir, shell: WIN, windowsHide: true });
+  const s = { child, turn: null, err: [] };
+  let part = '';
+  child.stdout.on('data', d => {
+    part += d.toString('utf8');
+    let i;
+    while ((i = part.indexOf('\n')) >= 0) {
+      const l = part.slice(0, i); part = part.slice(i + 1);
+      let e; try { e = JSON.parse(l); } catch { continue; }
+      if (!s.turn) continue;
+      if (e.type === 'assistant') for (const c of e.message?.content || []) {
+        if (c.type === 'tool_use') s.turn.progress?.(describeTool(c.name, c.input));
+        else if (c.type === 'text' && c.text?.trim()) s.turn.progress?.('整理回覆中');
+      }
+      if (e.type === 'result') { const t = s.turn; s.turn = null; t.done({ ok: !e.is_error && !!String(e.result || '').trim(), text: String(e.result || '').trim() || '⚠ Claude Code 沒有回覆內容' }); }
+    }
+  });
+  child.stderr.on('data', d => { s.err.push(d); if (s.err.length > 50) s.err.shift(); });
+  child.stdin.on('error', () => { });
+  const gone = msg => { for (const [k, v] of sessions) if (v === s) sessions.delete(k); clearTimeout(s.timer); if (s.turn) { const t = s.turn; s.turn = null; t.done({ ok: false, text: '⚠ Claude Code 執行失敗：' + (decode(s.err).trim().slice(-1200) || msg) }); } };
+  child.on('error', e => gone(e.message));
+  child.on('exit', code => gone('結束碼 ' + code));
+  return s;
+}
+async function warmClaude(job, b, here, live) {
+  // anything that changes the bot's standing instructions starts a fresh session
+  const fp = JSON.stringify([job.bot.task, job.bot.model, job.bot.browser, job.bot.livePort, job.notes, job.folderNotes, job.group, (job.colleagues || []).map(c => c.name + c.task), job.allowed, job.lang, storeDir(), job.conv?.id]);
+  let s = sessions.get(job.bot.id), text;
+  const ids = job.history.map(h => h.id || 0), newest = Math.max(0, ...ids);
+  if (s && s.fp === fp && s.convId === job.conv?.id) {
+    clearTimeout(s.timer);
+    // only what happened since the last turn, then the new instruction
+    const fresh = job.history.filter(h => (h.id || 0) > s.lastId && !(h.who === '使用者' && h.text === job.prompt));
+    text = [fresh.length ? '（上次之後的新對話）\n' + fresh.map(h => `【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : '')).join('\n') : '',
+      '先判斷這則指示的類型：只是問問題或要你確認時直接回答，不要使用工具。', '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
+    log(`⚡ ${job.bot.name}：AI 待機中，直接接續`);
+  } else {
+    if (s) closeSession(job.bot.id);
+    s = startSession(job, b);
+    s.fp = fp; s.convId = job.conv?.id;
+    sessions.set(job.bot.id, s);
+    text = buildPrompt(job, here);
+  }
+  s.lastId = newest;
+  live.ctl.kill = () => closeSession(job.bot.id, `${job.bot.name}：已停止`);
+  const res = await new Promise(done => {
+    s.turn = { done, progress: live.progress };
+    try { s.child.stdin.write(JSON.stringify({ type: 'user', message: { role: 'user', content: text } }) + '\n'); }
+    catch (e) { s.turn = null; done({ ok: false, text: '⚠ ' + e.message }); }
+  });
+  if (sessions.get(job.bot.id) === s) {
+    if (job.warm > 0) s.timer = setTimeout(() => closeSession(job.bot.id, `${job.bot.name}：待機 ${job.warm} 秒到了，AI 先休息`), job.warm * 1000);
+    if (!res.ok) closeSession(job.bot.id);   // start clean after an error
+  }
+  return res;
 }
 
 async function testJob(job) {
@@ -530,6 +609,7 @@ export async function ensureBrowser(bot) {
   for (let i = 0; i < 40; i++) { if (await cdpInfo(port)) break; await pause(500); }
   if (!(await cdpInfo(port))) throw new Error('Chrome 沒有啟動');
   browsers.set(bot.id, { port, last: Date.now() });
+  if (sessions.has(bot.id)) closeSession(bot.id);   // a waiting AI was connected to the old browser
   log(`🌐 ${bot.name} 的瀏覽器已在背景開啟`);
   // some systems pull an off-screen window back on screen: then keep it minimised instead
   try {
@@ -581,7 +661,7 @@ async function openJob(job) {
 // browsers idle for 30 minutes and not on screen are closed to save memory (tabs come back next time)
 async function reapBrowsers(all) {
   for (const [id, b] of browsers) {
-    if (busyBots.has(id)) continue;
+    if (busyBots.has(id) || (!all && sessions.has(id))) continue;   // in use, or its AI is waiting (待機)
     if (!all && Date.now() - b.last < 30 * 60000) continue;
     try {
       await cdp(b.port, async send => {
@@ -655,7 +735,7 @@ export function startRunner(opts) {
   const reaper = setInterval(() => reapBrowsers(false).catch(() => { }), 5 * 60000);
   const myCfg = cfg;
   return {
-    stop: () => { stopped = true; poll?.abort(); clearInterval(reaper); reapBrowsers(true).catch(() => { }); if (myCfg.token) fetch(myCfg.url + '/api/runner/bye', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + myCfg.token }, body: '{}' }).catch(() => { }); },
+    stop: () => { stopped = true; poll?.abort(); clearInterval(reaper); reapBrowsers(true).catch(() => { }); for (const id of [...sessions.keys()]) closeSession(id); if (myCfg.token) fetch(myCfg.url + '/api/runner/bye', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + myCfg.token }, body: '{}' }).catch(() => { }); },
     active: () => active, standby: () => standby
   };
 }
