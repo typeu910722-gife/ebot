@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '12.4';
+export const VERSION = '12.5';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -446,6 +446,8 @@ async function runEngine(engine, prompt, b, model, live = {}) {
         'mcp_servers.browser.startup_timeout_sec=60', 'mcp_servers.browser.default_tools_approval_mode="approve"',
         ...Object.entries(server.env || {}).map(([k, v]) => `mcp_servers.browser.env.${k}=${toml(v)}`)];
       r = await spawnCli('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'workspace-write', '-C', dir, '-o', last, ...m('-m'), ...c.flatMap(x => ['-c', x]), '-'], dir, prompt);
+      // Codex's sandbox isn't available on every Windows setup: run without it rather than not at all (other engines run unsandboxed too)
+      if (r.code !== 0 && /sandbox/i.test(r.err || '')) r = await spawnCli('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'danger-full-access', '-C', dir, '-o', last, ...m('-m'), ...c.flatMap(x => ['-c', x]), '-'], dir, prompt);
       try { text = readFileSync(last, 'utf8').trim(); } catch { }
       break;
     }
@@ -492,7 +494,17 @@ async function runEngine(engine, prompt, b, model, live = {}) {
   if (r.missing) return { ok: false, text: `⚠ 這台電腦沒有安裝 ${E.label}。請到「AI 連線」安裝並登入（${E.site}），或在任務設定把這個機器人改用其他 AI。` };
   if (tokens == null) { const tm = String((r.err || '') + (r.out || '')).match(/tokens used[:\s]*([\d,]+)/i); if (tm) tokens = +tm[1].replace(/,/g, ''); }
   if (r.code === 0 && text) return { ok: true, text, tokens };
-  return { ok: false, text: `⚠ ${E.label} 執行失敗：` + ((r.err || '').trim() || (r.out || '').trim() || '結束碼 ' + r.code).slice(-1500) };
+  return { ok: false, text: `⚠ ${E.label} 執行失敗：` + failText(r, prompt) };
+}
+// the useful part of a failed run: CLIs like Codex echo the whole prompt into their log, which buried the real error
+function failText(r, prompt) {
+  let t = String((r.err || '').trim() || (r.out || '').trim()).replace(/\x1b\[[0-9;]*m/g, '');
+  if (!t) return '結束碼 ' + r.code;
+  const errs = [...new Set(t.split('\n').map(l => l.trim()).filter(l => /^(error|錯誤)\b|^\[?error\]?[:\s]|\berror:\s|exception\b|failed\b/i.test(l)))];
+  if (errs.length) return errs.slice(-8).join('\n').slice(-1200);
+  const p = String(prompt || '').trim();
+  if (p) { const tail = p.slice(-200), i = t.lastIndexOf(tail); if (i >= 0) t = t.slice(i + tail.length).trim() || '（沒有錯誤訊息，結束碼 ' + r.code + '）'; }
+  return t.slice(-1200);
 }
 
 // ---------- job handlers ----------

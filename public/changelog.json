@@ -1,5 +1,21 @@
 [
  {
+  "v": "2.2.6",
+  "date": "2026-10-22",
+  "notes": [
+   "修正 AI 執行失敗時把整段內部指令貼到對話裡：現在只顯示真正的錯誤原因",
+   "ChatGPT（Codex）在 Windows 無法使用沙盒時，自動改用一般模式重試"
+  ],
+  "notes_en": [
+   "Failed AI runs no longer paste OCTA’s internal instructions into the chat — only the real error is shown",
+   "ChatGPT (Codex) retries without its sandbox when the sandbox isn’t available on Windows"
+  ],
+  "notes_ja": [
+   "AI の実行失敗時に内部指示が丸ごと表示される問題を修正。本当のエラーだけを表示",
+   "ChatGPT（Codex）は Windows でサンドボックスが使えない場合、通常モードで再試行"
+  ]
+ },
+ {
   "v": "2.2.5",
   "date": "2026-10-22",
   "notes": [
