@@ -69,7 +69,14 @@ async function auth(req, db) {
   return s;
 }
 const clean = (s, max) => String(s ?? '').trim().slice(0, max);
-const cleanTimes = a => [...new Set((Array.isArray(a) ? a : []).filter(s => /^([01]\d|2[0-3]):[0-5]\d$/.test(s)))].sort().slice(0, 12);
+// routine times: "HH:MM" every day, or "*/N" every N minutes (5–720)
+const isEvery = t => /^\*\/\d+$/.test(t);
+const cleanTimes = a => {
+  const list = Array.isArray(a) ? a : [];
+  const fixed = [...new Set(list.filter(s => /^([01]\d|2[0-3]):[0-5]\d$/.test(s)))].sort().slice(0, 12);
+  const ev = list.map(s => String(s).match(/^\*\/(\d+)$/)).filter(Boolean).map(mm => Math.min(720, Math.max(5, +mm[1])))[0];
+  return ev ? ['*/' + ev, ...fixed] : fixed;
+};
 const localNow = (env, t = now()) => {
   const d = new Date(t + (+env.TZ_OFFSET_MIN || 0) * 60000);
   return { date: d.toISOString().slice(0, 10), hm: d.toISOString().slice(11, 16) };
@@ -185,13 +192,20 @@ async function fireRoutines(env, db, userId, byHost) {
   let n = 0, all = null, hostOnline = null;
   for (const r of list) {
     const fired = JSON.parse(r.fired || '{}');
-    const due = JSON.parse(r.times).filter(t => t <= hm && fired[t] !== date);
+    const times = JSON.parse(r.times);
+    const due = times.filter(t => !isEvery(t) && t <= hm && fired[t] !== date);
+    // "every N minutes": due when N minutes passed since the last run, and the previous run is finished
+    const ev = times.find(isEvery);
+    if (ev && now() - (+fired[ev] || 0) >= (+ev.slice(2)) * MIN - 30000) {
+      const open = await db.prepare("SELECT 1 FROM jobs WHERE user_id=? AND conv=? AND status IN ('pending','running') LIMIT 1").bind(userId, r.conv).first();
+      if (!open) due.push(ev);
+    }
     if (!due.length) continue;
-    due.forEach(t => (fired[t] = date));
+    due.forEach(t => (fired[t] = isEvery(t) ? now() : date));
     const upd = await db.prepare("UPDATE routines SET fired=? WHERE id=? AND IFNULL(fired,'')=IFNULL(?,'')").bind(JSON.stringify(fired), r.id, r.fired).run();
     if (!upd.meta.changes) continue;   // someone else fired it
-    const t = due[due.length - 1];
-    if (pc && hm >= '00:10' && t < late) { await addMsg(db, userId, r.conv, 'sys', `${t} 例行任務「${r.name}」：電腦當時沒開，已略過`); n++; continue; }
+    const t = isEvery(due[due.length - 1]) ? hm : due[due.length - 1];
+    if (pc && !isEvery(due[due.length - 1]) && hm >= '00:10' && t < late) { await addMsg(db, userId, r.conv, 'sys', `${t} 例行任務「${r.name}」：電腦當時沒開，已略過`); n++; continue; }
     all = all || await loadAll(db, userId);
     const g = all.groups.find(x => x.id === r.conv), b = all.bots.find(x => x.id === r.conv);
     if (!g && !b) continue;
@@ -878,7 +892,7 @@ async function route({ request: req, env, params }) {
         const plans = [];
         if (good && job.kind === 'chat') {
           text = text.replace(/^\s*⏰\s*例行任務[:：]\s*(.+?)\s*[｜|]\s*(.+?)\s*[｜|]\s*(.+)$/gm, (_, n, t, p) => {
-            const times = cleanTimes(String(t).split(/[,，、\s]+/).map(x => { const mm = x.match(/^(\d{1,2})[:：](\d{2})$/); return mm ? mm[1].padStart(2, '0') + ':' + mm[2] : ''; }));
+            const times = cleanTimes(String(t).replace(/每\s*(\d+)\s*分(鐘)?/g, '*/$1').replace(/每\s*(\d+)\s*小時/g, (_, h) => '*/' + h * 60).split(/[,，、\s]+/).map(x => { if (/^\*\/\d+$/.test(x)) return x; const mm = x.match(/^(\d{1,2})[:：](\d{2})$/); return mm ? mm[1].padStart(2, '0') + ':' + mm[2] : ''; }));
             if (clean(n, 40) && times.length) plans.push({ name: clean(n, 40), times, prompt: clean(p, 2000) });
             return '';
           }).trim() || '（已設定例行任務）';
@@ -897,11 +911,11 @@ async function route({ request: req, env, params }) {
         await addMsg(db, U, job.conv, job.bot_id, text, outs);
         for (const r of plans.slice(0, 5)) {
           const { date, hm } = localNow(env);
-          const fired = JSON.stringify(Object.fromEntries(r.times.filter(t => t <= hm).map(t => [t, date])));   // times already past today start tomorrow
+          const fired = JSON.stringify(Object.fromEntries(r.times.filter(t => !isEvery(t) && t <= hm).map(t => [t, date])));   // times already past today start tomorrow
           const old = await db.prepare('SELECT id FROM routines WHERE user_id=? AND conv=? AND name=?').bind(U, job.conv, r.name).first();
           if (old) await db.prepare('UPDATE routines SET times=?,prompt=?,enabled=1,fired=? WHERE id=?').bind(JSON.stringify(r.times), r.prompt, fired, old.id).run();
           else await db.prepare('INSERT INTO routines (id,user_id,conv,name,prompt,times,enabled,fired,created) VALUES (?,?,?,?,?,?,1,?,?)').bind('r-' + uid(), U, job.conv, r.name, r.prompt, JSON.stringify(r.times), fired, now()).run();
-          await addMsg(db, U, job.conv, 'sys', `已${old ? '更新' : '新增'}例行任務「${r.name}」：每天 ${r.times.join('、')}`);
+          await addMsg(db, U, job.conv, 'sys', `已${old ? '更新' : '新增'}例行任務「${r.name}」：${r.times.map(t => isEvery(t) ? `每 ${t.slice(2)} 分鐘` : '每天 ' + t).join('、')}`);
         }
         if (learned && learned.length >= 4) {
           const cur = await db.prepare('SELECT task FROM bots WHERE id=? AND user_id=?').bind(job.bot_id, U).first();
@@ -1146,7 +1160,7 @@ async function route({ request: req, env, params }) {
       if (!bots.some(b => b.id === conv) && !groups.some(g => g.id === conv)) return err('找不到對話', 404);
       if (!name || !times.length) return err('名稱和時間都要填');
       const { date, hm } = localNow(env);   // times already past today start tomorrow
-      const fired = Object.fromEntries(times.filter(t => t <= hm).map(t => [t, date]));
+      const fired = Object.fromEntries(times.filter(t => !isEvery(t) && t <= hm).map(t => [t, date]));
       await db.prepare('INSERT INTO routines (id,user_id,conv,name,prompt,times,enabled,fired,created) VALUES (?,?,?,?,?,?,1,?,?)')
         .bind('r-' + uid(), U, conv, name, clean(body.prompt, 2000), JSON.stringify(times), JSON.stringify(fired), now()).run();
       return ok();
@@ -1162,7 +1176,7 @@ async function route({ request: req, env, params }) {
         let fired = r.fired;
         if (enabled && !r.enabled || body.times) {   // turning on or changing times: don't fire times already past today
           const { date, hm } = localNow(env);
-          fired = JSON.stringify(Object.fromEntries(times.filter(t => t <= hm).map(t => [t, date])));
+          fired = JSON.stringify(Object.fromEntries(times.filter(t => !isEvery(t) && t <= hm).map(t => [t, date])));
         }
         await db.prepare('UPDATE routines SET name=?,prompt=?,times=?,enabled=?,fired=? WHERE id=?')
           .bind(name, body.prompt === undefined ? r.prompt : clean(body.prompt, 2000), JSON.stringify(times), enabled, fired, id).run();

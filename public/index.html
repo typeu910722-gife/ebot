@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=10"></script>
+<script src="/i18n-dict.js?v=11"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -989,7 +989,10 @@ $('nf').onclick=()=>folderSheet(null);
 
 /* ---------- routines (例行任務) ---------- */
 const hm12=t=>{const [h,m]=t.split(':').map(Number);return new Date(2000,0,1,h,m).toLocaleTimeString(I18N.lang,{hour:'numeric',minute:'2-digit'})};
-const timesText=ts=>I18N.t('每天')+' '+ts.map(hm12).join(I18N.lang==='en'?', ':'、');
+const EVERY=[0,15,30,60,120,240];
+const everyText=n=>n>=60?I18N.t('每')+' '+(n/60)+' '+I18N.t('小時'):I18N.t('每')+' '+n+' '+I18N.t('分鐘');
+const timesText=ts=>{const ev=ts.find(t=>t.startsWith('*/')),fx=ts.filter(t=>!t.startsWith('*/'));
+  return [ev?everyText(+ev.slice(2)):'',fx.length?I18N.t('每天')+' '+fx.map(hm12).join(I18N.lang==='en'?', ':'、'):''].filter(Boolean).join(I18N.lang==='en'?'; ':'；')};
 let rtEdit=null;
 function renderRoutines(){const box=$('rt');if(!box)return;const list=S.routines.filter(r=>r.conv===cur);
   box.innerHTML=list.map(r=>rtEdit===r.id?rForm(r):`<div class="rrow" data-r="${r.id}" role="button" tabindex="0"><span class="t"><b data-u>${esc(r.name)}</b><small data-u>${timesText(r.times)}</small></span><button type="button" class="sw ${r.enabled?'on':''}" data-sw="${r.id}" aria-label="${r.enabled?'停用':'啟用'}" aria-pressed="${r.enabled}"></button></div>`).join('')
@@ -1004,12 +1007,13 @@ function renderRoutines(){const box=$('rt');if(!box)return;const list=S.routines
   const del=f.querySelector('[data-del]');if(del)del.onclick=async()=>{if(!del.dataset.sure){del.dataset.sure=1;del.textContent='再按一次刪除';return}
     await api('routines/'+rtEdit,'DELETE');rtEdit=null;await refresh();renderRoutines()};
   f.querySelector('[data-save]').onclick=async()=>{const body={name:f.querySelector('[name=rn]').value,prompt:f.querySelector('[name=rp]').value,
-      times:[...f.querySelectorAll('.times input')].map(i=>i.value).filter(Boolean)};
+      times:[...(+f.querySelector('[name=rev]').value?['*/'+f.querySelector('[name=rev]').value]:[]),...[...f.querySelectorAll('.times input')].map(i=>i.value).filter(Boolean)]};
     try{if(rtEdit==='new')await api('routines','POST',{...body,conv:cur});else await api('routines/'+rtEdit,'PUT',body);
       rtEdit=null;await refresh();renderRoutines()}catch(err){f.querySelector('.errmsg').textContent=err.message}};
 }
 function rForm(r){return `<div class="rform"><label class="field">名稱<input name="rn" maxlength="40" value="${r?esc(r.name):''}" placeholder="例如：早上整理訂單"></label>
-  <div class="field">每天的時間<div class="times">${(r?r.times:['08:00']).map(t=>`<input type="time" value="${t}">`).join('')}<button type="button" data-add>＋ 時間</button></div></div>
+  <label class="field">每隔一段時間做一次（例如巡訊息）<select name="rev">${EVERY.map(n=>`<option value="${n}" ${(r?.times||[]).includes('*/'+n)?'selected':''}>${n?everyText(n):I18N.t('不用')}</option>`).join('')}</select></label>
+  <div class="field">每天固定的時間（可以不填）<div class="times">${(r?r.times.filter(t=>!t.startsWith('*/')):['08:00']).map(t=>`<input type="time" value="${t}">`).join('')}<button type="button" data-add>＋ 時間</button></div></div>
   <label class="field">要做什麼（選填，空白就執行指定任務）<textarea name="rp" maxlength="2000" style="min-height:70px">${r?esc(r.prompt||''):''}</textarea></label>
   <div class="errmsg"></div>
   <div class="acts">${r?'<button type="button" class="del" data-del>刪除</button>':''}<button type="button" class="no" data-cancel>取消</button><button type="button" class="btn" data-save>${r?'儲存':'加入'}</button></div></div>`}

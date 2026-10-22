@@ -4,6 +4,8 @@
   "date": "2026-10-22",
   "notes": [
    "建立機器人可以不先寫任務：直接傳訊息告訴它要做什麼，它會自己整理並自動填入「指定任務」，之後補充做法也會自動更新",
+   "機器人更自主：理解目標後自己一路做完，做完列出需要你決定的事並附建議；回覆客人這類事會先擬好讓你一鍵核准",
+   "例行任務可以設定「每隔 15 分鐘／30 分鐘／1 小時…」持續巡查，也可以在對話裡叫它自己設定",
    "在對話裡說「每天幾點做什麼」，機器人會自動新增或更新例行任務",
    "機器人每次工作前會知道自己瀏覽器開著哪些分頁；問「你看到什麼」時會先去看再回答",
    "對話上方顯示每個機器人今天消耗的 token（群組顯示成員合計；Claude、ChatGPT 有數字，其他 AI 顯示執行次數）",
@@ -11,6 +13,8 @@
   ],
   "notes_en": [
    "Bots no longer need a task up front: tell it what to do in the chat and it writes and keeps its own task up to date",
+   "More autonomous bots: they plan and finish the work, then list what needs your decision with a suggestion; things like customer replies are drafted for one-tap approval",
+   "Routines can repeat every 15/30/60… minutes for continuous checks, and bots can set them up from the chat",
    "Say “every day at … do …” in the chat and the bot creates or updates the routine itself",
    "Bots know which tabs their browser has open before each task, and look before answering “what do you see?”",
    "The chat header shows the tokens each bot used today (groups show the members' total; Claude and ChatGPT report numbers, other AIs show run counts)",
@@ -18,6 +22,8 @@
   ],
   "notes_ja": [
    "ボットは最初にタスクを書かなくて OK：チャットで伝えると自分でタスクにまとめ、追加の説明も自動で反映",
+   "ボットがより自律的に：目標を理解して最後までやり、判断が必要なことを提案付きで列挙。お客様への返信などは下書きしてワンタップ承認",
+   "定期タスクを「15 分／30 分／1 時間ごと」に設定して継続チェック可能。チャットでボットに設定させることも可能",
    "チャットで「毎日○時に…」と伝えると、ボットが定期タスクを自動で追加・更新",
    "ボットは作業前にブラウザで開いているタブを把握し、「何が見える？」には確認してから回答",
    "チャット上部に各ボットの今日の使用トークンを表示（グループはメンバー合計。Claude と ChatGPT は数値、他の AI は実行回数）",
