@@ -95,7 +95,7 @@ async function addJob(db, userId, conv, chain, prompt, depth = 0) {
 }
 async function loadAll(db, userId) {
   const [b, g, f, r] = await db.batch([
-    db.prepare('SELECT id,name,task,folder,engine,model,avatar,browser,shot_ts,shot_file,page FROM bots WHERE user_id=? ORDER BY created').bind(userId),
+    db.prepare('SELECT id,name,task,folder,engine,model,avatar,browser,shot_ts,shot_file,page,bpc FROM bots WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,name,task,members,folder FROM groups_ WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,name,notes FROM folders WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,conv,name,prompt,times,enabled,hook,watch FROM routines WHERE user_id=? ORDER BY created').bind(userId)
@@ -149,12 +149,13 @@ const MIGRATIONS = [
   'CREATE TABLE IF NOT EXISTS logins (k TEXT PRIMARY KEY, fails INTEGER NOT NULL, until INTEGER NOT NULL)',
   'ALTER TABLE jobs ADD COLUMN progress TEXT', 'ALTER TABLE jobs ADD COLUMN tokens INTEGER',
   'ALTER TABLE routines ADD COLUMN hook TEXT', 'ALTER TABLE routines ADD COLUMN watch TEXT', 'ALTER TABLE routines ADD COLUMN wstate TEXT',
-  'CREATE INDEX IF NOT EXISTS routine_hook ON routines(hook)'
+  'CREATE INDEX IF NOT EXISTS routine_hook ON routines(hook)',
+  'ALTER TABLE files ADD COLUMN pc TEXT', 'ALTER TABLE bots ADD COLUMN bpc TEXT', 'ALTER TABLE jobs ADD COLUMN pc TEXT'
 ];
 let schemaOk = false;
 async function ensureSchema(db) {
   if (schemaOk) return;
-  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress, tokens FROM jobs LIMIT 0').all(); await db.prepare('SELECT hook, watch, wstate FROM routines LIMIT 0').all(); schemaOk = true; return; } catch { }
+  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress, tokens FROM jobs LIMIT 0').all(); await db.prepare('SELECT hook, watch, wstate FROM routines LIMIT 0').all(); await db.prepare('SELECT pc FROM files LIMIT 0').all(); await db.prepare('SELECT bpc FROM bots LIMIT 0').all(); await db.prepare('SELECT pc FROM jobs LIMIT 0').all(); schemaOk = true; return; } catch { }
   for (const sql of MIGRATIONS) { try { await db.prepare(sql).run(); } catch { } }
   schemaOk = true;
 }
@@ -820,13 +821,14 @@ async function route({ request: req, env, params }) {
     // ---------- files ----------
     if (path.startsWith('file/') && m === 'GET') {
       const id = path.slice(5);
-      let f = await db.prepare('SELECT id,name,mime,data,loc,want,path,size FROM files WHERE id=? AND user_id=?').bind(id, U).first();
+      let f = await db.prepare('SELECT id,name,mime,data,loc,want,path,size,pc FROM files WHERE id=? AND user_id=?').bind(id, U).first();
       if (!f) return err('找不到檔案', 404);
       // where the file is: the desktop app on the host computer reads it from its own disk instead of through the cloud
       if (url.searchParams.has('meta')) return J({ name: f.name, mime: f.mime, loc: f.loc || (f.data ? 'db' : 'cloud'), path: f.loc === 'pc' ? f.path : null, size: f.size || null });
       if (f.data) return J({ name: f.name, mime: f.mime, data: f.data });   // older files kept in the database
       if (f.loc === 'pc' && f.want !== -1) {
-        // the file is on the host computer: ask it for a temporary copy and wait
+        // the file is on the computer that made it (host or not): ask it for a temporary copy and wait
+        const pcOf = f.pc || null;
         if (!f.want || now() - f.want > MIN) { await db.prepare('UPDATE files SET want=? WHERE id=?').bind(now(), id).run(); await bump(db, U); }
         const t0 = now();
         while (now() - t0 < 20000) {
@@ -834,7 +836,13 @@ async function route({ request: req, env, params }) {
           f = await db.prepare('SELECT want FROM files WHERE id=?').bind(id).first();
           if (f?.want === -1) break;
         }
-        if (f?.want !== -1) return err((await hostInfo(db, U)).online || env.isLocal ? '電腦還在讀取檔案，請稍後再試' : '這個檔案存在主機電腦上，電腦目前離線', 503);
+        if (f?.want !== -1) {
+          if (env.isLocal) return err('電腦還在讀取檔案，請稍後再試', 503);
+          const h = await hostInfo(db, U), owner = pcOf, on = owner ? h.runners.find(r => (r.label || 'runner') === owner) : null;
+          const who = (owner || h.hostLabel || '').replace(/^desktop:/, '');
+          if (owner && owner !== h.hostLabel) return err(on && now() - (on.seen || 0) < HOST_ONLINE_MS ? `檔案在「${who}」電腦上，還在讀取，請稍後再試` : `這個檔案存在「${who}」電腦上，那台電腦目前離線。打開那台電腦的 OCTA 就能讀取`, 503);
+          return err(h.online ? '電腦還在讀取檔案，請稍後再試' : '這個檔案存在主機電腦上，電腦目前離線', 503);
+        }
         f = await db.prepare('SELECT name,mime FROM files WHERE id=?').bind(id).first();
       }
       return J({ name: f.name, mime: f.mime, data: await readChunks(db, id) });
@@ -878,7 +886,18 @@ async function route({ request: req, env, params }) {
         if (!hostExists) { await db.prepare('UPDATE users SET host=? WHERE id=?').bind(label, U).run(); await bump(db, U); isHost = true; }   // first computer becomes the host
         else isHost = u.host === label;
       }
-      if (!isHost && path !== 'runner/done') {
+      // a computer on standby still sends files that live on it, and does jobs addressed to it (handing logins over)
+      if (!isHost && path === 'runner/next' && m === 'POST') {
+        const t0 = now(); let rev = null;
+        for (; ;) {
+          const u2 = await db.prepare('SELECT rev, host FROM users WHERE id=?').bind(U).first(), r = u2?.rev ?? 0;
+          if (u2?.host === label) return J({ job: null });   // this computer just became the host: ask again as the host
+          if (r !== rev) { rev = r; const w = await pcWork(env, db, U, label, body.slots === undefined ? 1 : +body.slots); if (w) return J({ ...w, standby: true }); }
+          if (!body.wait || now() - t0 > WAIT_MS) return J({ job: null, standby: true });
+          await sleep(1000);
+        }
+      }
+      if (!isHost && !['runner/done', 'runner/blob', 'runner/xfer', 'runner/progress'].includes(path)) {
         if (body.wait) await sleep(WAIT_MS);
         return J({ job: null, standby: true });
       }
@@ -897,10 +916,11 @@ async function route({ request: req, env, params }) {
         const t0 = now();
         let rev = null;
         for (; ;) {
-          const r = (await db.prepare('SELECT rev FROM users WHERE id=?').bind(U).first())?.rev ?? 0;
+          const u2 = await db.prepare('SELECT rev, host FROM users WHERE id=?').bind(U).first(), r = u2?.rev ?? 0;
           if (r !== rev) {   // something changed since the last look
             rev = r;
-            const out = await nextWork(env, db, U, slots);
+            if (me.kind === 'runner' && u2.host !== label) return J({ job: null, standby: true });   // another computer just became the host
+            const out = await nextWork(env, db, U, slots, me.kind === 'runner' ? label : null);
             if (out) return J(out);
           }
           if (!body.wait || now() - t0 > WAIT_MS) return J({ job: null });
@@ -934,10 +954,29 @@ async function route({ request: req, env, params }) {
         const p = safePath(body.path);
         if (!p) return err('路徑不正確');
         await db.batch([
-          db.prepare("UPDATE files SET loc='pc', path=?, size=COALESCE(?,size), want=NULL WHERE id=? AND user_id=?").bind(p, +body.size || null, clean(body.id, 64), U),
+          db.prepare("UPDATE files SET loc='pc', path=?, size=COALESCE(?,size), want=NULL, pc=? WHERE id=? AND user_id=?").bind(p, +body.size || null, me.kind === 'runner' ? label : null, clean(body.id, 64), U),
           db.prepare('DELETE FROM chunks WHERE file_id=?').bind(clean(body.id, 64))
         ]);
         return J({ ok: true });
+      }
+      if (path === 'runner/xfer' && m === 'POST') {   // the old computer's logins, kept here only until the host takes them
+        const job = await db.prepare("SELECT * FROM jobs WHERE id=? AND user_id=? AND kind='export' AND status='running'").bind(+body.id, U).first();
+        if (!job) return err('找不到任務', 404);
+        const n = Math.max(0, Math.floor(+body.n || 0)), data = String(body.data || '');
+        if (data.length > CHUNK + 10 || n > 20) return err('資料太大');
+        await db.prepare('INSERT OR REPLACE INTO chunks (file_id,n,data,ts) VALUES (?,?,?,?)').bind('xfer-' + job.id, n, data, now()).run();
+        if (body.last) {
+          await db.prepare("UPDATE jobs SET status='done', finished=? WHERE id=?").bind(now(), job.id).run();
+          await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url,pc) VALUES (?,?,?,'[]','',?,'import',?,?)").bind(U, job.conv, job.bot_id, now(), 'xfer-' + job.id, job.url).run();
+          await bump(db, U);
+        }
+        return J({ ok: true });
+      }
+      if (path.startsWith('runner/xfer/') && m === 'GET') {
+        const id = path.slice('runner/xfer/'.length);
+        const job = await db.prepare("SELECT 1 FROM jobs WHERE user_id=? AND kind='import' AND url=? AND status='running'").bind(U, id).first();
+        if (!job) return err('找不到資料', 404);
+        return J({ data: await readChunks(db, id) });
       }
       if (path === 'runner/blob' && m === 'POST') {   // temporary copy of a file someone wants to see
         const id = clean(body.id, 64);
@@ -954,6 +993,16 @@ async function route({ request: req, env, params }) {
         const job = await db.prepare("SELECT * FROM jobs WHERE id=? AND user_id=? AND status='running'").bind(+body.id, U).first();
         if (!job) return err('找不到執行中的任務', 404);
         const good = body.ok !== false;
+        if (job.kind === 'export' || job.kind === 'import') {   // handing a bot's website logins to another computer
+          await db.prepare('UPDATE jobs SET status=?, finished=?, result=? WHERE id=?').bind(good ? 'done' : 'error', now(), clean(body.text, 3000), job.id).run();
+          if (job.kind === 'import' || !good) {
+            await db.prepare('DELETE FROM chunks WHERE file_id=?').bind(job.kind === 'import' ? job.url : 'xfer-' + job.id).run();
+            if (good) await db.prepare('UPDATE bots SET bpc=? WHERE id=? AND user_id=?').bind(job.pc || null, job.bot_id, U).run();
+            await addMsg(db, U, job.conv, 'sys', clean(body.text, 500) || (good ? '已帶入網站登入' : '⚠ 帶入網站登入失敗'));
+            await bump(db, U);
+          }
+          return ok();
+        }
         if (job.kind === 'test' || job.kind === 'list' || job.kind === 'install') {
           await db.prepare('UPDATE jobs SET status=?, finished=?, result=? WHERE id=?').bind(good ? 'done' : 'error', now(), clean(body.text, 3000), job.id).run();
           return ok();
@@ -989,13 +1038,18 @@ async function route({ request: req, env, params }) {
         }
         const tk = Number.isFinite(+body.tokens) && body.tokens !== null ? Math.max(0, Math.round(+body.tokens)) : null;
         await db.prepare('UPDATE jobs SET status=?, finished=?, tokens=? WHERE id=?').bind(good ? 'done' : 'error', now(), tk, job.id).run();
+        // where its website logins live: the first computer its browser ran on, until they're moved
+        if (me.kind === 'runner' && body.browser) await db.prepare('UPDATE bots SET bpc=? WHERE id=? AND user_id=? AND bpc IS NULL').bind(label, job.bot_id, U).run();
+        if (body.nskills && typeof body.nskills === 'object' && JSON.stringify(body.nskills).length < 300000) {   // the bot's own Claude Code skills, kept with the account
+          const st = await getSettings(db, U); st.nskills = st.nskills || {}; st.nskills[job.bot_id] = { h: clean(body.nskills.h, 64), files: body.nskills.files || {} }; await putSettings(db, U, st);
+        }
         // files the bot made in its 輸出 folder become attachments of the reply
         const outs = [];
         for (const f of (Array.isArray(body.files) ? body.files : []).slice(0, 8)) {
           const p = safePath(f.path), name = clean(f.name, 120);
           if (!p || !name) continue;
           const id = 'file-' + uid(), mime = mimeOf(name, f.mime);
-          await db.prepare("INSERT INTO files (id,user_id,name,mime,data,ts,conv,loc,path,size) VALUES (?,?,?,?,'',?,?,'pc',?,?)").bind(id, U, name, mime, now(), job.conv, p, +f.size || null).run();
+          await db.prepare("INSERT INTO files (id,user_id,name,mime,data,ts,conv,loc,path,size,pc) VALUES (?,?,?,?,'',?,?,'pc',?,?,?)").bind(id, U, name, mime, now(), job.conv, p, +f.size || null, me.kind === 'runner' ? label : null).run();
           outs.push({ id, name, mime });
         }
         await addMsg(db, U, job.conv, job.bot_id, text, outs);
@@ -1062,8 +1116,8 @@ async function route({ request: req, env, params }) {
         const old = await db.prepare('SELECT shot_file FROM bots WHERE id=? AND user_id=?').bind(job.bot_id, U).first();
         const id = 'file-' + uid();
         await db.batch([
-          db.prepare("INSERT INTO files (id,user_id,name,mime,data,ts,conv,loc,path,size) VALUES (?,?,?,?,'',?,?,'pc',?,?)").bind(id, U, name, mimeOf(name, body.mime), now(), job.conv, p, +body.size || null),
-          db.prepare('UPDATE bots SET shot_ts=?, shot_file=? WHERE id=? AND user_id=?').bind(now(), id, job.bot_id, U),
+          db.prepare("INSERT INTO files (id,user_id,name,mime,data,ts,conv,loc,path,size,pc) VALUES (?,?,?,?,'',?,?,'pc',?,?,?)").bind(id, U, name, mimeOf(name, body.mime), now(), job.conv, p, +body.size || null, me.kind === 'runner' ? label : null),
+          db.prepare('UPDATE bots SET shot_ts=?, shot_file=?, bpc=IFNULL(bpc,?) WHERE id=? AND user_id=?').bind(now(), id, me.kind === 'runner' ? label : null, job.bot_id, U),
           db.prepare('DELETE FROM files WHERE id=? AND user_id=?').bind(old?.shot_file || '', U),
           db.prepare('DELETE FROM chunks WHERE file_id=?').bind(old?.shot_file || ''),
           db.prepare('DELETE FROM shots WHERE bot_id=? AND user_id=?').bind(job.bot_id, U)
@@ -1108,7 +1162,7 @@ async function route({ request: req, env, params }) {
         me: me.name, local: me.kind === 'local', rev: rev.results[0]?.rev ?? 0,
         engines: h ? h.engines : JSON.parse((await db.prepare('SELECT engines FROM users WHERE id=?').bind(U).first())?.engines || 'null'),
         runnerOnline: env.runnerOnline ? env.runnerOnline() : h.online,
-        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {}, pins: st.pins || [], mute: st.mute || {}, memory: st.memory || {}, skills: st.skills || {}, warm: WARM.includes(+st.warm) ? +st.warm : 120, models: h ? h.models : st._models || null,
+        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {}, pins: st.pins || [], mute: st.mute || {}, memory: st.memory || {}, skills: st.skills || {}, nsk: Object.fromEntries(Object.entries(st.nskills || {}).map(([k, v]) => [k, [...new Set(Object.keys(v.files || {}).map(p => p.split('/')[0]))]])), warm: WARM.includes(+st.warm) ? +st.warm : 120, models: h ? h.models : st._models || null,
         ...all, last: last.results, ur: ur.results.map(r => [r.conv, r.id]), busy: busy.results
       });
     }
@@ -1185,6 +1239,21 @@ async function route({ request: req, env, params }) {
       await db.prepare('INSERT INTO bots (id,user_id,name,task,folder,engine,model,avatar,browser,created) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(id, U, name, task, folderOk(folders, body.folder), engine, modelOk(engine, body.model), avatarOk(body.avatar), body.browser === 'mine' ? 'mine' : null, now()).run();
       await addMsg(db, U, id, 'sys', task ? '機器人已建立' : '機器人已建立：直接傳訊息告訴它要做什麼，它會自己整理成指定任務');
       return ok({ id });
+    }
+    if (path.startsWith('bots/') && path.endsWith('/bring-logins') && m === 'POST') {   // move a bot's website logins to the host computer
+      const id = path.slice(5, -'/bring-logins'.length);
+      const b = await db.prepare('SELECT id,bpc FROM bots WHERE id=? AND user_id=?').bind(id, U).first();
+      if (!b) return err('找不到機器人', 404);
+      const h = await hostInfo(db, U);
+      if (!b.bpc) return err('這個機器人還沒在任何電腦上用過自己的瀏覽器');
+      if (b.bpc === h.hostLabel) return err('它的網站登入已經在主機電腦上了');
+      const old = h.runners.find(r => (r.label || 'runner') === b.bpc), who = b.bpc.replace(/^desktop:/, '');
+      if (!old) return err(`找不到「${who}」電腦（可能已移除）`);
+      if (now() - (old.seen || 0) >= HOST_ONLINE_MS) return err(`「${who}」電腦目前離線，請先打開那台電腦的 OCTA`, 409);
+      if (!h.online) return err('主機電腦離線', 409);
+      const r = await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url,pc) VALUES (?,?,?,'[]','',?,'export',?,?)").bind(U, id, id, now(), h.hostLabel, b.bpc).run();
+      await addMsg(db, U, id, 'sys', `正在從「${who}」電腦把網站登入帶到主機…`);
+      return ok({ id: r.meta.last_row_id });
     }
     if (path.startsWith('bots/')) {
       const id = path.slice(5);
@@ -1524,16 +1593,27 @@ async function newResetCode(db, userId) {
 }
 
 // what the host computer should do next: a job (if it has a free slot), uploads to save, files to send
-async function nextWork(env, db, U, slots) {
-  const files = (await db.prepare("SELECT id,name,mime,conv,loc,path FROM files WHERE user_id=? AND ((loc='cloud' AND conv IS NOT NULL) OR (loc='pc' AND want>?)) LIMIT 10").bind(U, now() - MIN).all()).results;
+// what a computer on standby should do: send files that live on it, jobs addressed to it
+async function pcWork(env, db, U, label, slots) {
+  const pull = (await db.prepare("SELECT id,path FROM files WHERE user_id=? AND loc='pc' AND want>? AND pc=? LIMIT 10").bind(U, now() - MIN, label).all()).results;
+  let job = null;
+  if (slots > 0) {
+    const j = await db.prepare("SELECT * FROM jobs WHERE user_id=? AND status='pending' AND pc=? AND kind='export' ORDER BY id LIMIT 1").bind(U, label).first();
+    if (j && (await db.prepare("UPDATE jobs SET status='running', started=? WHERE id=? AND status='pending'").bind(now(), j.id).run()).meta.changes) job = await jobPayload(env, db, U, j);
+  }
+  return job || pull.length ? { job, inbox: [], pull } : null;
+}
+async function nextWork(env, db, U, slots, label = null) {
+  // files that live on another computer are sent by that computer
+  const files = (await db.prepare("SELECT id,name,mime,conv,loc,path FROM files WHERE user_id=? AND ((loc='cloud' AND conv IS NOT NULL) OR (loc='pc' AND want>? AND (pc IS NULL OR pc=? OR ? IS NULL))) LIMIT 10").bind(U, now() - MIN, label, label).all()).results;
   const inbox = files.filter(f => f.loc === 'cloud').map(f => ({ id: f.id, name: f.name, conv: f.conv }));
   const pull = files.filter(f => f.loc === 'pc').map(f => ({ id: f.id, path: f.path }));
   let job = null;
   if (slots > 0) {
     // one task per bot at a time; showing its browser on screen ('open') never waits
-    const j = await db.prepare(`SELECT * FROM jobs j WHERE user_id=? AND status='pending'
+    const j = await db.prepare(`SELECT * FROM jobs j WHERE user_id=? AND status='pending' AND (j.pc IS NULL OR j.pc=?)
       AND (j.kind='open' OR NOT EXISTS (SELECT 1 FROM jobs r WHERE r.user_id=j.user_id AND r.bot_id=j.bot_id AND r.status='running' AND r.kind<>'open'))
-      ORDER BY (j.kind='open') DESC, id LIMIT 1`).bind(U).first();
+      ORDER BY (j.kind='open') DESC, id LIMIT 1`).bind(U, label || '').first();
     if (j) {
       const claimed = await db.prepare("UPDATE jobs SET status='running', started=? WHERE id=? AND status='pending'").bind(now(), j.id).run();
       if (claimed.meta.changes) { await bump(db, U); job = await jobPayload(env, db, U, j); }
@@ -1548,6 +1628,11 @@ async function jobPayload(env, db, U, job) {
   if (job.kind === 'test') return { id: job.id, kind: 'test', engine: engineOk(job.url), prompt: job.prompt };
   if (job.kind === 'list') return { id: job.id, kind: 'list', what: job.url };
   if (job.kind === 'install') return { id: job.id, kind: 'install', engine: engineOk(job.url) };
+  if (job.kind === 'export' || job.kind === 'import') {
+    const b = await db.prepare('SELECT id,name,browser FROM bots WHERE id=? AND user_id=?').bind(job.bot_id, U).first();
+    if (!b) { await db.prepare("UPDATE jobs SET status='error' WHERE id=?").bind(job.id).run(); return null; }
+    return { id: job.id, kind: job.kind, bot: { id: b.id, name: b.name, browser: 'own' }, xfer: job.kind === 'import' ? job.url : undefined };
+  }
   const { bots, groups, folders } = await loadAll(db, U);
   const name = id => id === 'me' ? '使用者' : id === 'sys' ? '系統' : (bots.find(b => b.id === id)?.name || '已刪除的機器人');
   const bot = bots.find(b => b.id === job.bot_id);
@@ -1564,6 +1649,7 @@ async function jobPayload(env, db, U, job) {
   const usageToday = (await db.prepare("SELECT COUNT(*) AS n FROM jobs j JOIN bots b ON b.id=j.bot_id WHERE j.user_id=? AND j.kind='chat' AND j.created>=? AND IFNULL(b.engine,'claude')=?").bind(U, dayStart, bot.engine || 'claude').first())?.n ?? null;
   return {
     id: job.id, kind: job.kind, url: job.url, prompt: job.prompt, usageToday, warm: WARM.includes(+st.warm) ? +st.warm : 120, allowed: (st.allow || {})[bot.id] || [], memory: (st.memory || {})[bot.id] || [], skills: (st.skills || {})[bot.id] || [],
+    nskills: (st.nskills || {})[bot.id] || null,
     routines: (await db.prepare('SELECT name,times,enabled FROM routines WHERE user_id=? AND conv=?').bind(U, job.conv).all()).results.map(r => ({ name: r.name, times: JSON.parse(r.times), enabled: !!r.enabled })),
     canAsk: job.depth < MAX_ASK_DEPTH,
     conv: { id: conv.id, name: conv.name },

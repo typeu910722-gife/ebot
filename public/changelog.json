@@ -1,5 +1,30 @@
 [
  {
+  "v": "2.3.0",
+  "date": "2026-10-22",
+  "notes": [
+   "換電腦也能用舊電腦的東西：機器人做的檔案和截圖會記得存在哪台電腦，就算那台已經不是主機，只要開著 OCTA 就能從手機、網頁或新主機打開",
+   "新主機的機器人需要舊電腦上的附件時，會自動取一份過來用",
+   "機器人資料夾裡的 Claude Code 技能會跟著帳號走，換主機會自動放回去；任務設定裡看得到",
+   "網站登入可以搬家：任務設定按「把網站登入帶到主機」，舊電腦開著時就會把機器人瀏覽器的登入搬到新主機",
+   "切換主機後，舊主機會立刻停止接新工作"
+  ],
+  "notes_en": [
+   "Use what’s on your old computer after switching: files and screenshots remember which computer has them, and open from your phone, the web or the new host as long as OCTA is open on that computer",
+   "When a bot on the new host needs an attachment from the old computer, it fetches a copy automatically",
+   "Claude Code skills in a bot’s folder follow your account and are restored on a new host; they’re listed in the bot’s settings",
+   "Website sign-ins can move: in the bot’s settings press “Bring sign-ins to the host” while the old computer is on",
+   "After switching hosts, the old host stops taking new work right away"
+  ],
+  "notes_ja": [
+   "パソコンを替えても旧パソコンのものが使えます：ファイルとスクリーンショットはどのパソコンにあるかを記録し、そのパソコンで OCTA が開いていればスマホ・ウェブ・新ホストから開けます",
+   "新ホストのボットが旧パソコンの添付ファイルを必要とすると、自動でコピーを取得します",
+   "ボットのフォルダの Claude Code スキルはアカウントと一緒に移り、新ホストに自動で戻ります。ボットの設定で確認できます",
+   "サイトのログインも移せます：旧パソコンが開いている間にボットの設定で「ログインをホストに移す」を押してください",
+   "ホストを切り替えると旧ホストはすぐに新しい作業を受けなくなります"
+  ]
+ },
+ {
   "v": "2.2.11",
   "date": "2026-10-22",
   "notes": [

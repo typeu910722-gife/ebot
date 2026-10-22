@@ -936,3 +936,21 @@ T.update({
 })
 
 T.update({'在資料夾中顯示': ('Show in folder', 'フォルダーで表示')})
+
+T.update({
+ 'Claude Code 技能（存在它的資料夾，會跟著帳號到任何主機）': ('Claude Code skills (in its folder; they follow your account to any host)', 'Claude Code スキル（ボットのフォルダ内。アカウントと一緒にどのホストにも移ります）'),
+ '網站登入': ('Website sign-ins', 'サイトのログイン'),
+ '它登入過的網站存在「': ('The sites it signed in to are kept in the browser on “', 'ログインしたサイトは「'),
+ '」電腦的瀏覽器裡，不在目前的主機上。': ('”, not on the current host.', '」パソコンのブラウザにあり、現在のホストにはありません。'),
+ '把網站登入帶到主機': ('Bring sign-ins to the host', 'ログインをホストに移す'),
+ '開始搬移，完成後對話裡會通知你': ('Moving them — you’ll be told in the chat when done', '移動を開始しました。完了したらチャットでお知らせします'),
+ '這個機器人還沒在任何電腦上用過自己的瀏覽器': ('This bot hasn’t used its own browser on any computer yet', 'このボットはまだどのパソコンでも自分のブラウザを使っていません'),
+ '它的網站登入已經在主機電腦上了': ('Its sign-ins are already on the host computer', 'ログインはすでにホストパソコンにあります'),
+ '主機電腦離線': ('The host computer is offline', 'ホストパソコンがオフラインです'),
+})
+P.extend([
+ (r'^正在從「(.+)」電腦把網站登入帶到主機…$', 'Bringing sign-ins from the “$1” computer to the host…', '「$1」パソコンからホストへログインを移しています…'),
+ (r'^已把「(.+)」的網站登入帶到這台主機（(\d+) 個網站）。有些網站會綁定裝置，可能還是要再登入一次。$', 'Moved “$1”’s website sign-ins to this host ($2 sites). Some sites are tied to a device and may ask you to sign in again.', '「$1」のログインをこのホストに移しました（$2 サイト）。端末に紐づくサイトでは再ログインが必要な場合があります。'),
+ (r'^這個檔案存在「(.+)」電腦上，那台電腦目前離線。打開那台電腦的 OCTA 就能讀取$', 'This file is on the “$1” computer, which is offline. Open OCTA on that computer to read it', 'このファイルは「$1」パソコンにあり、オフラインです。そのパソコンで OCTA を開くと読めます'),
+ (r'^「(.+)」電腦目前離線，請先打開那台電腦的 OCTA$', 'The “$1” computer is offline — open OCTA on it first', '「$1」パソコンがオフラインです。先に OCTA を開いてください'),
+])

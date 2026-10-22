@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS bots (
   created INTEGER NOT NULL,
   shot_ts INTEGER,
   page TEXT,                     -- last page the bot reported
-  shot_file TEXT                 -- files.id of the last screenshot (kept on the host computer)
+  shot_file TEXT,               -- files.id of the last screenshot (kept on the host computer)
+  bpc TEXT                       -- the computer that has its browser (logins)
 );
 CREATE TABLE IF NOT EXISTS groups_ (
   id TEXT PRIMARY KEY,
@@ -96,7 +97,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   finished INTEGER,
   result TEXT,                   -- for kind='test' (AI connection test)
   progress TEXT,                 -- what the bot is doing right now (shown while it works)
-  tokens INTEGER                 -- tokens the run used (when the AI reports it)
+  tokens INTEGER,                -- tokens the run used (when the AI reports it)
+  pc TEXT                        -- only this computer may take it (handing logins over)
 );
 CREATE INDEX IF NOT EXISTS job_user ON jobs(user_id, status, id);
 CREATE TABLE IF NOT EXISTS shots (   -- latest browser screenshot per bot
@@ -117,7 +119,8 @@ CREATE TABLE IF NOT EXISTS files (   -- attachments, screenshots, bot outputs
   loc TEXT,                      -- 'cloud' (waiting for the host computer) | 'pc' (saved on the host computer)
   path TEXT,                     -- path inside the computer's OCTA file folder
   size INTEGER,
-  want INTEGER                   -- someone asked to see it: the host computer uploads a temporary copy
+  want INTEGER,                  -- someone asked to see it: the computer that has it uploads a temporary copy
+  pc TEXT                        -- which computer has it (runner label)
 );
 CREATE TABLE IF NOT EXISTS chunks (  -- file content in pieces of up to ~1 MB (temporary)
   file_id TEXT NOT NULL,

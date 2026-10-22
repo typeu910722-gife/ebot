@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '12.7';
+export const VERSION = '13.0';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -529,10 +529,15 @@ async function chatJob(job) {
       try {
         const p = f.path ? join(storeDir(), f.path) : null;
         if (p && existsSync(p)) { h.paths.push(p); continue; }
-        if (!f.path) h.paths.push(await saveUpload({ ...f, conv: job.conv?.id || job.bot.id, convName: job.conv?.name || job.bot.name }));
+        if (!f.path) { h.paths.push(await saveUpload({ ...f, conv: job.conv?.id || job.bot.id, convName: job.conv?.name || job.bot.name })); continue; }
+        // made on another computer: get a copy through OCTA (that computer sends it) and keep it here
+        const d = await api('file/' + encodeURIComponent(f.id), undefined, 'GET');
+        mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, Buffer.from(d.data || '', 'base64')); h.paths.push(p);
+        log(`📥 從其他電腦取得：${f.path}`);
       } catch (e) { log('附件讀取失敗：' + e.message); }
     }
   }
+  restoreSkills(dir, job.nskills);
   const start = Date.now() - 1000;
   log(`▶ ${job.bot.name}［${job.bot.engine || 'claude'}］${job.group ? ' @' + job.group.name : ''}：${job.prompt.slice(0, 40)}`);
   job.bot.livePort = port;
@@ -566,10 +571,55 @@ async function chatJob(job) {
     if (live) { if (live.url && !/^(about:|chrome:)/.test(live.url)) page = live.url; if (live.jpeg) await saveShot(live.jpeg, '.jpeg'); }
     else { const shot = newestImage(dir, start); if (shot) await saveShot(readFileSync(shot.p), extname(shot.p).toLowerCase()); }
   } catch (e) { log('截圖儲存失敗：' + e.message); }
-  await api('runner/done', { id: job.id, ok: res.ok, text: res.text, page, tokens: res.tokens ?? null, files: res.ok ? newFiles(join(here, '輸出'), start) : [] });
+  const nsk = collectSkills(dir, job.nskills);
+  await api('runner/done', { id: job.id, ok: res.ok, text: res.text, page, tokens: res.tokens ?? null, files: res.ok ? newFiles(join(here, '輸出'), start) : [], browser: !!port, ...(nsk ? { nskills: nsk } : {}) });
   log(`${res.ok ? '✓' : '✗'} ${job.bot.name}`);
   if (['claude', 'codex'].includes(job.bot.engine || 'claude')) lastUsage = 0;   // refresh how much is left
   try { cfg.onDone?.(job, res); } catch { }
+}
+
+// ---------- the bot's own Claude Code skills (.claude/skills in its folder) travel with the account ----------
+const SKILL_EXT = /\.(md|txt|json|ya?ml|py|js|mjs|ts|sh|ps1|csv|html|css|toml)$/i;
+function skillFiles(root) {
+  const out = {}; let total = 0;
+  const walk = (d, pre) => { let es = []; try { es = readdirSync(d, { withFileTypes: true }); } catch { return; }
+    for (const e of es) { const p = join(d, e.name), r = pre ? pre + '/' + e.name : e.name;
+      if (e.isDirectory()) { if (!/^(node_modules|\.git)$/.test(e.name)) walk(p, r); }
+      else if (SKILL_EXT.test(e.name)) { try { const st = statSync(p); if (st.size > 60000 || total + st.size > 250000) continue; total += st.size; out[r] = readFileSync(p, 'utf8'); } catch { } } } };
+  walk(root, ''); return out;
+}
+function collectSkills(dir, had) {
+  const files = skillFiles(join(dir, '.claude', 'skills'));
+  if (!Object.keys(files).length && !had) return null;
+  const h = createHash('sha1').update(JSON.stringify(files)).digest('hex');
+  return h === had?.h ? null : { h, files };
+}
+function restoreSkills(dir, sk) {   // e.g. on a new host computer
+  if (!sk?.files) return;
+  for (const [r, text] of Object.entries(sk.files)) {
+    if (r.split('/').includes('..')) continue;
+    const p = join(dir, '.claude', 'skills', ...r.split('/'));
+    try { if (!existsSync(p) || readFileSync(p, 'utf8') !== text) { mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, text); } } catch { }
+  }
+}
+
+// ---------- handing a bot's website logins to another computer (cookies of its own browser) ----------
+async function exportJob(job) {
+  const port = await ensureBrowser(job.bot);
+  const { cookies = [] } = await cdp(port, send => send('Storage.getCookies'));
+  const data = Buffer.from(JSON.stringify(cookies)).toString('base64');
+  for (let i = 0, n = 0; i < data.length || n === 0; i += CHUNK, n++) await api('runner/xfer', { id: job.id, n, data: data.slice(i, i + CHUNK), last: i + CHUNK >= data.length });
+  log(`🔑 已送出 ${job.bot.name} 的網站登入（${cookies.length} 筆）`);
+}
+async function importJob(job) {
+  const { data } = await api('runner/xfer/' + encodeURIComponent(job.xfer), undefined, 'GET');
+  const cookies = JSON.parse(Buffer.from(data || '', 'base64').toString('utf8') || '[]').filter(c => c.name && c.domain)
+    .map(c => ({ name: c.name, value: c.value, domain: c.domain, path: c.path || '/', secure: !!c.secure, httpOnly: !!c.httpOnly, ...(c.sameSite ? { sameSite: c.sameSite } : {}), ...(c.expires > 0 ? { expires: c.expires } : {}) }));
+  const port = await ensureBrowser(job.bot);
+  await cdp(port, send => send('Storage.setCookies', { cookies }));
+  const sites = new Set(cookies.map(c => c.domain.replace(/^\./, '').split('.').slice(-2).join('.')));
+  log(`🔑 已帶入 ${job.bot.name} 的網站登入（${sites.size} 個網站）`);
+  await api('runner/done', { id: job.id, ok: true, text: `已把「${job.bot.name}」的網站登入帶到這台主機（${sites.size} 個網站）。有些網站會綁定裝置，可能還是要再登入一次。` });
 }
 
 // ---------- Grok Bot (through grok-bot-cli) ----------
@@ -907,7 +957,7 @@ let active = 0, failures = 0, stopped = true, onFatal = null, polling = false, s
 const fileWork = new Set();
 function runJob(job) {
   active++;
-  (job.kind === 'open' ? openJob(job) : job.kind === 'test' ? testJob(job) : job.kind === 'list' ? listJob(job) : job.kind === 'install' ? installJob(job) : chatJob(job))
+  (job.kind === 'open' ? openJob(job) : job.kind === 'test' ? testJob(job) : job.kind === 'list' ? listJob(job) : job.kind === 'install' ? installJob(job) : job.kind === 'export' ? exportJob(job) : job.kind === 'import' ? importJob(job) : chatJob(job))
     .catch(e => { log('任務錯誤：' + e.message); return api('runner/done', { id: job.id, ok: false, text: '⚠ ' + e.message }).catch(() => { }); })
     .finally(() => { active--; kick(); });
 }

@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=19"></script>
+<script src="/i18n-dict.js?v=20"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -588,7 +588,7 @@ async function refresh(){
   try{const d=await api('state');if(!S.loaded)boot.set(85,'整理畫面…');
     const prevTop=S.loaded?topBotId():null,prevEng=JSON.stringify(S.engines||null);
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
-      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120,tokens:d.tokens||{},models:d.models||{},pins:d.pins||[],mute:d.mute||{},memory:d.memory||{},skills:d.skills||{}});
+      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120,tokens:d.tokens||{},models:d.models||{},pins:d.pins||[],mute:d.mute||{},memory:d.memory||{},skills:d.skills||{},nsk:d.nsk||{}});
     if(cur&&!conv(cur))cur=null;
     if(cur)await loadMsgs(cur,'new');
     if(prevTop!==null)notifyNew(prevTop);
@@ -962,6 +962,8 @@ function sheet(kind,edit){
   ${!g&&c&&((S.allow||{})[c.id]||[]).length?`<div class="field">一律允許的事（機器人做這些不會再問你）<div class="picks" id="sf_al">${S.allow[c.id].map((t,i)=>`<div class="pick"><span data-u style="flex:1">${esc(t)}</span><button type="button" class="mv" data-unallow="${i}" aria-label="收回">✕</button></div>`).join('')}</div></div>`:''}
   ${!g&&c&&((S.memory||{})[c.id]||[]).length?`<div class="field">它記得的事（📌）<div class="picks" id="sf_mem">${S.memory[c.id].map((t,i)=>`<div class="pick"><span data-u style="flex:1">${esc(t)}</span><button type="button" class="mv" data-unmem="${i}" aria-label="忘記">✕</button></div>`).join('')}</div></div>`:''}
   ${!g&&c&&((S.skills||{})[c.id]||[]).length?`<div class="field">它會的技能（🧩，輸入 / 叫用）<div class="picks" id="sf_sk">${S.skills[c.id].map((k,i)=>`<div class="pick"><span data-u style="flex:1" title="${esc(k.steps)}">${esc(k.name)}</span><button type="button" class="mv" data-unsk="${i}" aria-label="刪除">✕</button></div>`).join('')}</div></div>`:''}
+  ${!g&&c&&((S.nsk||{})[c.id]||[]).length?`<div class="field">Claude Code 技能（存在它的資料夾，會跟著帳號到任何主機）<div class="picks">${S.nsk[c.id].map(n=>`<div class="pick"><span data-u>${esc(n)}</span></div>`).join('')}</div></div>`:''}
+  ${!g&&c&&c.bpc&&c.bpc!==S.host?`<div class="field">網站登入<p class="hmuted" style="margin:4px 0">它登入過的網站存在「<span data-u>${esc(c.bpc.replace(/^desktop:/,''))}</span>」電腦的瀏覽器裡，不在目前的主機上。</p><div class="row2"><button type="button" class="ghost" id="sf_bring">把網站登入帶到主機</button><span id="sf_bmsg" class="hmuted"></span></div></div>`:''}
   <label class="field">常用指令（一行一個，會變成輸入框上方的快速按鈕）<textarea id="sf_q" maxlength="2000" style="min-height:70px" placeholder="例如：整理今天的訂單&#10;把結果寫進試算表">${esc(((S.quick||{})[c?.id]||[]).join('\n'))}</textarea></label>
   ${edit?`<div class="field">例行任務<div class="rt" id="rt"></div></div>`:'<p>建立後可以在「任務設定」加入例行任務（每天固定時間自動執行）。</p>'}
   <div class="errmsg" id="se"></div>
@@ -981,6 +983,7 @@ function sheet(kind,edit){
   if(edit)renderRoutines();
   if($('sf_mem'))$('sf_mem').onclick=async e=>{const x=e.target.closest('[data-unmem]');if(!x)return;const list=[...S.memory[c.id]];list.splice(+x.dataset.unmem,1);
     try{await api('settings','PUT',{memory:{bot:c.id,list}});S.memory[c.id]=list;x.closest('.pick').remove();toast(I18N.t('已忘記'))}catch(err){toast(err.message)}};
+  if($('sf_bring'))$('sf_bring').onclick=async()=>{$('sf_bring').disabled=true;try{await api('bots/'+c.id+'/bring-logins','POST');$('sf_bmsg').textContent=I18N.t('開始搬移，完成後對話裡會通知你')}catch(e){$('sf_bmsg').textContent=e.message;$('sf_bring').disabled=false}};
   if($('sf_sk'))$('sf_sk').onclick=async e=>{const x=e.target.closest('[data-unsk]');if(!x)return;const list=[...S.skills[c.id]];list.splice(+x.dataset.unsk,1);
     try{await api('settings','PUT',{skills:{bot:c.id,list}});S.skills[c.id]=list;x.closest('.pick').remove();toast(I18N.t('已刪除'))}catch(err){toast(err.message)}};
   if($('sf_al'))$('sf_al').onclick=async e=>{const x=e.target.closest('[data-unallow]');if(!x)return;const list=[...S.allow[c.id]];list.splice(+x.dataset.unallow,1);
