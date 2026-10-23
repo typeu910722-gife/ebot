@@ -421,6 +421,9 @@ details.adv[open]{display:grid;gap:8px}
     .askp .askt::after{content:'▴';color:var(--gold2)}.askp.open .askt::after{content:'▾'}
     .askp:not(.open) .askc{display:none}
     body.asking #msgs{padding-bottom:64px}}
+  .opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .opts button{font-size:13px;padding:7px 12px;border-radius:999px;text-align:left}
+  .opts button:hover{border-color:var(--gold);color:var(--gold2)}
 </style>
 </head>
 <body>
@@ -803,7 +806,7 @@ function render(scroll){
     if(m.by==='sys')return `<div class="sys">${esc(m.text)}<span class="ts">${hm(m.ts)}</span></div>`;
     if(m.by==='me')return `<div class="m me${m.tmp?' tmp':''}"><div class="bx"><div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div><div class="meta">${m.tmp?'傳送中…':hm(m.ts)}</div></div></div>`;
     const long=m.text.length>1400||m.text.split('\n').length>30,open=OPENED.has(m.id);
-    return `<div class="m" data-mid="${m.id}"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
+    return `<div class="m" data-mid="${m.id}"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}${optsHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
   const bz=busyIn(cur);
   if(bz.length){const run=bz.find(b=>b.status==='running');
     mh+=`<div class="work"><span class="fade">${run&&run.kind==='chat'&&run.started?`<span class="el" data-since="${run.started}">${elapsed(run.started)}</span> `:''}${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器正在顯示…':esc(nameOf(run.bot_id))+' 處理中…'+(run.progress?`<span class="prog" data-u>${esc(run.progress)}</span>`:'')):S.runnerOnline?'排隊中…':'等待主機電腦上線…'}</span><button id="stop">停止</button></div>`}
@@ -849,6 +852,7 @@ $('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).th
   if(e.target.id==='older'){const box=$('msgs'),h0=box.scrollHeight,id=cur;e.target.disabled=true;
     loadMsgs(id,'older').then(()=>{if(cur!==id)return;render(false);box.scrollTop=box.scrollHeight-h0}).catch(()=>{e.target.disabled=false});return}
   const cp=e.target.closest('[data-copy-msg]');if(cp){const m=convMsgs(cur).find(x=>String(x.id)===cp.dataset.copyMsg);if(m)navigator.clipboard?.writeText(m.text).then(()=>toast('已複製')).catch(()=>{});return}
+  const op=e.target.closest('[data-opt]');if(op){op.disabled=true;sendMsg((isG(cur)?'@'+op.dataset.who+' ':'')+op.dataset.opt);return}
   const ex=e.target.closest('[data-expand]');if(ex){const id=+ex.dataset.expand;OPENED.has(id)?OPENED.delete(id):OPENED.add(id);render(false);return}
   const cc=e.target.closest('[data-copy-code]');if(cc){navigator.clipboard?.writeText(cc.nextElementSibling.textContent).then(()=>toast(I18N.t('已複製'))).catch(()=>{});return}
   const rt=e.target.closest('[data-retry]');if(rt){const ms=convMsgs(cur),i=ms.findIndex(x=>String(x.id)===rt.dataset.retry);
@@ -1127,6 +1131,11 @@ let rtEdit=null;
 const ASKRE={test:t=>/❓/.test(t)||/[？?]\s*$/.test(String(t).trim())};
 // the question itself: the ❓ line(s), otherwise the last paragraph
 const askText=t=>{t=String(t);const q=t.split('\n').filter(l=>/❓/.test(l)).map(l=>l.replace(/^\s*❓\s*(問你[:：])?\s*/,''));if(q.length)return q.join('\n');const ps=t.trim().split(/\n\s*\n/);return ps[ps.length-1]};
+// "A. 現在重新查 B. 用剛才那份就好" at the end of a question → buttons
+const askOpts=t=>{const q=askText(t).split('\n').pop()||'';const out=[];const re=/(?:^|[\s（(：:，,？?。])([A-Da-d])[.．、)）]\s*([^\n]+?)(?=\s*(?:[\s（(，,；;？?。]|^)[A-Da-d][.．、)）]|[？?）)]*\s*$)/g;let m;while((m=re.exec(q))&&out.length<4){const v=m[2].replace(/[？?。]+$/,'').trim();if(v)out.push(m[1].toUpperCase()+'. '+v)}return out.length>=2?out:[]};
+const lastOpen=m=>{const ms=convMsgs(m.conv||cur).filter(x=>!x.tmp&&x.by!=='sys');return ms.length&&ms[ms.length-1].id===m.id};
+function optsHtml(m){if(!lastOpen(m)||!ASKRE.test(String(m.text)))return '';const o=askOpts(m.text);if(!o.length)return '';
+  return `<div class="opts">${o.map(v=>`<button type="button" class="ghost" data-opt="${esc(v)}" data-who="${esc(nameOf(m.by))}">${esc(v)}</button>`).join('')}</div>`}
 function askDismissed(){try{return JSON.parse(localStorage.getItem('octa_askx')||'[]')}catch(e){return []}}
 function openAsks(){if(!cur||!isG(cur))return [];const c=conv(cur);if(!c)return [];const ms=convMsgs(cur).filter(m=>!m.tmp&&m.by!=='sys'),gone=askDismissed(),out=[];
   for(const id of c.members){const b=bot(id);if(!b)continue;let i=ms.length-1;while(i>=0&&ms[i].by!==id)i--;
@@ -1142,13 +1151,13 @@ function renderAsks(){const p=$('askp');if(!p)return;const list=openAsks(),key=l
   p.dataset.k=key;p.hidden=false;const wasOpen=p.classList.contains('open');
   p.innerHTML=`<div class="askt" role="button"><span>❓ ${list.length===1?esc(list[0].b.name)+' 有問題要問你':'機器人有問題要問你'} <span class="pill">${list.length}</span></span></div>`+list.map(({b,m})=>{const q=askText(m.text),tail=q.length>400?q.slice(0,400)+'…':q;
     return `<div class="askc" data-mid="${m.id}" data-name="${esc(b.name)}"><div class="askh"><span class="av" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b><small>私下問你</small><button type="button" class="askx" aria-label="之後再說">×</button></div>
-      <div class="askq" data-u>${esc(tail)}</div><textarea rows="2" placeholder="回覆給 ${esc(b.name)}（只有它會收到）">${esc(typed[m.id]||'')}</textarea>
+      <div class="askq" data-u>${esc(tail)}</div>${askOpts(m.text).length?`<div class="opts">${askOpts(m.text).map(v=>`<button type="button" class="ghost" data-aopt="${esc(v)}">${esc(v)}</button>`).join('')}</div>`:''}<textarea rows="2" placeholder="回覆給 ${esc(b.name)}（只有它會收到）">${esc(typed[m.id]||'')}</textarea>
       <div class="row2"><button type="button" class="btn askgo">回覆</button><button type="button" class="ghost askto">在對話中查看</button></div></div>`}).join('');
   if(wasOpen)p.classList.add('open');
   p.querySelector('.askt').onclick=()=>{p.classList.toggle('open');if(p.classList.contains('open'))p.querySelector('textarea')?.focus()};
   p.querySelectorAll('.askc').forEach(c=>{const ta=c.querySelector('textarea'),go=async()=>{const v=ta.value.trim();if(!v)return ta.focus();c.querySelector('.askgo').disabled=true;
       if(await sendMsg('@'+c.dataset.name+' '+v)){p.dataset.k=''}else c.querySelector('.askgo').disabled=false};
-    c.querySelector('.askgo').onclick=go;ta.onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();go()}};
+    c.querySelector('.askgo').onclick=go;c.querySelectorAll('[data-aopt]').forEach(b=>b.onclick=()=>{ta.value=b.dataset.aopt;go()});ta.onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();go()}};
     c.querySelector('.askx').onclick=()=>{try{const g=askDismissed();g.push(+c.dataset.mid);localStorage.setItem('octa_askx',JSON.stringify(g.slice(-200)))}catch(e){}p.dataset.k='';renderAsks()};
     c.querySelector('.askto').onclick=()=>{const el=document.querySelector(`#msgs [data-mid="${c.dataset.mid}"]`);if(el)el.scrollIntoView({block:'center',behavior:'smooth'});else $('msgs').scrollTop=$('msgs').scrollHeight}})}
 function renderRoutines(){const box=$('rt');if(!box)return;const list=S.routines.filter(r=>r.conv===cur);

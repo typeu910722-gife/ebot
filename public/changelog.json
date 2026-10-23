@@ -1,5 +1,21 @@
 [
  {
+  "v": "2.9.4",
+  "date": "2026-10-23",
+  "notes": [
+   "住宿判斷修正：最後一晚是今天的算續住（明天才退房）；應掃房改成「昨晚有住、今晚沒續住」的所有房間",
+   "機器人會一次把兩館都查完才回覆，名單照館別、房號排好",
+   "工作筆記可以正常寫入；再問同樣的事時，會先告訴你上次幾點查的結果，並問要不要重新查",
+   "機器人提出 A／B 選項時，對話裡會出現按鈕，點一下就回覆"
+  ],
+  "notes_en": [
+   "Stay logic fixed: last night today = continuing; rooms to clean = every room occupied last night without a continuing stay",
+   "Bots finish both properties before replying, sorted by property and room",
+   "Work notes save properly; asked again, bots show the earlier result and offer to re-check",
+   "A/B choices from bots appear as buttons"
+  ]
+ },
+ {
   "v": "2.9.3",
   "date": "2026-10-23",
   "notes": [

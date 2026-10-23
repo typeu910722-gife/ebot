@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '17.1';
+export const VERSION = '17.2';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -157,7 +157,10 @@ function dayInfo(job) {
   const y = new Date(d - 864e5), t = new Date(+d + 864e5);
   const out = [`今天是 ${d.getFullYear()}/${f(d)}（週${wk[d.getDay()]}），昨天是 ${f(y)}（週${wk[y.getDay()]}），明天是 ${f(t)}。`];
   if (/入住|退房|續住|掃房|房號|訂房/.test([job.bot.task, job.notes, job.folderNotes, job.group?.task, job.prompt].join(' '))) out.push(
-    `判斷住宿日期時，先把每個暱稱的日期換成「住哪幾晚」再分類（照規則：「10/21-23」＝住 10/21、10/22、10/23 三晚，10/24 退房）：第一晚是今天 ${f(d)} → 今日入住；今天在住宿晚數裡但不是第一晚 → 今日續住；最後一晚是昨天 ${f(y)} → 今天退房（應掃房）。`,
+    `判斷住宿日期時，先把每個暱稱的日期換成「住哪幾晚」再分類（照規則：「10/21-23」＝住 10/21、10/22、10/23 三晚，10/24 退房）：第一晚是今天 ${f(d)} → 今日入住；昨天 ${f(y)} 也住、今天 ${f(d)} 也住 → 今日續住（最後一晚是今天的人明天才退房，今天算續住，不是退房）；最後一晚是昨天 ${f(y)} → 今天退房。`,
+    `應掃房＝昨晚有人住、今晚沒有同一組客人續住的房間：把昨晚 ${f(y)} 有住的房間全部列出，扣掉今日續住的房，就是今天要掃的；不要只找暱稱寫明今天退房的。房況以 eroom 為準時要去 eroom 對照。`,
+    `整理名單時兩館分開，每館照房號由小到大排，每行「館別 房號 姓名」；一暱稱多房、同房多組、延期、取消等另外列給使用者決定。`,
+    `一次把整件事做完再回覆（兩館都查、需要對照的網站都對照）；不要回「還沒查完」「需要繼續搜尋」。真的被卡住才說卡在哪。`,
     `找名單不能只看畫面上看得到的：要在搜尋框分別搜尋今天、昨天和前幾天的日期（例如「${f(d)}」「${f(y)}」「${d.getMonth() + 1}/1」「${d.getMonth() + 1}/2」），兩館都要切換過去查，往下捲到清單載入完整；每筆都要算過再分類。`);
   return out;
 }
@@ -165,7 +168,7 @@ const notesFile = job => join(workDir, 'bots', String(job.bot.id).replace(/[^\w-
 function workNotes(job) {
   let t = ''; try { t = readFileSync(notesFile(job), 'utf8').trim(); } catch { }
   if (t.length > 6000) t = '…' + t.slice(-6000);
-  return [`你的工作筆記（檔案 ${notesFile(job)}，由你自己維護）：查到值得留下的資料就更新這個檔案，例如今天的名單與房況、網站上東西在哪、做到哪一步，每段寫上查到的時間；舊日期、用不到的就刪掉。下次先看筆記，只補查可能變動的部分，不用每次從頭查。`,
+  return [`你的工作筆記（檔案 ${notesFile(job)}，由你自己維護）：查到值得留下的資料就更新這個檔案，例如今天的名單與房況、網站上東西在哪、做到哪一步，每段寫上查到的時間；舊日期、用不到的就刪掉。下次先看筆記，只補查可能變動的部分，不用每次從頭查。使用者再問一樣的事、而筆記裡已經有今天整理好的結果時，先告訴他「上次幾點查的、結果是什麼」，再用 ❓ 問他要不要重新查（A. 現在重新查 B. 用剛才那份就好）。`,
     t ? '目前筆記內容：\n' + t : '（目前筆記是空的）'];
 }
 function buildPrompt(job, here) {
@@ -491,7 +494,7 @@ async function runEngine(engine, prompt, b, model, live = {}) {
     case 'codex': {
       const last = join(dir, '.codex-last.txt');
       try { writeFileSync(last, ''); } catch { }
-      const c = ['approval_policy="never"', `sandbox_workspace_write.writable_roots=${toml([store])}`,
+      const c = ['approval_policy="never"', `sandbox_workspace_write.writable_roots=${toml([store, dir])}`,
         `mcp_servers.browser.command=${toml(server.command)}`, `mcp_servers.browser.args=${toml(server.args)}`,
         'mcp_servers.browser.startup_timeout_sec=60', 'mcp_servers.browser.default_tools_approval_mode="approve"',
         ...Object.entries(server.env || {}).map(([k, v]) => `mcp_servers.browser.env.${k}=${toml(v)}`)];
