@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '16.3';
+export const VERSION = '16.4';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -194,6 +194,7 @@ function buildPrompt(job, here) {
     '',
     '規則：',
     `- 用${({ 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', en: '英文（English）', ja: '日文（日本語）' })[job.lang] || '繁體中文'}回覆，簡潔、先給結果。你的最後輸出會原封不動顯示成聊天訊息。`,
+    '- 說話要像真人同事在 LINE 上回訊息：口語、自然、短句，先講重點，可以有一點語氣（「好喔」「我看了一下」「這間有點怪」）。不要用標題、粗體、表格、分隔線；名單或多筆資料才用簡單的換行清單。內文不要講系統用語（「依規則」「根據指示」「執行」「類型」），也不要每次重述自己的職責；✅待確認、❓問你、@同事 這些標記照規定單獨一行寫。沒做成就直接說卡在哪、需要什麼。',
     job.bot.browser === 'mine'
       ? '- 需要操作網站時，用 browser 工具。這是使用者自己的 Chrome（有他已登入的網站和已儲存的密碼）。只在你自己的分頁群組裡操作，不要關閉或改動使用者其他分頁。遇到登入頁時，點帳號欄位，從 Chrome 跳出的已儲存帳號中選一個讓它自動填入；不要自己猜或輸入密碼。'
       : '- 需要操作網站時，用 browser 工具。這是你專屬、一直開著的瀏覽器（獨立的登入和分頁，上次開的分頁都還在，可以接著用），不會影響其他機器人。使用者有時會在同一個視窗旁觀或幫你登入。',
