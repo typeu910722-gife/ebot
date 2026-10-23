@@ -59,3 +59,12 @@
 - [x] Grok 引擎（官方 Grok CLI）；Grok Bot 引擎（grok-bot-cli / gbot）＋帶入機器人（grokbot/list、kind=list 工作）
 - [x] 測試：webhook、監看、gbot 假 CLI 端對端、UI（觸發表單、帶入）、API 31 項
 - [ ] 實機：Grok CLI / Grok Bot App 登入、LINE webhook 真實呼叫
+
+## 2026-10-23 2.5.2–2.5.6
+- 群組：無 @ 時成員並行處理、無關的回「（略過）」並隱藏；規則含「輪流/依序/接力」才依序。成員可 @問、@交接。
+- 外部交接：Grok Bot 首席 POST hook → Claude助理 實測成功（約 30 秒）；對話顯示交接者與內容。
+- 共用登入：job 開始時也從其他機器人「開著的」瀏覽器抓 cookies（2.5.3）。
+- Ollama：關 grep/glob（ripgrep 缺）、給 octa-task.md 絕對路徑。
+- 機器人可自己點「已記住帳號」登入；需密碼仍停下。
+- LINE 測試：Claude、Gemini 已傳給 yzz；ChatGPT 要使用者輸入 LINE 密碼；Ollama 待 2.5.6 重試。
+- 待辦：Grok Bot CLI 匯入（app 不寫 gateway-descriptor.json）；Claude 週額度剩 3%（10/26 重置）。

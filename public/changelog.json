@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.5.6",
+  "date": "2026-10-23",
+  "notes": [
+   "Ollama 機器人會正確讀到這次的指示，不再回「找不到檔案」"
+  ],
+  "notes_en": [
+   "Ollama bots now read their instructions reliably instead of replying 'file not found'"
+  ]
+ },
+ {
   "v": "2.5.5",
   "date": "2026-10-23",
   "notes": [

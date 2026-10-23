@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '15.4';
+export const VERSION = '15.5';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -487,7 +487,7 @@ async function runEngine(engine, prompt, b, model, live = {}) {
         tools: { task: false, todowrite: false, todoread: false, grep: false, glob: false }   // grep/glob need ripgrep, often missing on Windows; small local models misuse sub-agents and to-do lists, then reply about the error
       });
       // /no_think: qwen3-style models skip their long hidden reasoning (several times faster on a laptop)
-      r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, '/no_think ' + FILE_INSTR], dir, '', { ctl: live.ctl });
+      r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, '/no_think ' + FILE_INSTR.replace('目前資料夾裡的 octa-task.md', `檔案 ${join(dir, 'octa-task.md')}（用 read 工具讀這個完整路徑）`)], dir, '', { ctl: live.ctl });
       break;
     }
     default: {
