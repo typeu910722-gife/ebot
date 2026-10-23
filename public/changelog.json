@@ -1,5 +1,17 @@
 [
  {
+  "v": "2.6.2",
+  "date": "2026-10-23",
+  "notes": [
+   "在群組裡問機器人排程，它會看到自己的例行任務",
+   "機器人回覆不再提到內部說明檔"
+  ],
+  "notes_en": [
+   "Bots in a group now see their own routines when asked about schedules",
+   "Bots no longer mention their internal instruction file"
+  ]
+ },
+ {
   "v": "2.6.1",
   "date": "2026-10-23",
   "notes": [
