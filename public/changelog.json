@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.9.5",
+  "date": "2026-10-23",
+  "notes": [
+   "整理名單時不會因為有疑點就整份不給：先列能確定的，疑點另外列；暱稱日期沒有年份時自動當成今年，舊聊天直接跳過"
+  ],
+  "notes_en": [
+   "Lists aren't held back over doubtful items: certain ones first, doubts listed separately; dates without a year are taken as this year"
+  ]
+ },
+ {
   "v": "2.9.4",
   "date": "2026-10-23",
   "notes": [
