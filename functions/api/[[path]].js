@@ -1477,7 +1477,7 @@ async function route({ request: req, env, params }) {
     }
     if (path === 'engine-install' && m === 'POST') {   // from any device: the host computer opens the install window
       const engine = engineOk(body.engine);
-      if (['copilot', 'cursor', 'qwen', 'grok'].includes(engine)) return err('這個 AI 暫時不開放連接', 400);
+      if (['copilot', 'cursor', 'qwen', 'grok', 'grokbot'].includes(engine)) return err('這個 AI 暫時不開放連接', 400);
       const h = env.isLocal ? null : await hostInfo(db, U);
       if (h && !h.online) return err('主機電腦離線，請先打開主機電腦上的 OCTA', 409);
       const hs = h && h.runners.find(r => (r.label || 'runner') === h.hostLabel), hv = hs?.info ? JSON.parse(hs.info).app || '' : '';

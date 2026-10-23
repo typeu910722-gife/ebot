@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.8.5",
+  "date": "2026-10-23",
+  "notes": [
+   "移除「把 Grok Bot 的機器人帶進 OCTA」進階功能；Grok Bot 交派任務給 OCTA 改用交接網址"
+  ],
+  "notes_en": [
+   "Removed the advanced 'bring Grok Bot bots into OCTA' option; Grok Bot hands tasks to OCTA via the hand-off URL"
+  ]
+ },
+ {
   "v": "2.8.4",
   "date": "2026-10-23",
   "notes": [

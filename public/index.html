@@ -948,7 +948,7 @@ const ENG={
     npm:'@qwen-code/qwen-code',login:'qwen',hint:'依畫面選擇登入方式，完成後輸入 /quit 離開',m:'例如 qwen3-coder-plus'},
   grok:{hide:1,n:'Grok',full:'Grok（xAI Grok CLI）',good:'即時資訊與 X（Twitter）趨勢、網路研究、推理與寫作、程式開發',who:'有 X Premium／SuperGrok 等 Grok 方案',cost:'用你的 Grok 帳號；依 xAI 方案',site:'https://docs.x.ai/build/overview',quota:'count',
     win:'irm https://x.ai/cli/install.ps1 | iex',mac:'curl -fsSL https://x.ai/cli/install.sh | bash',login:'grok login',hint:'瀏覽器會打開，用你的 X／Grok 帳號登入',m:''},
-  grokbot:{n:'Grok Bot',full:'Grok Bot（帶入你在 Grok Bot 的機器人）',tag:'第三方',good:'把 Grok Bot 裡設定好的機器人帶進 OCTA：它在 xAI 的雲端電腦上工作，OCTA 負責排程、事件觸發、核准和通知',who:'有 Grok Bot（SuperGrok 或 Cursor 方案），並在這台電腦裝好、登入 Grok Bot 桌面 App',cost:'用你的 Grok Bot 方案。透過開源工具 grok-bot-cli 連接（第三方，不是 xAI 官方），它會使用這台電腦上 Grok Bot App 的登入狀態',site:'https://github.com/ScriptedAlchemy/grok-bot-cli',quota:'count',
+  grokbot:{hide:1,n:'Grok Bot',full:'Grok Bot（帶入你在 Grok Bot 的機器人）',tag:'第三方',good:'把 Grok Bot 裡設定好的機器人帶進 OCTA：它在 xAI 的雲端電腦上工作，OCTA 負責排程、事件觸發、核准和通知',who:'有 Grok Bot（SuperGrok 或 Cursor 方案），並在這台電腦裝好、登入 Grok Bot 桌面 App',cost:'用你的 Grok Bot 方案。透過開源工具 grok-bot-cli 連接（第三方，不是 xAI 官方），它會使用這台電腦上 Grok Bot App 的登入狀態',site:'https://github.com/ScriptedAlchemy/grok-bot-cli',quota:'count',
     npm:'grok-bot-cli',login:'gbot bots list',hint:'先在這台電腦安裝並登入 Grok Bot 桌面 App，裝好會列出你的 Grok Bot 機器人',m:''},
   opencode:{n:'Ollama',full:'Ollama 本機模型（免費）',tag:'免費',good:'本機部署開源模型、私有化 AI、中文處理、程式開發',who:'想用免費的開源模型，資料不離開電腦',cost:'免費，在你的電腦上執行（需要較好的顯示卡或 16GB 以上記憶體）',site:'https://ollama.com',quota:'local',
     npm:'opencode-ai',pre:'winget install -e --id Ollama.Ollama',login:'ollama pull qwen3',hint:'會先安裝 Ollama，再下載 qwen3 模型（約 5 GB）',m:'例如 qwen3、gemma3、llama3.1（空白就用電腦上第一個模型）'}};
@@ -1471,7 +1471,7 @@ async function openAI(focus){
     const say=r?`要把工作交給 OCTA 的「${b.name}」時，用 HTTP POST 傳 JSON 到 ${hookUrl(r)} ，格式 {"text":"工作內容","from":"你的名字"}（Content-Type: application/json）。收到 {"ok":true} 就是交接成功，對方會自動開始做。`:'';
     return `<div class="gbrow"><span data-u>${esc(b.avatar||'🤖')} ${esc(b.name)}</span>${r?`<button class="ghost" data-copy="${esc(say)}">複製給 Grok Bot 的話</button>`:`<button class="ghost" data-gbhook="${b.id}">產生交接網址</button>`}</div>`}).join(''):'<p class="hmuted">還沒有機器人，先建立一個。</p>'}</div>
   <p class="hmuted">交接網址等同鑰匙，只給你信任的 AI，不要公開。要停用時，到那個機器人的任務設定 → 例行任務，關掉「外部交接」。</p>
-  <details class="aic" data-k="grokbot" ${focus==='grokbot'?'open':''}><summary><span class="ait"><b>進階：把 Grok Bot 的機器人帶進 OCTA</b> ${engState('grokbot')==='ok'?'<span class="pill p-ok">已連接</span>':'<span class="pill p-off">未接上</span>'}<small class="aigood">反方向：在 OCTA 直接指揮 Grok Bot 的機器人。需要第三方工具 grok-bot-cli，目前 Grok Bot App 不一定支援</small></span></summary><div class="aib">${card('grokbot').replace(/^[\s\S]*?<div class="aib">/,'').replace(/<\/div><\/details>$/,'')}</div></details></div>`);
+  </div>`);
   $('veil').querySelectorAll('pre.code').forEach(p=>{p.insertAdjacentHTML('afterend',`<div class="row2" style="margin-top:4px">${copyBtn(p.textContent)}</div>`)});
   $('veil').querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.copy).then(()=>b.textContent=I18N.t('已複製 ✓')).catch(()=>{})});
   $('veil').querySelectorAll('[data-install]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('desktop/install','POST',{engine:b.dataset.install});b.textContent=I18N.t('已打開安裝視窗')}catch(e){b.disabled=false;alertSheet('無法開啟',e.message)}});
