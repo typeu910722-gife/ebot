@@ -1059,13 +1059,15 @@ async function route({ request: req, env, params }) {
           text = clean(text.replace(tm[0], ''), 20000) || '（已更新指定任務）';
         }
         // 📌記住：… — a lasting fact or preference the bot should keep (its memory)
-        const remember = [];
+        const remember = [], sitesNew = [];
         // 🧩技能：名稱 … 🧩結束 — a workflow saved to rerun later (shown in the / menu)
         const skillsNew = [];
         // small local models (Ollama) fire these on everything ("已記住：自我介紹已完成…"): their markers are dropped, not saved
         const small = (await db.prepare('SELECT engine FROM bots WHERE id=? AND user_id=?').bind(job.bot_id, U).first())?.engine === 'opencode';
         if (good && job.kind === 'chat') {
           text = text.replace(/^\s*📌\s*記住[:：]\s*(.+)$/gm, (_, t) => { const v = clean(t, 300); if (v && !small) remember.push(v); return ''; });
+          // 🗺️網站筆記：網域｜做法 — how to get around a website, shared with every bot
+          text = text.replace(/^\s*🗺️?\s*網站筆記[:：]\s*([^｜|\n]+)\s*[｜|]\s*(.+)$/gm, (_, d, t) => { const dom = clean(d, 60).toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, ''), v = clean(t, 300); if (dom && v && !small) sitesNew.push([dom, v]); return ''; });
           text = text.replace(/🧩\s*技能[:：]\s*([^\n]+)\n([\s\S]*?)🧩\s*結束/g, (_, n, st2) => { const name = clean(n, 40), steps = clean(st2, 3000); if (name && steps && !small) skillsNew.push({ name, steps }); return ''; });
           text = text.trim() || '（已記下）';
         }
@@ -1100,8 +1102,9 @@ async function route({ request: req, env, params }) {
         const isGroup = (await loadAll(db, U)).groups.some(g => g.id === job.conv);
         const quiet = isGroup || job.prompt.startsWith('（例行任務') || BG.test(job.prompt) || /^同事「[^」]*」回覆了你在背景問/.test(job.prompt);   // where "（略過）" means nothing to show
         if (!(quiet && passed(text) && !outs.length)) await addMsg(db, U, job.conv, job.bot_id, text, outs);
-        if (remember.length || skillsNew.length) {
+        if (remember.length || skillsNew.length || sitesNew.length) {
           const st = await getSettings(db, U);
+          if (sitesNew.length) { st.sites = st.sites || {}; for (const [d, v] of sitesNew) st.sites[d] = [...new Set([...(st.sites[d] || []), v])].slice(-12); }
           if (remember.length) { st.memory = st.memory || {}; st.memory[job.bot_id] = [...new Set([...(st.memory[job.bot_id] || []), ...remember])].slice(-40); }
           if (skillsNew.length) { st.skills = st.skills || {}; const cur = (st.skills[job.bot_id] || []).filter(x => !skillsNew.some(n => n.name === x.name)); st.skills[job.bot_id] = [...cur, ...skillsNew].slice(-20); }
           await putSettings(db, U, st);
@@ -1745,6 +1748,7 @@ async function jobPayload(env, db, U, job) {
     folderNotes: folders.find(f => f.id === bot.folder)?.notes || '',
     notes: st.notes || '',
     nick: st.nick || '',
+    sites: Object.entries(st.sites || {}).map(([d, l]) => `${d}：\n` + l.map(x => '- ' + x).join('\n')).join('\n').slice(-6000),
     lang: st.lang || 'zh-TW',
     colleagues: bots.filter(b => b.id !== bot.id).sort((a, b) => ((a.folder || null) === (bot.folder || null) ? 0 : 1) - ((b.folder || null) === (bot.folder || null) ? 0 : 1)).slice(0, 20).map(b => ({ id: b.id, name: b.name, task: b.task })),
     group: group ? { name: group.name, task: group.task, members: group.members.map(name), mode: turnsOf(group) ? 'turns' : 'parallel' } : null,

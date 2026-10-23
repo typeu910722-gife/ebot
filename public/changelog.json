@@ -1,5 +1,19 @@
 [
  {
+  "v": "2.9.0",
+  "date": "2026-10-23",
+  "notes": [
+   "機器人的瀏覽器有即時游標：看得到它移到哪、點了什麼（點擊波紋＋外框閃一下）、正在輸入",
+   "操作網站更聰明：每一步都重新確認畫面；找不到選項會換方法（等待、捲動、截圖後用座標點、鍵盤、改網址），至少試 3 種才說做不到",
+   "新增共用「網站筆記」：任何機器人學會某個網站的操作方法，所有機器人以後都會照著做"
+  ],
+  "notes_en": [
+   "Live cursor in bot browsers: see where it moves, what it clicks, and when it types",
+   "Smarter website handling: checks the page after every step and tries several methods (wait, scroll, screenshot and click by position, keyboard, URL) before giving up",
+   "Shared website notes: what one bot learns about a site, every bot uses next time"
+  ]
+ },
+ {
   "v": "2.8.5",
   "date": "2026-10-23",
   "notes": [

@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '16.6';
+export const VERSION = '16.8';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -98,7 +98,7 @@ function botDir(id, mode = 'own', port = 0) {
   const profile = join(dir, 'profile');
   const mine = mode === 'mine';
   const pwArgs = mine ? ['--extension', '--output-dir', join(dir, 'shots')]
-    : port ? ['--cdp-endpoint', `http://127.0.0.1:${port}`, '--output-dir', join(dir, 'shots')]   // the bot's own browser that stays open
+    : port ? ['--cdp-endpoint', `http://127.0.0.1:${port}`, '--caps', 'vision', '--output-dir', join(dir, 'shots')]   // the bot's own browser that stays open
     : ['--browser', 'chrome', '--user-data-dir', profile, '--output-dir', join(dir, 'shots')];
   const env = { ...(cfg.pwCli ? cfg.nodeEnv || {} : {}), ...(mine && extToken() ? { PLAYWRIGHT_MCP_EXTENSION_TOKEN: extToken() } : {}) };
   const server = cfg.pwCli
@@ -199,6 +199,11 @@ function buildPrompt(job, here) {
       ? '- 需要操作網站時，用 browser 工具。這是使用者自己的 Chrome（有他已登入的網站和已儲存的密碼）。只在你自己的分頁群組裡操作，不要關閉或改動使用者其他分頁。遇到登入頁時，點帳號欄位，從 Chrome 跳出的已儲存帳號中選一個讓它自動填入；不要自己猜或輸入密碼。'
       : '- 需要操作網站時，用 browser 工具。這是你專屬、一直開著的瀏覽器（獨立的登入和分頁，上次開的分頁都還在，可以接著用），不會影響其他機器人。使用者有時會在同一個視窗旁觀或幫你登入。',
     job.bot.page ? `- 你上次停在：${job.bot.page}` : '',
+    '- 操作網站像人一樣一步一步來：每次點擊、輸入、切換後都重新 browser_snapshot 看畫面變了什麼，再決定下一步，不要憑猜。',
+    '- 找不到要點的東西或點了沒反應時，依序換方法：等 1–2 秒再看（browser_wait_for）→ 捲動頁面或清單 → 用 browser_take_screenshot 看實際畫面（下拉選單、彈出框常常不在 snapshot 裡，看到位置就用 browser_mouse_click_xy 以座標點）→ 滑鼠移上去（hover）→ 鍵盤（Tab、方向鍵、Enter）→ 從網址直接進入。至少換 3 種方法才能說做不到，並說清楚試了什麼。',
+    '- 研究一個網站時：先看網址結構（帳號 ID、頁面路徑常在網址裡，改網址就能切換）、左側選單、右上角帳號選單，弄清楚每個功能在哪。',
+    '- 學到某個網站好用的做法（例如去哪裡切換帳號、哪個網址直接打開某頁、哪個按鈕要先等載入），在回覆最後單獨一行寫「🗺️網站筆記：網域｜做法」，所有機器人以後都會知道。',
+    job.sites ? '- 之前大家學到的網站操作筆記（先照這些做）：\n' + job.sites : '',
     '- 登入頁只要點選已經記住的帳號（例如顯示帳號名稱和「登入」按鈕、「以 XX 身分繼續」），不必輸入密碼或驗證碼時，直接點它繼續。',
     '- 需要輸入帳號密碼、驗證碼或手機確認時，停在那一頁，回報「需要使用者在電腦上登入」（照抄這幾個字）和要登入的網站。使用者會把你的瀏覽器叫到螢幕上幫你登入，再叫你繼續。',
     '- 發訊息給任何人、付款、刪除資料、更改帳號設定：除非使用者在對話中明確下令，否則只準備好內容並請使用者確認，不要執行。',
@@ -928,7 +933,24 @@ const tagScript = (name, color) => `(() => { if (window.top !== window) return; 
   const fix = () => { if (document.title && !document.title.startsWith(P)) document.title = P + document.title; else if (!document.title) document.title = P + location.hostname; };
   const put = () => { if (!document.documentElement || document.getElementById('__octa_tag')) return; const d = document.createElement('div'); d.id = '__octa_tag'; d.textContent = '🐙 ' + N;
     d.setAttribute('style', 'position:fixed;left:10px;bottom:10px;z-index:2147483647;background:' + C + ';color:#fff;font:600 13px/1 system-ui,sans-serif;padding:7px 12px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.35);pointer-events:none;opacity:.92');
-    document.documentElement.appendChild(d); fix(); new MutationObserver(fix).observe(document.querySelector('title') || document.head || document.documentElement, { childList: true, subtree: true, characterData: true }); };
+    document.documentElement.appendChild(d); fix(); new MutationObserver(fix).observe(document.querySelector('title') || document.head || document.documentElement, { childList: true, subtree: true, characterData: true });
+    // a live cursor so you can watch what the bot does: glides to each mouse move, ripples on clicks, flashes what it clicked
+    const cur = document.createElement('div'); cur.id = '__octa_cur';
+    cur.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M3 2l7.5 19 2.6-7.9L21 10.5z" fill="' + C + '" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg><span></span>';
+    cur.setAttribute('style', 'position:fixed;left:0;top:0;z-index:2147483647;pointer-events:none;transform:translate(-60px,-60px);transition:transform .38s cubic-bezier(.3,.8,.3,1),opacity .4s;opacity:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))');
+    const lab = cur.querySelector('span'); lab.setAttribute('style', 'position:absolute;left:22px;top:20px;white-space:nowrap;background:' + C + ';color:#fff;font:600 11px/1 system-ui,sans-serif;padding:4px 7px;border-radius:999px;opacity:0;transition:opacity .2s');
+    lab.textContent = N; document.documentElement.appendChild(cur);
+    let idle, x = -60, y = -60; const wake = () => { cur.style.opacity = '1'; clearTimeout(idle); idle = setTimeout(() => { cur.style.opacity = '0' }, 8000); };
+    const move = (nx, ny) => { x = nx; y = ny; cur.style.transform = 'translate(' + (x - 3) + 'px,' + (y - 2) + 'px)'; wake(); };
+    addEventListener('mousemove', e => move(e.clientX, e.clientY), true);
+    addEventListener('mousedown', e => { move(e.clientX, e.clientY);
+      const r = document.createElement('div'); r.setAttribute('style', 'position:fixed;z-index:2147483646;pointer-events:none;left:' + (e.clientX - 18) + 'px;top:' + (e.clientY - 18) + 'px;width:36px;height:36px;border-radius:50%;border:3px solid ' + C + ';transform:scale(.3);opacity:1;transition:transform .5s ease-out,opacity .5s');
+      document.documentElement.appendChild(r); requestAnimationFrame(() => { r.style.transform = 'scale(1.6)'; r.style.opacity = '0'; }); setTimeout(() => r.remove(), 600);
+      const t = e.target; if (t && t.style) { const o = t.style.outline, oo = t.style.outlineOffset; t.style.outline = '3px solid ' + C; t.style.outlineOffset = '2px'; setTimeout(() => { t.style.outline = o; t.style.outlineOffset = oo; }, 700); } }, true);
+    addEventListener('keydown', () => { lab.textContent = '⌨️ ' + N + ' 輸入中'; lab.style.opacity = '1'; wake();
+      const f = document.activeElement; if (f && f.getBoundingClientRect && x < 0) { const b = f.getBoundingClientRect(); move(b.left + 12, b.top + b.height / 2); }
+      clearTimeout(lab._t); lab._t = setTimeout(() => { lab.style.opacity = '0'; lab.textContent = N; }, 900); }, true);
+    addEventListener('focusin', e => { const b = e.target.getBoundingClientRect && e.target.getBoundingClientRect(); if (b && b.width && !(x >= b.left && x <= b.right && y >= b.top && y <= b.bottom)) move(b.left + Math.min(24, b.width / 2), b.top + b.height / 2); }, true); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', put); else put(); })()`;
 async function tagBrowser(port, name) {
   if (tags.has(port) || typeof WebSocket === 'undefined') return;

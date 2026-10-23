@@ -71,3 +71,4 @@
 - 2.6.0：背景互通（私聊中 @同事 → 對方自己對話跑 〔背景:id:ask|give〕，結果 🔁 回傳；ask 會叫回原機器人）；24 小時待命 = 例行任務「待命巡查」*/N，不發系統訊息、（略過）隱藏；同事清單改全部機器人。
 - 2.7.0：備援 AI（bots.fb、jobs.eng，QUOTA 錯誤→下一個）；瀏覽器 --window-name＋profile 名稱/主題色；群組依「之後/然後」依序；所有引擎給 octa-task.md 絕對路徑；agy 英文旁白過濾；cookie host-only 用 url 設定。
 - 2.8.0：群組提問側窗（#askp，回覆=@bot）、無@回答回給發問者（asksUser，你們/大家除外）、聊聊/討論→輪流、st.spent 記住額度用完到 reset、瀏覽器留在桌面（cascade，不最小化/不移出畫面）、【回覆】標記切掉工作旁白。
+- 2.9.0：tagScript 加即時游標（mousemove/mousedown/keydown/focusin）；playwright-mcp 加 --caps vision（browser_mouse_click_xy）；網站操作步驟提示；🗺️網站筆記 → st.sites 共用注入 prompt。
