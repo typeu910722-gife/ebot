@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '15.2';
+export const VERSION = '15.3';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -483,7 +483,7 @@ async function runEngine(engine, prompt, b, model, live = {}) {
         $schema: 'https://opencode.ai/config.json', enabled_providers: ['ollama'], model: 'ollama/' + name,
         provider: { ollama: { npm: '@ai-sdk/openai-compatible', name: 'Ollama', options: { baseURL: 'http://127.0.0.1:11434/v1' }, models: { [name]: { name } } } },
         mcp: { browser: { type: 'local', command: [server.command, ...server.args], environment: server.env || {}, enabled: true } },
-        tools: { task: false, todowrite: false, todoread: false }   // small local models misuse sub-agents and to-do lists, then reply about the error
+        tools: { task: false, todowrite: false, todoread: false, grep: false, glob: false }   // grep/glob need ripgrep, often missing on Windows; small local models misuse sub-agents and to-do lists, then reply about the error
       });
       // /no_think: qwen3-style models skip their long hidden reasoning (several times faster on a laptop)
       r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, '/no_think ' + FILE_INSTR], dir, '', { ctl: live.ctl });

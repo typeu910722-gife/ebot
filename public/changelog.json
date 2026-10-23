@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.5.4",
+  "date": "2026-10-23",
+  "notes": [
+   "Ollama 機器人不再因為搜尋工具（ripgrep）出錯而答非所問"
+  ],
+  "notes_en": [
+   "Ollama bots no longer go off-topic when the ripgrep search tool fails"
+  ]
+ },
+ {
   "v": "2.5.3",
   "date": "2026-10-23",
   "notes": [
