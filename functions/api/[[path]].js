@@ -93,6 +93,8 @@ async function addJob(db, userId, conv, chain, prompt, depth = 0) {
   await db.prepare('INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,depth) VALUES (?,?,?,?,?,?,?)')
     .bind(userId, conv, steps[0].b, JSON.stringify(steps.slice(1)), steps[0].p, now(), depth).run();
 }
+const STANDBY = '待命巡查';   // a bot on 24-hour standby: checks its duties every N minutes, says nothing when there's nothing to do
+const BG = /^〔背景:([^:〕]+):(ask|give)〕/;   // a bot's message to another bot, run in the other bot's own chat
 const turnsOf = g => /輪流|依序|按順序|接力/.test(g.task || '');
 const passed = t => /^[（(]?\s*(略過|PASS)\s*[）)]?[。.]?$/i.test(String(t).trim());
 async function loadAll(db, userId) {
@@ -222,7 +224,7 @@ async function fireRoutines(env, db, userId, byHost) {
       if (!(last?.by_ === 'sys' && last.text.startsWith('例行任務先暫停'))) { await addMsg(db, userId, r.conv, 'sys', `例行任務先暫停：「${r.name}」要等你在機器人的瀏覽器登入。登入後按「登入好了，繼續」或傳任何訊息，就會恢復。`); n++; }
       continue;
     }
-    await addMsg(db, userId, r.conv, 'sys', `${t} 例行任務：${r.name}`);
+    if (r.name !== STANDBY) await addMsg(db, userId, r.conv, 'sys', `${t} 例行任務：${r.name}`);
     await addJob(db, userId, r.conv, g ? g.members : [b.id], `（例行任務「${r.name}」）${r.prompt || '請執行你的指定任務，完成後回報結果。'}`);
     if (!byHost) {
       if (hostOnline === null) hostOnline = env.isLocal ? true : (await hostInfo(db, userId)).online;
@@ -1067,7 +1069,8 @@ async function route({ request: req, env, params }) {
           outs.push({ id, name, mime });
         }
         const isGroup = (await loadAll(db, U)).groups.some(g => g.id === job.conv);
-        if (!(isGroup && passed(text) && !outs.length)) await addMsg(db, U, job.conv, job.bot_id, text, outs);
+        const quiet = isGroup || job.prompt.startsWith('（例行任務') || BG.test(job.prompt) || /^同事「[^」]*」回覆了你在背景問/.test(job.prompt);   // where "（略過）" means nothing to show
+        if (!(quiet && passed(text) && !outs.length)) await addMsg(db, U, job.conv, job.bot_id, text, outs);
         if (remember.length || skillsNew.length) {
           const st = await getSettings(db, U);
           if (remember.length) { st.memory = st.memory || {}; st.memory[job.bot_id] = [...new Set([...(st.memory[job.bot_id] || []), ...remember])].slice(-40); }
@@ -1111,19 +1114,35 @@ async function route({ request: req, env, params }) {
         const { bots, groups } = await loadAll(db, U);
         const self = bots.find(b => b.id === job.bot_id), grp = groups.find(g => g.id === job.conv);
         const asks = [], gives = [];
+        // a background message finished: hand the answer back to the bot that sent it
+        const bg = job.prompt.match(BG), from = bg && bots.find(b => b.id === bg[1]);
+        if (from && self && !passed(text)) {
+          await addMsg(db, U, from.id, 'sys', `🔁 「${self.name}」${bg[2] === 'ask' ? '回覆' : '完成交辦'}：${text.slice(0, 800)}`);
+          if (bg[2] === 'ask' && job.depth < MAX_ASK_DEPTH) await addJob(db, U, from.id, [from.id], `同事「${self.name}」回覆了你在背景問的問題：\n${text.slice(0, 3000)}\n\n請根據回覆繼續你原本在做的工作（看前面的對話）；已經沒事就只回「（略過）」。`, job.depth + 1);
+        }
         if (self && job.depth < MAX_ASK_DEPTH && !passed(text)) {
           for (const line of text.split('\n')) {
             const mm = line.trim().match(/^@(\S+)\s+(.+)$/);
             if (!mm) continue;
-            const to = bots.find(b => b.name === mm[1] && b.id !== self.id && (grp ? grp.members.includes(b.id) : (b.folder || null) === (self.folder || null)));
+            const to = bots.find(b => b.name === mm[1] && b.id !== self.id && (!grp || grp.members.includes(b.id)));
             if (!to || asks.some(a => a.b === to.id) || gives.some(a => a.b === to.id)) continue;
             const hand = mm[2].match(/^交接\s*[:：]?\s*(.+)$/);   // "@名字 交接：…" passes the whole job on; no need to come back
+            if (!grp) {   // outside a group: the other bot works on it in the background, in its own chat
+              const what = hand ? hand[1] : mm[2];
+              await addMsg(db, U, to.id, 'sys', `🔁 「${self.name}」${hand ? '交辦' : '問'}：${what.slice(0, 600)}`);
+              await addJob(db, U, to.id, [to.id], hand
+                ? `〔背景:${self.id}:give〕同事「${self.name}」交辦給你：${what}\n請照你的職責完成，最後簡短回報結果，回報會自動傳給${self.name}。`
+                : `〔背景:${self.id}:ask〕同事「${self.name}」在背景問你：${what}\n請直接回答，回答會自動傳給${self.name}。`, job.depth + 1);
+              gives.push({ b: to.id });
+              continue;
+            }
             if (hand) gives.push({ b: to.id, p: `${self.name} 把工作交接給你：${hand[1]}\n（原本的指示：${job.prompt.slice(0, 1500)}）\n請接手完成並回報。` });
             else asks.push({ b: to.id, p: `${self.name} 問你：${mm[2]}\n請直接回答 ${self.name}。` });
           }
         }
         if (asks.length) rest = [...asks, { b: self.id, p: `同事已在上面回覆你的問題，請根據回覆繼續完成原本的指示：${job.prompt}` }, ...rest];
-        if (gives.length) { for (const g of gives) await addJob(db, U, job.conv, [g], g.p, job.depth + 1); await bump(db, U); }
+        for (const g of gives) if (g.p) await addJob(db, U, job.conv, [g], g.p, job.depth + 1);
+        if (gives.length || from) await bump(db, U);
         await addJob(db, U, job.conv, rest, job.prompt, job.depth + (asks.length ? 1 : 0));
         return ok();
       }
@@ -1682,7 +1701,7 @@ async function jobPayload(env, db, U, job) {
     folderNotes: folders.find(f => f.id === bot.folder)?.notes || '',
     notes: st.notes || '',
     lang: st.lang || 'zh-TW',
-    colleagues: bots.filter(b => b.id !== bot.id && (b.folder || null) === (bot.folder || null)).map(b => ({ id: b.id, name: b.name, task: b.task })),
+    colleagues: bots.filter(b => b.id !== bot.id).sort((a, b) => ((a.folder || null) === (bot.folder || null) ? 0 : 1) - ((b.folder || null) === (bot.folder || null) ? 0 : 1)).slice(0, 20).map(b => ({ id: b.id, name: b.name, task: b.task })),
     group: group ? { name: group.name, task: group.task, members: group.members.map(name), mode: turnsOf(group) ? 'turns' : 'parallel' } : null,
     history: hist.map(h => ({ id: h.id, who: name(h.by_), text: h.text, files: (h.files ? JSON.parse(h.files) : []).map(f => ({ ...f, path: pathOf(f.id) })) }))
   };

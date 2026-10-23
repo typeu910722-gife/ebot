@@ -1,5 +1,19 @@
 [
  {
+  "v": "2.6.0",
+  "date": "2026-10-23",
+  "notes": [
+   "機器人可以在背景互相溝通：@同事 問題、@同事 交接：工作，對方在自己的對話裡處理，結果自動傳回",
+   "新增「24 小時待命」：任務設定裡選每 10／30／60 分鐘，機器人會自己巡查指定任務，有事處理、沒事不出聲",
+   "所有機器人都互相認識（不限同分區），可以找最適合的同事幫忙"
+  ],
+  "notes_en": [
+   "Bots talk to each other in the background: @colleague question or @colleague 交接: task; answers come back automatically",
+   "New 24-hour standby: bots check their duties every 10/30/60 minutes, act when needed, stay quiet otherwise",
+   "Every bot knows all its colleagues, not only those in the same section"
+  ]
+ },
+ {
   "v": "2.5.6",
   "date": "2026-10-23",
   "notes": [

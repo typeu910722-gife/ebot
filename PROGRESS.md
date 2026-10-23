@@ -68,3 +68,4 @@
 - 機器人可自己點「已記住帳號」登入；需密碼仍停下。
 - LINE 測試：Claude、Gemini 已傳給 yzz；ChatGPT 要使用者輸入 LINE 密碼；Ollama 待 2.5.6 重試。
 - 待辦：Grok Bot CLI 匯入（app 不寫 gateway-descriptor.json）；Claude 週額度剩 3%（10/26 重置）。
+- 2.6.0：背景互通（私聊中 @同事 → 對方自己對話跑 〔背景:id:ask|give〕，結果 🔁 回傳；ask 會叫回原機器人）；24 小時待命 = 例行任務「待命巡查」*/N，不發系統訊息、（略過）隱藏；同事清單改全部機器人。

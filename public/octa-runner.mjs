@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '15.5';
+export const VERSION = '15.6';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -164,9 +164,9 @@ function buildPrompt(job, here) {
     '資訊不夠、會影響結果時，直接問使用者並停下等回覆，不要亂猜。'
   );
   if (job.colleagues?.length && !job.group) {
-    lines.push(`你在分區「${job.folder || '未分區'}」，同分區的同事：`);
-    for (const c of job.colleagues) lines.push(`- ${c.name}：${c.task}`);
-    if (job.canAsk) lines.push('需要同事的資料或幫忙時，在回覆中單獨一行寫「@同事名 你的問題」，系統會請對方回答，再把你叫回來繼續。不需要就不要寫。');
+    lines.push('OCTA 裡的其他機器人同事（像全天待命的員工，可以在背景互相幫忙）：');
+    for (const c of job.colleagues) lines.push(`- ${c.name}：${c.task || '（還沒有指定任務）'}`);
+    if (job.canAsk) lines.push('需要同事的資料或幫忙時，單獨一行寫「@同事名 你的問題」，系統會在背景傳給對方，對方回答後自動叫你繼續；整件事交給更適合的同事做，寫「@同事名 交接：要做的事」，對方做完會回報給你。不需要就不要寫。');
   }
   lines.push('', '你的運作環境（使用者問到你用什麼 AI、方案、還剩多少流量時，照這些資料回答，不要說你查不到）：', ...aboutMe(job));
   if (job.memory?.length) lines.push('', '你記得的事（之前學到的偏好和重要事實；重要決定前仍要到來源確認最新狀況）：', ...job.memory.map(m => '- ' + m));
