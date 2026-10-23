@@ -156,7 +156,7 @@ select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padd
 .mention button{border:1px solid var(--line2);background:var(--panel);border-radius:99px;padding:4px 10px;font-size:12px;color:var(--mute)}
 .mention button:hover{color:var(--gold2);border-color:var(--line)}
 form.in{display:flex;gap:10px;border-top:1px solid var(--line2);padding:12px max(20px,env(safe-area-inset-right,0px)) 14px 20px}
-form.in textarea{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;color:var(--ink);font:inherit;resize:none;height:46px;max-height:140px;line-height:1.5;overflow-y:auto}
+form.in textarea{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;color:var(--ink);font:inherit;resize:none;height:46px;min-height:46px;max-height:140px;box-sizing:border-box;line-height:1.5;overflow-y:auto}
 form.in{align-items:flex-end}
 form.in .send,form.in .clip{height:46px}
 .send{border:0;background:var(--gold);color:#12110e;border-radius:var(--r);padding:0 18px;font-weight:500}
@@ -186,7 +186,7 @@ form.in .send,form.in .clip{height:46px}
 .aic summary b{font-weight:500;font-size:15px;flex:1;font-family:var(--tc)}
 .aib{padding:0 14px 14px;display:grid;gap:10px;font-size:13px;color:var(--mute);line-height:1.7;min-width:0}
 .aib p{margin:0}
-.ol{margin:0;padding-left:20px;display:grid;gap:10px}
+.ol{margin:0;padding-left:20px;display:grid;gap:10px;min-width:0}.ol>li{min-width:0;overflow-wrap:anywhere}
 .ol pre.code{margin-top:4px}
 .emos{display:flex;flex-wrap:wrap;gap:6px;letter-spacing:0}
 .emo-b{width:38px;height:38px;border-radius:10px;border:1px solid var(--line2);background:var(--bg);font-size:20px;line-height:1;display:grid;place-items:center;color:var(--gold2);font-family:var(--tc);transition:transform .12s,border-color .12s}
@@ -250,7 +250,7 @@ form.in .send,form.in .clip{height:46px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;color:var(--mute)}
 .kv b{font-weight:500;color:var(--ink)}
 .toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px}
-pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;overflow-x:auto;white-space:pre;color:var(--gold2);user-select:all}
+pre.code{max-width:100%;box-sizing:border-box;margin:0;background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;overflow-x:auto;white-space:pre;color:var(--gold2);user-select:all}
 .row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 /* ---------- phone ---------- */
 @media (max-width:760px){
@@ -306,7 +306,7 @@ pre.code{margin:0;background:var(--bg);border:1px solid var(--line2);border-radi
 @keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 .yrow{width:min(320px,76vw);display:flex;justify-content:space-between;font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
 .yzm{font-family:var(--serif);font-weight:700;color:var(--gold2);letter-spacing:.08em}
-.ytop{position:fixed;top:0;left:0;right:0;height:3px;z-index:90;pointer-events:none;opacity:0;transition:opacity .2s}
+.ytop{position:fixed;top:0;left:0;right:0;height:3px;z-index:90;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .2s}
 .ytop div{position:absolute;inset:0 auto 0 0;width:40%;background:linear-gradient(90deg,#8d7344,var(--gold),var(--gold2));overflow:hidden;animation:ymove 1.1s ease-in-out infinite}
 @keyframes ymove{0%{left:-40%}100%{left:100%}}
 body.yloading .ytop{opacity:1}
@@ -416,7 +416,11 @@ details.adv[open]{display:grid;gap:8px}
   .askc textarea:focus{outline:none;border-color:var(--gold)}
   .askc .row2{gap:8px}
   @media (min-width:1100px){body.asking #msgs{padding-right:360px}}
-  @media (max-width:760px){.askp{left:12px;right:12px;width:auto;top:auto;bottom:96px;max-height:45vh}}
+  @media (max-width:760px){.askp{left:10px;right:10px;width:auto;top:auto;bottom:calc(150px + env(safe-area-inset-bottom,0px));max-height:58vh;gap:8px}
+    .askp .askt{background:var(--panel2);border:1px solid var(--gold);border-radius:999px;padding:9px 14px;font-size:13px;justify-content:space-between;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+    .askp .askt::after{content:'▴';color:var(--gold2)}.askp.open .askt::after{content:'▾'}
+    .askp:not(.open) .askc{display:none}
+    body.asking #msgs{padding-bottom:64px}}
 </style>
 </head>
 <body>
@@ -787,7 +791,7 @@ function render(scroll){
   const off=!S.runnerOnline&&!CFG.local;$('offb').hidden=!off;
   if(off)setHTML($('offb'),`<span>⚠ 主機電腦離線，訊息會先排隊，電腦連上後自動處理。</span><button type="button" class="ghost" onclick="openGuide()">怎麼連上？</button>`);
   setHTML($('task'),'<em>'+(g?'協作規則':'指定任務')+'</em>'+(c.task?'<span data-u>'+esc(c.task)+'</span>':'<span class="tlearn">還沒有指定任務：直接傳訊息告訴它要做什麼，它會自己整理並填進來。</span>'));
-  $('msg').placeholder=I18N.t(g?'輸入指示，可用 @ 指定誰做':'輸入指示…');
+  $('msg').placeholder=I18N.t(g&&innerWidth>760?'輸入指示，可用 @ 指定誰做':'輸入指示…');
   const qk=(S.quick||{})[cur]||[];
   setHTML($('quick'),qk.length?qk.map((q,i)=>`<button type="button" data-q="${i}" title="${esc(q)}" data-u>⚡ ${esc(q.length>24?q.slice(0,24)+'…':q)}</button>`).join(''):'');
   $('mention').innerHTML=g?c.members.map(id=>bot(id)?`<button data-at="${esc(bot(id).name)}" data-u>@${esc(bot(id).name)}</button>`:'').join(''):'';
@@ -822,7 +826,7 @@ function openConv(id){saveDraft();cur=id;try{localStorage.setItem('ebot_cur',cur
 const draftKey=()=>'octa_draft_'+cur;
 function saveDraft(){if(!cur)return;try{const v=$('msg').value;v?localStorage.setItem(draftKey(),v):localStorage.removeItem(draftKey())}catch(e){}}
 function loadDraft(){let v='';try{v=localStorage.getItem(draftKey())||''}catch(e){}$('msg').value=v;grow()}
-function grow(){const t=$('msg');t.style.height='auto';t.style.height=Math.min(t.scrollHeight,140)+'px'}
+function grow(){const t=$('msg');if(!t.offsetParent){t.style.height='';return}t.style.height='auto';t.style.height=Math.min(Math.max(t.scrollHeight,46),140)+'px'}   // hidden (phone list view): measure later
 $('msg').addEventListener('input',()=>{grow();clearTimeout(grow.t);grow.t=setTimeout(saveDraft,400)});
 $('q').addEventListener('input',()=>render(false));
 $('q').addEventListener('keydown',e=>{if(e.key==='Enter'){const f=$('list').querySelector('.item');if(f){openConv(f.dataset.id);$('q').value='';render(false)}}if(e.key==='Escape'){$('q').value='';render(false);$('q').blur()}});
@@ -1135,11 +1139,13 @@ function renderAsks(){const p=$('askp');if(!p)return;const list=openAsks(),key=l
   document.body.classList.toggle('asking',!!list.length);if(!list.length){p.hidden=true;p.dataset.k='';return}
   if(p.dataset.k===key&&!p.hidden)return;   // same questions: keep what you are typing
   const typed={};p.querySelectorAll('.askc').forEach(c=>{typed[c.dataset.mid]=c.querySelector('textarea').value});
-  p.dataset.k=key;p.hidden=false;
-  p.innerHTML=`<div class="askt">機器人有問題要問你 <span class="pill">${list.length}</span></div>`+list.map(({b,m})=>{const q=askText(m.text),tail=q.length>400?q.slice(0,400)+'…':q;
+  p.dataset.k=key;p.hidden=false;const wasOpen=p.classList.contains('open');
+  p.innerHTML=`<div class="askt" role="button"><span>❓ ${list.length===1?esc(list[0].b.name)+' 有問題要問你':'機器人有問題要問你'} <span class="pill">${list.length}</span></span></div>`+list.map(({b,m})=>{const q=askText(m.text),tail=q.length>400?q.slice(0,400)+'…':q;
     return `<div class="askc" data-mid="${m.id}" data-name="${esc(b.name)}"><div class="askh"><span class="av" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b><small>私下問你</small><button type="button" class="askx" aria-label="之後再說">×</button></div>
       <div class="askq" data-u>${esc(tail)}</div><textarea rows="2" placeholder="回覆給 ${esc(b.name)}（只有它會收到）">${esc(typed[m.id]||'')}</textarea>
       <div class="row2"><button type="button" class="btn askgo">回覆</button><button type="button" class="ghost askto">在對話中查看</button></div></div>`}).join('');
+  if(wasOpen)p.classList.add('open');
+  p.querySelector('.askt').onclick=()=>{p.classList.toggle('open');if(p.classList.contains('open'))p.querySelector('textarea')?.focus()};
   p.querySelectorAll('.askc').forEach(c=>{const ta=c.querySelector('textarea'),go=async()=>{const v=ta.value.trim();if(!v)return ta.focus();c.querySelector('.askgo').disabled=true;
       if(await sendMsg('@'+c.dataset.name+' '+v)){p.dataset.k=''}else c.querySelector('.askgo').disabled=false};
     c.querySelector('.askgo').onclick=go;ta.onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();go()}};

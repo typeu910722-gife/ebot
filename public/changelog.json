@@ -1,5 +1,17 @@
 [
  {
+  "v": "2.9.1",
+  "date": "2026-10-23",
+  "notes": [
+   "手機版面調整：輸入框不再被壓扁、程式碼不再超出畫面、機器人提問改成輸入框上方的提示條，點開才展開",
+   "機器人更主動：切換帳號／館別、捲動、搜尋、到其他網站查資料都會自己做，不再叫你幫它打開頁面或提供名單；只有發訊息、改資料、付款、刪除才會先問"
+  ],
+  "notes_en": [
+   "Phone layout fixes: input box no longer squashed, code blocks fit, bot questions show as a compact bar",
+   "Bots act on their own for anything read-only (switch accounts, scroll, search, check other sites); they only ask before sending, changing, paying or deleting"
+  ]
+ },
+ {
   "v": "2.9.0",
   "date": "2026-10-23",
   "notes": [
