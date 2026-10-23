@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '17.0';
+export const VERSION = '17.1';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -151,6 +151,23 @@ const q = a => (WIN && /[\s"&|<>^]/.test(a) ? '"' + a.replace(/"/g, '\\"') + '"'
 const whoAmI = job => { const E = ENGINES[job.bot.engine || 'claude'] || ENGINES.claude;
   return callUser(job) + `提醒：你是「${job.bot.name}」，用的 AI 是 ${E.label}${job.bot.model ? `（${job.bot.model}）` : ''}。` + (job.group ? '對話裡其他機器人的發言是它們自己的，不是你的；不要用它們的名字、模型或任務介紹自己。' : ''); };
 const callUser = job => job.nick ? `使用者叫「${job.nick}」：跟他說話時稱呼他「${job.nick}」，不要叫他老闆、主人或使用者；規則或資料裡寫的「老闆」就是指他。` : '跟使用者說話時直接用「你」，不要叫他老闆或主人；規則或資料裡寫的「老闆」就是指使用者。';
+// today's date said plainly, and the bot's own work notes (what it already found), so it doesn't start from zero each time
+function dayInfo(job) {
+  const d = new Date(), f = x => `${x.getMonth() + 1}/${x.getDate()}`, wk = '日一二三四五六';
+  const y = new Date(d - 864e5), t = new Date(+d + 864e5);
+  const out = [`今天是 ${d.getFullYear()}/${f(d)}（週${wk[d.getDay()]}），昨天是 ${f(y)}（週${wk[y.getDay()]}），明天是 ${f(t)}。`];
+  if (/入住|退房|續住|掃房|房號|訂房/.test([job.bot.task, job.notes, job.folderNotes, job.group?.task, job.prompt].join(' '))) out.push(
+    `判斷住宿日期時，先把每個暱稱的日期換成「住哪幾晚」再分類（照規則：「10/21-23」＝住 10/21、10/22、10/23 三晚，10/24 退房）：第一晚是今天 ${f(d)} → 今日入住；今天在住宿晚數裡但不是第一晚 → 今日續住；最後一晚是昨天 ${f(y)} → 今天退房（應掃房）。`,
+    `找名單不能只看畫面上看得到的：要在搜尋框分別搜尋今天、昨天和前幾天的日期（例如「${f(d)}」「${f(y)}」「${d.getMonth() + 1}/1」「${d.getMonth() + 1}/2」），兩館都要切換過去查，往下捲到清單載入完整；每筆都要算過再分類。`);
+  return out;
+}
+const notesFile = job => join(workDir, 'bots', String(job.bot.id).replace(/[^\w-]/g, ''), '工作筆記.md');
+function workNotes(job) {
+  let t = ''; try { t = readFileSync(notesFile(job), 'utf8').trim(); } catch { }
+  if (t.length > 6000) t = '…' + t.slice(-6000);
+  return [`你的工作筆記（檔案 ${notesFile(job)}，由你自己維護）：查到值得留下的資料就更新這個檔案，例如今天的名單與房況、網站上東西在哪、做到哪一步，每段寫上查到的時間；舊日期、用不到的就刪掉。下次先看筆記，只補查可能變動的部分，不用每次從頭查。`,
+    t ? '目前筆記內容：\n' + t : '（目前筆記是空的）'];
+}
 function buildPrompt(job, here) {
   const lines = [
     `你是 OCTA（奧克塔）裡的機器人「${job.bot.name}」，在使用者自己的電腦上執行。`,
@@ -225,6 +242,7 @@ function buildPrompt(job, here) {
     const recent = i >= hist.length - (small ? 2 : 4), t = recent || h.text.length <= cut ? h.text : h.text.slice(0, cut) + '…（較早的訊息，已截短）';
     lines.push(`【${h.who}】${t}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   });
+  lines.push('', ...dayInfo(job), '', ...workNotes(job));
   lines.push('', ...tabsNow(job), '', '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。', '', whoAmI(job), '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
@@ -833,7 +851,7 @@ async function warmClaude(job, b, here, live) {
     // only what happened since the last turn, then the new instruction
     const fresh = job.history.filter(h => (h.id || 0) > s.lastId && !(h.who === '使用者' && h.text === job.prompt));
     text = [fresh.length ? '（上次之後的新對話）\n' + fresh.map(h => `【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : '')).join('\n') : '',
-      tabsNow(job).join('\n'), '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。', whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
+      dayInfo(job).join('\n'), workNotes(job).join('\n'), tabsNow(job).join('\n'), '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。', whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
     log(`⚡ ${job.bot.name}：AI 待機中，直接接續`);
   } else {
     if (s) closeSession(job.bot.id);

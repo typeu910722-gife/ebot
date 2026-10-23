@@ -1,5 +1,17 @@
 [
  {
+  "v": "2.9.3",
+  "date": "2026-10-23",
+  "notes": [
+   "每個機器人有自己的「工作筆記」：查到的名單、房況、網站位置會記下來，下次先看筆記只補查變動，不用每次從頭查",
+   "住宿日期判斷更準：先把暱稱換成住哪幾晚再分類入住／續住／應掃房，並要求搜尋前幾天的日期、兩館都查齊"
+  ],
+  "notes_en": [
+   "Each bot keeps its own work notes (lists, room status, where things are) and reuses them next time",
+   "More accurate stay-date logic: nights are worked out first, then check-in / continuing / checkout, searching earlier dates in both properties"
+  ]
+ },
+ {
   "v": "2.9.2",
   "date": "2026-10-23",
   "notes": [

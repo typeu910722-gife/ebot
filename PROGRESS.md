@@ -72,3 +72,4 @@
 - 2.7.0：備援 AI（bots.fb、jobs.eng，QUOTA 錯誤→下一個）；瀏覽器 --window-name＋profile 名稱/主題色；群組依「之後/然後」依序；所有引擎給 octa-task.md 絕對路徑；agy 英文旁白過濾；cookie host-only 用 url 設定。
 - 2.8.0：群組提問側窗（#askp，回覆=@bot）、無@回答回給發問者（asksUser，你們/大家除外）、聊聊/討論→輪流、st.spent 記住額度用完到 reset、瀏覽器留在桌面（cascade，不最小化/不移出畫面）、【回覆】標記切掉工作旁白。
 - 2.9.0：tagScript 加即時游標（mousemove/mousedown/keydown/focusin）；playwright-mcp 加 --caps vision（browser_mouse_click_xy）；網站操作步驟提示；🗺️網站筆記 → st.sites 共用注入 prompt。
+- 2.9.3：dayInfo（今天/昨天/明天＋住宿分類規則、搜尋前幾天）、workNotes（bots/<id>/工作筆記.md 自動注入 prompt，機器人自行維護）。待查：Grok Bot 對同問題的回答（使用者中止電腦操作）。
