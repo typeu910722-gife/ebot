@@ -139,6 +139,10 @@ const ENGINES = ['claude', 'codex', 'gemini', 'grok', 'grokbot', 'copilot', 'cur
 // backup AIs: up to two "engine|model" entries, tried in order when the bot's AI has run out of quota
 const fbParse = v => { try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
 const fbOk = v => JSON.stringify((Array.isArray(v) ? v : []).map(x => String(x || '').split('|')).filter(([e]) => ENGINES.includes(e) && !['copilot', 'cursor', 'qwen', 'grok'].includes(e)).slice(0, 2).map(([e, m]) => e + (clean(m, 80) ? '|' + clean(m, 80) : '')));
+// a bot's message that waits on the user (a question, something to confirm or decide)
+const asksUser = t => !/@\S/.test(String(t || '').trim().split('\n').pop()) && /[？?]\s*$|請問|需要你|要不要|待確認|請(你|老闆)?(確認|決定|提供|告訴)|需要老闆決定|需要使用者/.test(String(t || '').slice(-400));
+// "Resets in 156h16m" → when that AI can be used again
+const resetAt = t => { const m = String(t).match(/resets? in\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?/i); return m && (m[1] || m[2]) ? now() + ((+m[1] || 0) * 60 + (+m[2] || 0)) * 60000 : now() + 60 * 60000; };
 const ENGINE_NAMES = { claude: 'Claude', codex: 'ChatGPT', gemini: 'Antigravity', grokbot: 'Grok Bot', opencode: 'Ollama' };
 const QUOTA = /quota|usage limit|rate.?limit|limit (reached|exceeded)|exceeded your|upgrade your (plan|subscription)|out of credits|insufficient.?credit|too many requests|\b429\b|額度|用量上限|已達上限/i;
 const engineOk = e => (ENGINES.includes(e) ? e : 'claude');
@@ -1018,7 +1022,9 @@ async function route({ request: req, env, params }) {
           const b = (await loadAll(db, U)).bots.find(x => x.id === job.bot_id);
           if (b && b.fb.length) {
             const list = [b.engine + (b.model ? '|' + b.model : ''), ...b.fb], at = Math.max(0, list.indexOf(job.eng || list[0]));
-            const nxt = list[at + 1];
+            const st = await getSettings(db, U); st.spent = Object.fromEntries(Object.entries(st.spent || {}).filter(([, t]) => t > now()));
+            st.spent[list[at]] = resetAt(body.text); await putSettings(db, U, st);   // skip it for the next jobs until it resets
+            const nxt = list.slice(at + 1).find(x => !(st.spent[x] > now()));
             if (nxt) {
               const lab = x => { const [e, mm] = x.split('|'); return (ENGINE_NAMES[e] || e) + (mm ? `（${mm}）` : ''); };
               await db.prepare("UPDATE jobs SET status='error', finished=? WHERE id=?").bind(now(), job.id).run();
@@ -1044,6 +1050,7 @@ async function route({ request: req, env, params }) {
           return ok();
         }
         let text = clean(body.text, 20000) || (good ? '（完成，無回覆內容）' : '⚠ 執行失敗');
+        if (good && job.kind === 'chat' && text.includes('【回覆】')) text = text.slice(text.lastIndexOf('【回覆】') + 4).trim() || '（完成）';   // drop the running commentary before the reply
         // 📝任務更新：… 📝結束 — the bot learned what its standing job is; save it as its 指定任務
         let learned = null;
         const tm = good && job.kind === 'chat' ? text.match(/📝\s*任務更新[:：]\s*([\s\S]*?)(?:📝\s*結束|$)/) : null;
@@ -1440,7 +1447,13 @@ async function route({ request: req, env, params }) {
         const at = id => text.indexOf('@' + (bots.find(x => x.id === id)?.name || '\u0000'));
         const named = group.members.filter(id => at(id) >= 0).sort((a, b) => at(a) - at(b));
         chain = named.length ? named : group.members;
-        var ordered = named.length > 1 && /收到.{0,20}後|之後|然後|接著|再由|再交|完成後|做完|拿到.{0,10}(後|再)|依序|輪流/.test(text);
+        // no @: an answer to the question a member just asked goes back to that member only
+        if (!named.length && !/你們|大家|各位|每位|每個|所有人|全部/.test(text)) {
+          const [, prev] = (await db.prepare("SELECT by_,text FROM messages WHERE user_id=? AND conv=? AND by_<>'sys' ORDER BY id DESC LIMIT 2").bind(U, conv).all()).results;
+          if (prev && group.members.includes(prev.by_) && asksUser(prev.text)) chain = [prev.by_];
+        }
+        // one waits for another's result, or they are asked to talk with each other: take turns so each sees what came before
+        var ordered = chain.length > 1 && ((named.length > 1 && /收到.{0,20}後|之後|然後|接著|再由|再交|完成後|做完|拿到.{0,10}(後|再)|依序|輪流/.test(text)) || /互相|彼此|聊聊|討論|交流|心得|對話|聊天|你們聊/.test(text));
       }
       // groups: members work at the same time and each decides whether the message is theirs; rules saying 輪流/依序 keep turns
       if (group && !turnsOf(group) && !ordered) for (const id of chain) await addJob(db, U, conv, [id], text || '請處理我傳的附件。');
@@ -1711,6 +1724,11 @@ async function jobPayload(env, db, U, job) {
   const where = fileIds.length ? (await db.prepare(`SELECT id,path FROM files WHERE user_id=? AND id IN (${fileIds.map(() => '?').join(',')})`).bind(U, ...fileIds).all()).results : [];
   const pathOf = id => where.find(w => w.id === id)?.path || null;
   const st = await getSettings(db, U);
+  // its AI ran out of quota recently: start straight on the first backup that still has some
+  if (!job.eng && job.kind === 'chat' && bot.fb?.length) {
+    const sp = st.spent || {}, list = [bot.engine + (bot.model ? '|' + bot.model : ''), ...bot.fb];
+    if (sp[list[0]] > now()) { const alt = list.find(x => !(sp[x] > now())); if (alt) { job.eng = alt; await db.prepare('UPDATE jobs SET eng=? WHERE id=?').bind(alt, job.id).run(); } }
+  }
   const { date } = localNow(env);   // how many jobs this AI already ran today, so the bot can tell the user
   const dayStart = Date.parse(date + 'T00:00:00Z') - (+env.TZ_OFFSET_MIN || 0) * 60000;
   const usageToday = (await db.prepare("SELECT COUNT(*) AS n FROM jobs j JOIN bots b ON b.id=j.bot_id WHERE j.user_id=? AND j.kind='chat' AND j.created>=? AND IFNULL(b.engine,'claude')=?").bind(U, dayStart, bot.engine || 'claude').first())?.n ?? null;

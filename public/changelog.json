@@ -1,5 +1,27 @@
 [
  {
+  "v": "2.8.0",
+  "date": "2026-10-23",
+  "notes": [
+   "群組機器人要問你事情時，右邊會跳出「私下問你」視窗，直接回覆給那一隻，不會被其他機器人搶答",
+   "在群組直接回答機器人剛問的問題（不用 @），會只交給問你的那一隻",
+   "「互相聊聊」「討論」「心得」這類訊息改成輪流發言，每隻都看得到前面的人說了什麼、可以互相接話",
+   "群組發言改成像同事聊天：只講自己的部分、帶出實際做過的事，不再每隻都重述全部分工",
+   "額度用完的 AI 會被記住，到重置前直接用備援，不再每次先失敗一次",
+   "機器人的瀏覽器改成一直留在桌面上（每隻錯開位置），隨時可以點進去；交還後也不會被收起來",
+   "回覆不再夾雜工作過程的說明"
+  ],
+  "notes_en": [
+   "When a group bot needs to ask you something, a side panel lets you answer just that bot",
+   "Answering a bot's question in a group without @ goes only to the bot that asked",
+   "Messages like 'chat with each other' or 'discuss' run in turns so bots can respond to each other",
+   "Group replies read like colleagues talking: only their own part, with real details",
+   "An AI that ran out of quota is remembered and skipped until it resets",
+   "Bots' browsers stay on the desktop (cascaded) so you can click into them any time",
+   "Replies no longer include the AI's work-in-progress notes"
+  ]
+ },
+ {
   "v": "2.7.1",
   "date": "2026-10-23",
   "notes": [

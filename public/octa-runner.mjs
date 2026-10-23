@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '16.0';
+export const VERSION = '16.2';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -159,7 +159,9 @@ function buildPrompt(job, here) {
     `你在群組「${job.group.name}」，成員依序為：${job.group.members.join('、')}。`,
     job.group.task ? `群組協作規則：${job.group.task}` : '群組沒有特別規則：依各成員的指定任務分工。',
     '只做你自己負責的部分，可以引用其他成員在對話裡交出的資料。',
-    ...(job.group.mode === 'parallel' && !String(job.prompt || '').includes('@' + job.bot.name) ? ['成員是同時收到這則訊息、各自並行處理的。先判斷這則訊息該不該由你處理：跟你的職責無關、或別的成員明顯更適合時，整則回覆只寫「（略過）」；問整個群組的（例如大家自我介紹）就要回答。'] : []),
+    '在群組說話像同事聊天：用第一人稱只講你自己的部分，不要重述其他成員的職責；帶出你實際做過或看到的具體事（日期、房號、遇到的狀況），可以直接回應前面成員說的話，或 @ 某位成員接話、問問題。簡短自然。',
+    '要問使用者的事，寫清楚放在回覆最後並用問號結尾；使用者回覆會直接回到你這裡。',
+    ...(job.group.mode === 'parallel' && !String(job.prompt || '').includes('@' + job.bot.name) ? ['成員是同時收到這則訊息、各自並行處理的。先判斷這則訊息該不該由你處理：只有訊息明顯是交代給別的成員的工作時，整則回覆才只寫「（略過）」；對大家說的（你們、大家、各位、沒指定人的問題、聊天）一定要回答。'] : []),
     ...(job.canAsk ? ['需要其他成員的資料或幫忙時，單獨一行寫「@成員名 你的問題」，系統會請對方回答再叫你回來繼續；整件工作交給更適合的成員時寫「@成員名 交接：要做的事」，交出去後你就不用再做。'] : []),
     '資訊不夠、會影響結果時，直接問使用者並停下等回覆，不要亂猜。'
   );
@@ -213,7 +215,7 @@ function buildPrompt(job, here) {
     const recent = i >= hist.length - (small ? 2 : 4), t = recent || h.text.length <= cut ? h.text : h.text.slice(0, cut) + '…（較早的訊息，已截短）';
     lines.push(`【${h.who}】${t}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   });
-  lines.push('', ...tabsNow(job), '', '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」之類的說明，最後只輸出一次給使用者看的繁體中文回覆。', '', whoAmI(job), '現在請處理這則指示：', job.prompt);
+  lines.push('', ...tabsNow(job), '', '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。', '', whoAmI(job), '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
 
@@ -512,6 +514,8 @@ async function runEngine(engine, prompt, b, model, live = {}) {
     }
   }
   text = (text || r.out || '').replace(/\x1b\[[0-9;]*m/g, '').trim();
+  // the reply starts after the last 【回覆】 line; anything before it is the model's running commentary
+  { const k = text.lastIndexOf('【回覆】'); if (k >= 0) text = text.slice(k + 4).trim() || text.replace(/【回覆】/g, '').trim(); }
   // agy prints the model's running commentary too ("Let me read…"): keep the reply, drop English narration lines before it
   if (engine === 'gemini' && /[\u4e00-\u9fff]/.test(text)) text = text.split('\n').filter(l => !/^\s*(Let me|Let's|I'll|I will|I see|I need|I'm going|Found it|Now,? |Next,? |First,? |OK,? |Okay|Great|Perfect|Looking at|Checking|Reading)\b/i.test(l)).join('\n').replace(/\n{3,}/g, '\n\n').trim();
   const E = ENGINES[engine] || ENGINES.claude;
@@ -819,7 +823,7 @@ async function warmClaude(job, b, here, live) {
     // only what happened since the last turn, then the new instruction
     const fresh = job.history.filter(h => (h.id || 0) > s.lastId && !(h.who === '使用者' && h.text === job.prompt));
     text = [fresh.length ? '（上次之後的新對話）\n' + fresh.map(h => `【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : '')).join('\n') : '',
-      tabsNow(job).join('\n'), '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」之類的說明，最後只輸出一次給使用者看的繁體中文回覆。', whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
+      tabsNow(job).join('\n'), '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。', whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
     log(`⚡ ${job.bot.name}：AI 待機中，直接接續`);
   } else {
     if (s) closeSession(job.bot.id);
@@ -933,10 +937,19 @@ function markProfile(profile, name) {
     writeFileSync(f, JSON.stringify(pr));
   } catch (e) { log('瀏覽器標記失敗：' + e.message); }
 }
+const onDesk = new Set();
 async function openBrowser(bot) {
   const port = portOf(bot.id);
   const key = bot.id;
-  if (await cdpInfo(port)) { browsers.set(key, { port, last: Date.now() }); return port; }
+  if (await cdpInfo(port)) {
+    browsers.set(key, { port, last: Date.now() });
+    if (!onDesk.has(port)) { onDesk.add(port); await cdp(port, async send => {   // a window an older version hid off-screen or minimised comes back onto the desktop
+      const [p] = await pagesOf(send); if (!p) return;
+      const { windowId, bounds } = await send('Browser.getWindowForTarget', { targetId: p.targetId });
+      if (bounds.windowState === 'minimized' || bounds.left < -5000) { await send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } }).catch(() => { }); await send('Browser.setWindowBounds', { windowId, bounds: { left: 40 + ((port - 9311) % 6) * 60, top: 30 + ((port - 9311) % 6) * 40, width: 1200, height: 820 } }).catch(() => { }); }
+    }).catch(() => { }); }
+    return port;
+  }
   const chrome = findChrome();
   if (!chrome) throw new Error('找不到 Google Chrome');
   const profile = botDir(bot.id).profile;
@@ -945,7 +958,7 @@ async function openBrowser(bot) {
   if (profileInUse(profile)) throw new Error('這個機器人的瀏覽器有一個舊視窗開著，請先關掉它');
   markProfile(profile, bot.name);
   const child = spawn(chrome, [`--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, '--no-first-run', '--no-default-browser-check', `--window-name=OCTA｜${bot.name}`,
-    '--restore-last-session', '--window-position=-32000,-32000', '--window-size=1280,860'], { detached: true, stdio: 'ignore', windowsHide: false });
+    '--restore-last-session', `--window-position=${40 + ((port - 9311) % 6) * 60},${30 + ((port - 9311) % 6) * 40}`, '--window-size=1200,820'], { detached: true, stdio: 'ignore', windowsHide: false });
   child.on('error', () => { });
   child.unref();
   for (let i = 0; i < 40; i++) { if (await cdpInfo(port)) break; await pause(500); }
@@ -953,15 +966,7 @@ async function openBrowser(bot) {
   browsers.set(key, { port, last: Date.now(), profile });
   if (sessions.has(bot.id)) closeSession(bot.id);   // a waiting AI was connected to the old browser
   log(`🌐 ${bot.name} 的瀏覽器已在背景開啟`);
-  // some systems pull an off-screen window back on screen: then keep it minimised instead
-  try {
-    await cdp(port, async send => {
-      const [p] = await pagesOf(send);
-      if (!p) return;
-      const { windowId, bounds } = await send('Browser.getWindowForTarget', { targetId: p.targetId });
-      if (bounds.left > -5000) await send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'minimized' } });
-    });
-  } catch { }
+  // the window stays on the desktop (cascaded per bot) so you can click into any bot's browser at any time
   return port;
 }
 async function browserSnapshot(port, since) {   // screenshot + address of the tab the bot used last
@@ -981,9 +986,10 @@ async function showBrowser(port, url, hide) {
     let pages = await pagesOf(send), targetId = pages[0]?.targetId;
     if (url || !targetId) targetId = (await send('Target.createTarget', { url: url || 'about:blank' })).targetId;
     const { windowId } = await send('Browser.getWindowForTarget', { targetId });
-    if (hide) { await send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } }).catch(() => { }); await send('Browser.setWindowBounds', { windowId, bounds: { left: -32000, top: -32000 } }); return; }
+    if (hide) return;   // handing back: the window stays where it is on the desktop
     await send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } }).catch(() => { });
-    await send('Browser.setWindowBounds', { windowId, bounds: { left: 60, top: 40, width: 1280, height: 860 } });
+    const { bounds } = await send('Browser.getWindowForTarget', { targetId });
+    if (bounds.left < -5000) await send('Browser.setWindowBounds', { windowId, bounds: { left: 60, top: 40, width: 1200, height: 820 } });   // windows from older versions sat off-screen
     await send('Target.activateTarget', { targetId });
   });
 }

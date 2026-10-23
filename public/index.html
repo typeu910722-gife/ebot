@@ -404,6 +404,19 @@ details.adv[open]{display:grid;gap:8px}
   .gblist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
   .gbrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
   .gbrow span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .askp{position:fixed;right:18px;top:130px;width:330px;max-height:calc(100vh - 190px);overflow:auto;z-index:30;display:flex;flex-direction:column;gap:10px;animation:askin .25s ease-out}
+  .askp[hidden]{display:none}
+  @keyframes askin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+  .askt{font-size:12px;color:var(--gold2);letter-spacing:.04em;display:flex;align-items:center;gap:6px;padding:0 4px}
+  .askc{background:var(--panel2);border:1px solid var(--gold);border-radius:14px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:8px}
+  .askh{display:flex;align-items:center;gap:8px}.askh .av{width:28px;height:28px;font-size:13px;flex:none}.askh b{font-weight:600}.askh small{color:var(--mute);flex:1}
+  .askx{background:none;border:0;color:var(--mute);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}.askx:hover{color:var(--ink)}
+  .askq{font-size:13px;line-height:1.6;color:var(--ink);white-space:pre-wrap;max-height:150px;overflow:auto;border-left:2px solid var(--line);padding-left:8px}
+  .askc textarea{width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink);font:inherit;font-size:13px;resize:vertical}
+  .askc textarea:focus{outline:none;border-color:var(--gold)}
+  .askc .row2{gap:8px}
+  @media (min-width:1100px){body.asking #msgs{padding-right:360px}}
+  @media (max-width:760px){.askp{left:12px;right:12px;width:auto;top:auto;bottom:96px;max-height:45vh}}
 </style>
 </head>
 <body>
@@ -516,6 +529,7 @@ details.adv[open]{display:grid;gap:8px}
     <div class="note" id="note" hidden></div>
   </section>
 </div>
+<aside class="askp" id="askp" hidden aria-label="機器人的提問"></aside>
 <div class="veil" id="veil" hidden></div>
 
 <script>
@@ -736,6 +750,7 @@ function md(src){
 
 /* ---------- render ---------- */
 function render(scroll){
+  queueMicrotask(renderAsks);
   $('online').className='pill '+(S.runnerOnline?'p-ok':'p-off');$('online').textContent=CFG.local?(S.runnerOnline?'電腦在線':'電腦離線'):S.runnerOnline?'主機在線':'主機離線';
   $('online').title=I18N.t(S.runnerOnline?'機器人在主機電腦上工作中':'主機電腦沒開或沒連上，訊息會先排隊');
   let h='';
@@ -784,7 +799,7 @@ function render(scroll){
     if(m.by==='sys')return `<div class="sys">${esc(m.text)}<span class="ts">${hm(m.ts)}</span></div>`;
     if(m.by==='me')return `<div class="m me${m.tmp?' tmp':''}"><div class="bx"><div class="bub" data-u>${fmt(m.text)}${filesHtml(m.files)}</div><div class="meta">${m.tmp?'傳送中…':hm(m.ts)}</div></div></div>`;
     const long=m.text.length>1400||m.text.split('\n').length>30,open=OPENED.has(m.id);
-    return `<div class="m"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
+    return `<div class="m" data-mid="${m.id}"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
   const bz=busyIn(cur);
   if(bz.length){const run=bz.find(b=>b.status==='running');
     mh+=`<div class="work"><span class="fade">${run&&run.kind==='chat'&&run.started?`<span class="el" data-since="${run.started}">${elapsed(run.started)}</span> `:''}${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器正在顯示…':esc(nameOf(run.bot_id))+' 處理中…'+(run.progress?`<span class="prog" data-u>${esc(run.progress)}</span>`:'')):S.runnerOnline?'排隊中…':'等待主機電腦上線…'}</span><button id="stop">停止</button></div>`}
@@ -1104,6 +1119,30 @@ const trigText=r=>r.hook?I18N.t('外部事件觸發'):r.watch?I18N.t('網頁有�
 const timesText=ts=>{const ev=ts.find(t=>t.startsWith('*/')),fx=ts.filter(t=>!t.startsWith('*/'));
   return [ev?everyText(+ev.slice(2)):'',fx.length?I18N.t('每天')+' '+fx.map(hm12).join(I18N.lang==='en'?', ':'、'):''].filter(Boolean).join(I18N.lang==='en'?'; ':'；')};
 let rtEdit=null;
+/* a group member asks you something: a side panel to answer that one bot (only it receives the reply) */
+const ASKRE=/[？?]\s*$|請問|需要你|要不要|待確認|請(你|老闆)?(確認|決定|提供|告訴)|需要老闆決定|需要使用者/;
+function askDismissed(){try{return JSON.parse(localStorage.getItem('octa_askx')||'[]')}catch(e){return []}}
+function openAsks(){if(!cur||!isG(cur))return [];const c=conv(cur);if(!c)return [];const ms=convMsgs(cur).filter(m=>!m.tmp&&m.by!=='sys'),gone=askDismissed(),out=[];
+  for(const id of c.members){const b=bot(id);if(!b)continue;let i=ms.length-1;while(i>=0&&ms[i].by!==id)i--;
+    if(i<0||!ASKRE.test(String(ms[i].text).slice(-400))||/@\S/.test(String(ms[i].text).trim().split('\n').pop())||gone.includes(ms[i].id))continue;   // a question @ another member isn't for you
+    const after=ms.slice(i+1),mine=after.filter(m=>m.by==='me');
+    if(mine.some(m=>m.text.includes('@'+b.name))||(after[0]&&after[0].by==='me'&&!/@\S/.test(after[0].text)))continue;
+    out.push({b,m:ms[i]})}
+  return out}
+function renderAsks(){const p=$('askp');if(!p)return;const list=openAsks(),key=list.map(x=>x.m.id).join(',');
+  document.body.classList.toggle('asking',!!list.length);if(!list.length){p.hidden=true;p.dataset.k='';return}
+  if(p.dataset.k===key&&!p.hidden)return;   // same questions: keep what you are typing
+  const typed={};p.querySelectorAll('.askc').forEach(c=>{typed[c.dataset.mid]=c.querySelector('textarea').value});
+  p.dataset.k=key;p.hidden=false;
+  p.innerHTML=`<div class="askt">機器人有問題要問你 <span class="pill">${list.length}</span></div>`+list.map(({b,m})=>{const q=String(m.text),tail=q.length>320?'…'+q.slice(-320):q;
+    return `<div class="askc" data-mid="${m.id}" data-name="${esc(b.name)}"><div class="askh"><span class="av" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b><small>私下問你</small><button type="button" class="askx" aria-label="之後再說">×</button></div>
+      <div class="askq" data-u>${esc(tail)}</div><textarea rows="2" placeholder="回覆給 ${esc(b.name)}（只有它會收到）">${esc(typed[m.id]||'')}</textarea>
+      <div class="row2"><button type="button" class="btn askgo">回覆</button><button type="button" class="ghost askto">在對話中查看</button></div></div>`}).join('');
+  p.querySelectorAll('.askc').forEach(c=>{const ta=c.querySelector('textarea'),go=async()=>{const v=ta.value.trim();if(!v)return ta.focus();c.querySelector('.askgo').disabled=true;
+      if(await sendMsg('@'+c.dataset.name+' '+v)){p.dataset.k=''}else c.querySelector('.askgo').disabled=false};
+    c.querySelector('.askgo').onclick=go;ta.onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();go()}};
+    c.querySelector('.askx').onclick=()=>{try{const g=askDismissed();g.push(+c.dataset.mid);localStorage.setItem('octa_askx',JSON.stringify(g.slice(-200)))}catch(e){}p.dataset.k='';renderAsks()};
+    c.querySelector('.askto').onclick=()=>{const el=document.querySelector(`#msgs [data-mid="${c.dataset.mid}"]`);if(el)el.scrollIntoView({block:'center',behavior:'smooth'});else $('msgs').scrollTop=$('msgs').scrollHeight}})}
 function renderRoutines(){const box=$('rt');if(!box)return;const list=S.routines.filter(r=>r.conv===cur);
   box.innerHTML=list.map(r=>rtEdit===r.id?rForm(r):`<div class="rrow" data-r="${r.id}" role="button" tabindex="0"><span class="t"><b data-u>${esc(r.name)}</b><small data-u>${trigText(r)}</small></span><button type="button" class="sw ${r.enabled?'on':''}" data-sw="${r.id}" aria-label="${r.enabled?'停用':'啟用'}" aria-pressed="${r.enabled}"></button></div>`).join('')
    +(rtEdit==='new'?rForm(null):`<button type="button" class="ghost" id="rtAdd" style="justify-self:start">＋ 例行任務</button>`);
