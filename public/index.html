@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=24"></script>
+<script src="/i18n-dict.js?v=25"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -1502,7 +1502,7 @@ function renderUpd(u){const el=$('upd');if(!el||!u)return;window._upd=u;
   el.hidden=!show;if(!show)return;
   el.innerHTML=u.state==='available'?`<span>有新版本 <b data-u>v${esc(u.version)}</b></span><button class="ghost" id="updWhat">看更新內容</button><button class="btn" id="updGo">更新</button>`
     :u.state==='downloading'?`<span>下載新版本中…</span><div class="ytrack"><div class="yfill" style="width:${u.percent||0}%"></div></div><span data-u>${u.percent||0}%</span>`
-    :u.state==='ready'?`<span>新版本已下載好</span><button class="btn" id="updGo">重新啟動並更新</button>`
+    :u.state==='ready'?`<span>新版本已下載好${u.admin?'<small style="display:block;color:var(--gold2)">這台電腦的 OCTA 是裝給所有使用者，Windows 會詢問是否允許變更，請按「是」</small>':''}</span><button class="btn" id="updGo">重新啟動並更新</button>`
     :`<span>更新失敗，請稍後再試</span><button class="ghost" id="updGo">重試</button>`;
   if($('updWhat'))$('updWhat').onclick=openVersion;
   const b=$('updGo');if(b)b.onclick=()=>{if(u.state==='ready'){boot.show('正在更新，OCTA 會自動重新開啟…');UPD.install()}else UPD.download()};

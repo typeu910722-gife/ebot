@@ -6,7 +6,7 @@ import { join, dirname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, appendFileSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import { startServer } from './server.mjs';
 
@@ -21,7 +21,7 @@ const plainNotes = n => (Array.isArray(n) ? n.map(x => x.note || '').join('\n') 
 autoUpdater.on('update-available', i => setUpd({ state: 'available', version: i.version, notes: plainNotes(i.releaseNotes), date: i.releaseDate || '' }));
 autoUpdater.on('update-not-available', () => setUpd({ state: 'none' }));
 autoUpdater.on('download-progress', p => setUpd({ state: 'downloading', percent: Math.round(p.percent || 0) }));
-autoUpdater.on('update-downloaded', i => setUpd({ state: 'ready', version: i.version, percent: 100 }));
+autoUpdater.on('update-downloaded', i => setUpd({ state: 'ready', version: i.version, percent: 100, admin: needsAdmin() }));
 autoUpdater.on('error', e => { setUpd({ state: 'error', error: String(e?.message || e).slice(0, 300) }); });
 function checkUpdates() { if (app.isPackaged) autoUpdater.checkForUpdates().catch(() => { }); }
 
@@ -184,14 +184,26 @@ function freeInstallDir() {
     `$ids | Select-Object -Unique | % { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; exit 0`;
   try { execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { timeout: 15000, windowsHide: true, env: { ...process.env, OCTA_DIR: dirname(process.execPath) } }); } catch (e) { logError('free-install-dir', e); }
 }
-// the silent installer doesn't always start OCTA again: a small background helper waits for the installer
-// to finish, then opens OCTA if it isn't running
+// the silent installer doesn't always start OCTA again, and a helper started by OCTA dies with it: Windows Task Scheduler
+// runs the helper on its own. It waits for the installer to finish, then opens OCTA (the new version, or the old one if
+// the update didn't go through)
 function reopenAfterUpdate() {
   if (process.platform !== 'win32') return;
-  const ps = `$exe=$env:OCTA_EXE; Start-Sleep 6; $end=(Get-Date).AddMinutes(6); ` +
-    `while ((Get-Date) -lt $end -and (Get-Process | ? { $_.ProcessName -like '*octa*setup*' -or $_.ProcessName -like 'Un_A*' })) { Start-Sleep 2 }; ` +
-    `Start-Sleep 3; if (-not (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($exe)) -ErrorAction SilentlyContinue)) { Start-Process -FilePath $exe }`;
-  try { spawn('powershell', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', ps], { detached: true, stdio: 'ignore', windowsHide: true, env: { ...process.env, OCTA_EXE: process.execPath } }).unref(); } catch (e) { logError('reopen', e); }
+  try {
+    const f = join(dataDir, 'reopen-octa.ps1'), q = t => "'" + String(t).replace(/'/g, "''") + "'";
+    writeFileSync(f, '\ufeff' + [`$exe = ${q(process.execPath)}`, 'Start-Sleep 6', '$end = (Get-Date).AddMinutes(8)',
+      "while ((Get-Date) -lt $end -and (Get-Process | Where-Object { $_.ProcessName -like '*octa*setup*' -or $_.ProcessName -like 'Un_A*' })) { Start-Sleep 2 }",
+      'Start-Sleep 3', 'if (-not (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($exe)) -ErrorAction SilentlyContinue)) { Start-Process -FilePath $exe }',
+      'schtasks /Delete /TN OCTA-reopen /F | Out-Null'].join('\r\n'));
+    execFileSync('schtasks', ['/Create', '/TN', 'OCTA-reopen', '/TR', `powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "${f}"`, '/SC', 'ONCE', '/ST', '23:59', '/F'], { windowsHide: true, timeout: 15000 });
+    execFileSync('schtasks', ['/Run', '/TN', 'OCTA-reopen'], { windowsHide: true, timeout: 15000 });
+  } catch (e) { logError('reopen', e); }
+}
+// installed "for all users" (e.g. into E:\ or Program Files): Windows asks for permission at every update
+function needsAdmin() {
+  if (process.platform !== 'win32') return false;
+  const t = join(dirname(process.execPath), '.octa-write-test');
+  try { writeFileSync(t, ''); rmSync(t, { force: true }); return false; } catch { return true; }
 }
 // tell the user when the last silent update didn't go through, and offer the installer
 function checkLastUpdate() {

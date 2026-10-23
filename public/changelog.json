@@ -1,5 +1,21 @@
 [
  {
+  "v": "2.5.1",
+  "date": "2026-10-23",
+  "notes": [
+   "更新後一定會重新打開 OCTA（改由 Windows 工作排程器負責，更新失敗也會打開舊版）",
+   "OCTA 裝給所有使用者時，更新前會提醒你 Windows 會詢問權限，要按「是」"
+  ],
+  "notes_en": [
+   "OCTA always reopens after an update (Windows Task Scheduler now handles it, and the old version opens if the update fails)",
+   "When OCTA is installed for all users, you’re told before updating that Windows will ask for permission — press “Yes”"
+  ],
+  "notes_ja": [
+   "更新後に必ず OCTA を再起動します（Windows タスク スケジューラが担当。更新に失敗した場合は旧版を起動）",
+   "全ユーザー向けにインストールされている場合、更新前に Windows の許可確認で「はい」を押すよう案内します"
+  ]
+ },
+ {
   "v": "2.5.0",
   "date": "2026-10-23",
   "notes": [

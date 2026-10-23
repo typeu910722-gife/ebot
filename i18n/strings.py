@@ -983,3 +983,5 @@ T.update({
  '產生交接網址': ('Create hand-off URL', '引き継ぎ URL を作成'),
  '其他 AI 用這個網址把工作交給這個機器人，它會自動開始做。': ('Other AIs use this URL to hand work to this bot; it starts right away.', '他の AI はこの URL でこのボットに作業を渡せます。受け取るとすぐ始めます。'),
 })
+
+T.update({'這台電腦的 OCTA 是裝給所有使用者，Windows 會詢問是否允許變更，請按「是」': ('OCTA is installed for all users on this computer: Windows will ask to allow changes — press “Yes”', 'このパソコンの OCTA は全ユーザー向けにインストールされています。Windows が変更の許可を求めるので「はい」を押してください')})
