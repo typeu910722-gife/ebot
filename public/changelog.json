@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.5.5",
+  "date": "2026-10-23",
+  "notes": [
+   "網站只要點選已記住的帳號就能登入時，機器人會自己點，不再停下來等你"
+  ],
+  "notes_en": [
+   "When a site only needs you to pick a remembered account, bots click it themselves instead of waiting for you"
+  ]
+ },
+ {
   "v": "2.5.4",
   "date": "2026-10-23",
   "notes": [
