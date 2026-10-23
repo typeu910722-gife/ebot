@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '14.0';
+export const VERSION = '14.1';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -473,7 +473,8 @@ async function runEngine(engine, prompt, b, model, live = {}) {
       b.put('opencode.json', {
         $schema: 'https://opencode.ai/config.json', enabled_providers: ['ollama'], model: 'ollama/' + name,
         provider: { ollama: { npm: '@ai-sdk/openai-compatible', name: 'Ollama', options: { baseURL: 'http://127.0.0.1:11434/v1' }, models: { [name]: { name } } } },
-        mcp: { browser: { type: 'local', command: [server.command, ...server.args], environment: server.env || {}, enabled: true } }
+        mcp: { browser: { type: 'local', command: [server.command, ...server.args], environment: server.env || {}, enabled: true } },
+        tools: { task: false, todowrite: false, todoread: false }   // small local models misuse sub-agents and to-do lists, then reply about the error
       });
       r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, FILE_INSTR], dir, '');
       break;

@@ -1,5 +1,18 @@
 [
  {
+  "v": "2.4.1",
+  "date": "2026-10-23",
+  "notes": [
+   "修正 Ollama 本機模型有時不回答問題、反而回一段英文錯誤說明（關掉小模型容易用錯的子任務與待辦工具）"
+  ],
+  "notes_en": [
+   "Fixed Ollama local models sometimes replying with an English error explanation instead of answering (sub-task and to-do tools, which small models misuse, are now off)"
+  ],
+  "notes_ja": [
+   "Ollama のローカルモデルが質問に答えず英語のエラー説明を返すことがある問題を修正（小型モデルが誤用しやすいサブタスクと ToDo ツールをオフ）"
+  ]
+ },
+ {
   "v": "2.4.0",
   "date": "2026-10-23",
   "notes": [
