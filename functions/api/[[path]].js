@@ -93,6 +93,8 @@ async function addJob(db, userId, conv, chain, prompt, depth = 0) {
   await db.prepare('INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,depth) VALUES (?,?,?,?,?,?,?)')
     .bind(userId, conv, steps[0].b, JSON.stringify(steps.slice(1)), steps[0].p, now(), depth).run();
 }
+const turnsOf = g => /輪流|依序|按順序|接力/.test(g.task || '');
+const passed = t => /^[（(]?\s*(略過|PASS)\s*[）)]?[。.]?$/i.test(String(t).trim());
 async function loadAll(db, userId) {
   const [b, g, f, r] = await db.batch([
     db.prepare('SELECT id,name,task,folder,engine,model,avatar,browser,shot_ts,shot_file,page,bpc FROM bots WHERE user_id=? ORDER BY created').bind(userId),
@@ -257,7 +259,7 @@ async function fireEvent(env, db, r, what) {
   const all = await loadAll(db, r.user_id);
   const g = all.groups.find(x => x.id === r.conv), b = all.bots.find(x => x.id === r.conv);
   if (!g && !b) return 'gone';
-  await addMsg(db, r.user_id, r.conv, 'sys', `⚡ 事件觸發：${r.name}`);
+  await addMsg(db, r.user_id, r.conv, 'sys', /交接的工作：/.test(what) ? `⚡ ${what.slice(0, 300)}` : `⚡ 事件觸發：${r.name}`);
   await addJob(db, r.user_id, r.conv, g ? g.members : [b.id], `（例行任務「${r.name}」由事件觸發）${r.prompt || '請執行你的指定任務，完成後回報結果。'}\n\n事件內容：\n${what}`.slice(0, 20000));
   await bump(db, r.user_id);
   return 'fired';
@@ -1064,7 +1066,8 @@ async function route({ request: req, env, params }) {
           await db.prepare("INSERT INTO files (id,user_id,name,mime,data,ts,conv,loc,path,size,pc) VALUES (?,?,?,?,'',?,?,'pc',?,?,?)").bind(id, U, name, mime, now(), job.conv, p, +f.size || null, me.kind === 'runner' ? label : null).run();
           outs.push({ id, name, mime });
         }
-        await addMsg(db, U, job.conv, job.bot_id, text, outs);
+        const isGroup = (await loadAll(db, U)).groups.some(g => g.id === job.conv);
+        if (!(isGroup && passed(text) && !outs.length)) await addMsg(db, U, job.conv, job.bot_id, text, outs);
         if (remember.length || skillsNew.length) {
           const st = await getSettings(db, U);
           if (remember.length) { st.memory = st.memory || {}; st.memory[job.bot_id] = [...new Set([...(st.memory[job.bot_id] || []), ...remember])].slice(-40); }
@@ -1105,18 +1108,22 @@ async function route({ request: req, env, params }) {
         if (!good || job.kind !== 'chat') return ok();
         let rest = JSON.parse(job.chain).map(s => (typeof s === 'string' ? { b: s, p: job.prompt } : s));
         // a bot asks a colleague in the same 分區: a line starting with "@名字 問題"
-        const { bots } = await loadAll(db, U);
-        const self = bots.find(b => b.id === job.bot_id);
-        const asks = [];
-        if (self && job.depth < MAX_ASK_DEPTH) {
+        const { bots, groups } = await loadAll(db, U);
+        const self = bots.find(b => b.id === job.bot_id), grp = groups.find(g => g.id === job.conv);
+        const asks = [], gives = [];
+        if (self && job.depth < MAX_ASK_DEPTH && !passed(text)) {
           for (const line of text.split('\n')) {
             const mm = line.trim().match(/^@(\S+)\s+(.+)$/);
             if (!mm) continue;
-            const to = bots.find(b => b.name === mm[1] && b.id !== self.id && (b.folder || null) === (self.folder || null));
-            if (to && !asks.some(a => a.b === to.id)) asks.push({ b: to.id, p: `${self.name} 問你：${mm[2]}\n請直接回答 ${self.name}。` });
+            const to = bots.find(b => b.name === mm[1] && b.id !== self.id && (grp ? grp.members.includes(b.id) : (b.folder || null) === (self.folder || null)));
+            if (!to || asks.some(a => a.b === to.id) || gives.some(a => a.b === to.id)) continue;
+            const hand = mm[2].match(/^交接\s*[:：]?\s*(.+)$/);   // "@名字 交接：…" passes the whole job on; no need to come back
+            if (hand) gives.push({ b: to.id, p: `${self.name} 把工作交接給你：${hand[1]}\n（原本的指示：${job.prompt.slice(0, 1500)}）\n請接手完成並回報。` });
+            else asks.push({ b: to.id, p: `${self.name} 問你：${mm[2]}\n請直接回答 ${self.name}。` });
           }
         }
         if (asks.length) rest = [...asks, { b: self.id, p: `同事已在上面回覆你的問題，請根據回覆繼續完成原本的指示：${job.prompt}` }, ...rest];
+        if (gives.length) { for (const g of gives) await addJob(db, U, job.conv, [g], g.p, job.depth + 1); await bump(db, U); }
         await addJob(db, U, job.conv, rest, job.prompt, job.depth + (asks.length ? 1 : 0));
         return ok();
       }
@@ -1391,7 +1398,9 @@ async function route({ request: req, env, params }) {
         const named = group.members.filter(id => { const b = bots.find(x => x.id === id); return b && text.includes('@' + b.name); });
         chain = named.length ? named : group.members;
       }
-      await addJob(db, U, conv, chain, text || '請處理我傳的附件。');
+      // groups: members work at the same time and each decides whether the message is theirs; rules saying 輪流/依序 keep turns
+      if (group && !turnsOf(group)) for (const id of chain) await addJob(db, U, conv, [id], text || '請處理我傳的附件。');
+      else await addJob(db, U, conv, chain, text || '請處理我傳的附件。');
       return ok();
     }
     if (path === 'clear' && m === 'POST') {   // empty one conversation's history
@@ -1674,7 +1683,7 @@ async function jobPayload(env, db, U, job) {
     notes: st.notes || '',
     lang: st.lang || 'zh-TW',
     colleagues: bots.filter(b => b.id !== bot.id && (b.folder || null) === (bot.folder || null)).map(b => ({ id: b.id, name: b.name, task: b.task })),
-    group: group ? { name: group.name, task: group.task, members: group.members.map(name) } : null,
+    group: group ? { name: group.name, task: group.task, members: group.members.map(name), mode: turnsOf(group) ? 'turns' : 'parallel' } : null,
     history: hist.map(h => ({ id: h.id, who: name(h.by_), text: h.text, files: (h.files ? JSON.parse(h.files) : []).map(f => ({ ...f, path: pathOf(f.id) })) }))
   };
 }

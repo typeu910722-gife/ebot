@@ -1,5 +1,21 @@
 [
  {
+  "v": "2.5.2",
+  "date": "2026-10-23",
+  "notes": [
+   "群組裡的機器人改成同時處理訊息，不再一個等一個；跟自己職責無關的訊息會自動略過",
+   "群組成員可以互相追問（@成員 問題）或把工作整件交接（@成員 交接：內容）",
+   "Grok Bot 等其他 AI 交接工作時，對話裡會顯示是誰交接、交接了什麼",
+   "更新完成畫面會列出所有沒看過的版本內容；交接網址不再超出畫面"
+  ],
+  "notes_en": [
+   "Group members now work on messages at the same time, and skip messages that aren't their job",
+   "Group members can ask each other (@member question) or hand off a whole job (@member 交接: task)",
+   "Hand-offs from Grok Bot and other AIs show who sent them and what the task is",
+   "The update screen lists every version you missed; the hand-off URL no longer overflows"
+  ]
+ },
+ {
   "v": "2.5.1",
   "date": "2026-10-23",
   "notes": [

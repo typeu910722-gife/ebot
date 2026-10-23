@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '15.0';
+export const VERSION = '15.1';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -157,10 +157,13 @@ function buildPrompt(job, here) {
   ];
   if (job.group) lines.push(
     `你在群組「${job.group.name}」，成員依序為：${job.group.members.join('、')}。`,
-    `群組協作規則：${job.group.task}`,
-    '只做你自己負責的部分，可以引用前面成員在對話裡交出的資料。'
+    job.group.task ? `群組協作規則：${job.group.task}` : '群組沒有特別規則：依各成員的指定任務分工。',
+    '只做你自己負責的部分，可以引用其他成員在對話裡交出的資料。',
+    ...(job.group.mode === 'parallel' && !String(job.prompt || '').includes('@' + job.bot.name) ? ['成員是同時收到這則訊息、各自並行處理的。先判斷這則訊息該不該由你處理：跟你的職責無關、或別的成員明顯更適合時，整則回覆只寫「（略過）」；問整個群組的（例如大家自我介紹）就要回答。'] : []),
+    ...(job.canAsk ? ['需要其他成員的資料或幫忙時，單獨一行寫「@成員名 你的問題」，系統會請對方回答再叫你回來繼續；整件工作交給更適合的成員時寫「@成員名 交接：要做的事」，交出去後你就不用再做。'] : []),
+    '資訊不夠、會影響結果時，直接問使用者並停下等回覆，不要亂猜。'
   );
-  if (job.colleagues?.length) {
+  if (job.colleagues?.length && !job.group) {
     lines.push(`你在分區「${job.folder || '未分區'}」，同分區的同事：`);
     for (const c of job.colleagues) lines.push(`- ${c.name}：${c.task}`);
     if (job.canAsk) lines.push('需要同事的資料或幫忙時，在回覆中單獨一行寫「@同事名 你的問題」，系統會請對方回答，再把你叫回來繼續。不需要就不要寫。');
