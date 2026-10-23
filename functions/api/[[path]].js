@@ -140,7 +140,7 @@ const ENGINES = ['claude', 'codex', 'gemini', 'grok', 'grokbot', 'copilot', 'cur
 const fbParse = v => { try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
 const fbOk = v => JSON.stringify((Array.isArray(v) ? v : []).map(x => String(x || '').split('|')).filter(([e]) => ENGINES.includes(e) && !['copilot', 'cursor', 'qwen', 'grok'].includes(e)).slice(0, 2).map(([e, m]) => e + (clean(m, 80) ? '|' + clean(m, 80) : '')));
 // a bot's message that waits on the user (a question, something to confirm or decide)
-const asksUser = t => !/@\S/.test(String(t || '').trim().split('\n').pop()) && /[？?]\s*$|請問|需要你|要不要|待確認|請(你|老闆)?(確認|決定|提供|告訴)|需要老闆決定|需要使用者/.test(String(t || '').slice(-400));
+const asksUser = t => /❓/.test(String(t || '')) || (!/@\S/.test(String(t || '').trim().split('\n').pop()) && /[？?]\s*$/.test(String(t || '').trim()));
 // "Resets in 156h16m" → when that AI can be used again
 const resetAt = t => { const m = String(t).match(/resets? in\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?/i); return m && (m[1] || m[2]) ? now() + ((+m[1] || 0) * 60 + (+m[2] || 0)) * 60000 : now() + 60 * 60000; };
 const ENGINE_NAMES = { claude: 'Claude', codex: 'ChatGPT', gemini: 'Antigravity', grokbot: 'Grok Bot', opencode: 'Ollama' };
@@ -1229,7 +1229,7 @@ async function route({ request: req, env, params }) {
         me: me.name, local: me.kind === 'local', rev: rev.results[0]?.rev ?? 0,
         engines: h ? h.engines : JSON.parse((await db.prepare('SELECT engines FROM users WHERE id=?').bind(U).first())?.engines || 'null'),
         runnerOnline: env.runnerOnline ? env.runnerOnline() : h.online,
-        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, shareBrowser: st.shareBrowser !== false, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {}, pins: st.pins || [], mute: st.mute || {}, memory: st.memory || {}, skills: st.skills || {}, nsk: Object.fromEntries(Object.entries(st.nskills || {}).map(([k, v]) => [k, [...new Set(Object.keys(v.files || {}).map(p => p.split('/')[0]))]])), warm: WARM.includes(+st.warm) ? +st.warm : 120, models: h ? h.models : st._models || null,
+        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, shareBrowser: st.shareBrowser !== false, nick: st.nick || '', sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {}, pins: st.pins || [], mute: st.mute || {}, memory: st.memory || {}, skills: st.skills || {}, nsk: Object.fromEntries(Object.entries(st.nskills || {}).map(([k, v]) => [k, [...new Set(Object.keys(v.files || {}).map(p => p.split('/')[0]))]])), warm: WARM.includes(+st.warm) ? +st.warm : 120, models: h ? h.models : st._models || null,
         ...all, last: last.results, ur: ur.results.map(r => [r.conv, r.id]), busy: busy.results
       });
     }
@@ -1504,6 +1504,7 @@ async function route({ request: req, env, params }) {
       const st = await getSettings(db, U);
       if (body.notes !== undefined) st.notes = clean(body.notes, 20000);
       if (body.notifyAll !== undefined) st.notifyAll = !!body.notifyAll;
+      if (body.nick !== undefined) st.nick = clean(body.nick, 20);   // what the bots call you
       if (['cloud', 'pc'].includes(body.sched)) st.sched = body.sched;
       if (body.warm !== undefined && WARM.includes(+body.warm)) st.warm = +body.warm;
       if (body.shareBrowser !== undefined) st.shareBrowser = !!body.shareBrowser;
@@ -1743,6 +1744,7 @@ async function jobPayload(env, db, U, job) {
     folder: folders.find(f => f.id === bot.folder)?.name || null,
     folderNotes: folders.find(f => f.id === bot.folder)?.notes || '',
     notes: st.notes || '',
+    nick: st.nick || '',
     lang: st.lang || 'zh-TW',
     colleagues: bots.filter(b => b.id !== bot.id).sort((a, b) => ((a.folder || null) === (bot.folder || null) ? 0 : 1) - ((b.folder || null) === (bot.folder || null) ? 0 : 1)).slice(0, 20).map(b => ({ id: b.id, name: b.name, task: b.task })),
     group: group ? { name: group.name, task: group.task, members: group.members.map(name), mode: turnsOf(group) ? 'turns' : 'parallel' } : null,

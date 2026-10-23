@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '16.2';
+export const VERSION = '16.3';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -149,10 +149,12 @@ const q = a => (WIN && /[\s"&|<>^]/.test(a) ? '"' + a.replace(/"/g, '\\"') + '"'
 // ---------- prompts ----------
 // said again right before the instruction: in groups, models (small ones especially) took on another member's name and duties
 const whoAmI = job => { const E = ENGINES[job.bot.engine || 'claude'] || ENGINES.claude;
-  return `提醒：你是「${job.bot.name}」，用的 AI 是 ${E.label}${job.bot.model ? `（${job.bot.model}）` : ''}。` + (job.group ? '對話裡其他機器人的發言是它們自己的，不是你的；不要用它們的名字、模型或任務介紹自己。' : ''); };
+  return callUser(job) + `提醒：你是「${job.bot.name}」，用的 AI 是 ${E.label}${job.bot.model ? `（${job.bot.model}）` : ''}。` + (job.group ? '對話裡其他機器人的發言是它們自己的，不是你的；不要用它們的名字、模型或任務介紹自己。' : ''); };
+const callUser = job => job.nick ? `使用者叫「${job.nick}」：跟他說話時稱呼他「${job.nick}」，不要叫他老闆、主人或使用者；規則或資料裡寫的「老闆」就是指他。` : '跟使用者說話時直接用「你」，不要叫他老闆或主人；規則或資料裡寫的「老闆」就是指使用者。';
 function buildPrompt(job, here) {
   const lines = [
     `你是 OCTA（奧克塔）裡的機器人「${job.bot.name}」，在使用者自己的電腦上執行。`,
+    callUser(job),
     job.bot.task ? `你的指定任務：${job.bot.task}` : '你還沒有指定任務：從使用者的訊息了解你要長期負責什麼。'
   ];
   if (job.group) lines.push(
@@ -160,7 +162,7 @@ function buildPrompt(job, here) {
     job.group.task ? `群組協作規則：${job.group.task}` : '群組沒有特別規則：依各成員的指定任務分工。',
     '只做你自己負責的部分，可以引用其他成員在對話裡交出的資料。',
     '在群組說話像同事聊天：用第一人稱只講你自己的部分，不要重述其他成員的職責；帶出你實際做過或看到的具體事（日期、房號、遇到的狀況），可以直接回應前面成員說的話，或 @ 某位成員接話、問問題。簡短自然。',
-    '要問使用者的事，寫清楚放在回覆最後並用問號結尾；使用者回覆會直接回到你這裡。',
+    '真的需要使用者回答才能繼續時，在回覆最後單獨一行寫「❓問你：具體問題」：寫清楚是哪一館哪一房／哪位客人、你看到什麼、要他選什麼（例如「貳宿 303 有 ʟɪɴ_ 和 蔡宗恩 兩組暱稱，密碼要傳給：A. ʟɪɴ_ B. 蔡宗恩？」）。不是問題的心得、說明、報告不要寫 ❓，也不要用問號結尾。使用者回覆會直接回到你這裡。',
     ...(job.group.mode === 'parallel' && !String(job.prompt || '').includes('@' + job.bot.name) ? ['成員是同時收到這則訊息、各自並行處理的。先判斷這則訊息該不該由你處理：只有訊息明顯是交代給別的成員的工作時，整則回覆才只寫「（略過）」；對大家說的（你們、大家、各位、沒指定人的問題、聊天）一定要回答。'] : []),
     ...(job.canAsk ? ['需要其他成員的資料或幫忙時，單獨一行寫「@成員名 你的問題」，系統會請對方回答再叫你回來繼續；整件工作交給更適合的成員時寫「@成員名 交接：要做的事」，交出去後你就不用再做。'] : []),
     '資訊不夠、會影響結果時，直接問使用者並停下等回覆，不要亂猜。'
@@ -815,7 +817,7 @@ function startSession(job, b) {
 }
 async function warmClaude(job, b, here, live) {
   // anything that changes the bot's standing instructions starts a fresh session
-  const fp = JSON.stringify([job.memory, (job.skills || []).map(k => k.name + k.steps), job.bot.task, job.bot.model, job.bot.browser, job.bot.livePort, job.notes, job.folderNotes, job.group, (job.colleagues || []).map(c => c.name + c.task), job.allowed, job.lang, storeDir(), job.conv?.id]);
+  const fp = JSON.stringify([job.memory, (job.skills || []).map(k => k.name + k.steps), job.bot.task, job.bot.model, job.bot.browser, job.bot.livePort, job.notes, job.folderNotes, job.group, (job.colleagues || []).map(c => c.name + c.task), job.allowed, job.lang, storeDir(), job.conv?.id, job.nick]);
   let s = sessions.get(job.bot.id), text;
   const ids = job.history.map(h => h.id || 0), newest = Math.max(0, ...ids);
   if (s && s.fp === fp && s.convId === job.conv?.id) {

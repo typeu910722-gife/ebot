@@ -1,5 +1,17 @@
 [
  {
+  "v": "2.8.1",
+  "date": "2026-10-23",
+  "notes": [
+   "設定新增「個人資料」：填暱稱後，機器人都用這個暱稱稱呼你，不再叫「老闆」",
+   "機器人提問改成具體問題（哪一館哪一房、看到什麼、要你選什麼），心得或報告不會再被當成提問跳出來"
+  ],
+  "notes_en": [
+   "New Profile setting: bots call you by your nickname instead of 'boss'",
+   "Bot questions are now specific (which room, what they saw, what to choose); statements no longer pop up as questions"
+  ]
+ },
+ {
   "v": "2.8.0",
   "date": "2026-10-23",
   "notes": [

@@ -608,7 +608,7 @@ async function refresh(){
   try{const d=await api('state');if(!S.loaded)boot.set(85,'整理畫面…');
     const prevTop=S.loaded?topBotId():null,prevEng=JSON.stringify(S.engines||null);
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
-      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120,tokens:d.tokens||{},models:d.models||{},pins:d.pins||[],mute:d.mute||{},memory:d.memory||{},skills:d.skills||{},nsk:d.nsk||{},shareBrowser:d.shareBrowser!==false});
+      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120,tokens:d.tokens||{},models:d.models||{},pins:d.pins||[],mute:d.mute||{},memory:d.memory||{},skills:d.skills||{},nsk:d.nsk||{},shareBrowser:d.shareBrowser!==false,nick:d.nick||""});
     if(cur&&!conv(cur))cur=null;
     if(cur)await loadMsgs(cur,'new');
     if(prevTop!==null)notifyNew(prevTop);
@@ -1120,11 +1120,13 @@ const timesText=ts=>{const ev=ts.find(t=>t.startsWith('*/')),fx=ts.filter(t=>!t.
   return [ev?everyText(+ev.slice(2)):'',fx.length?I18N.t('每天')+' '+fx.map(hm12).join(I18N.lang==='en'?', ':'、'):''].filter(Boolean).join(I18N.lang==='en'?'; ':'；')};
 let rtEdit=null;
 /* a group member asks you something: a side panel to answer that one bot (only it receives the reply) */
-const ASKRE=/[？?]\s*$|請問|需要你|要不要|待確認|請(你|老闆)?(確認|決定|提供|告訴)|需要老闆決定|需要使用者/;
+const ASKRE={test:t=>/❓/.test(t)||/[？?]\s*$/.test(String(t).trim())};
+// the question itself: the ❓ line(s), otherwise the last paragraph
+const askText=t=>{t=String(t);const q=t.split('\n').filter(l=>/❓/.test(l)).map(l=>l.replace(/^\s*❓\s*(問你[:：])?\s*/,''));if(q.length)return q.join('\n');const ps=t.trim().split(/\n\s*\n/);return ps[ps.length-1]};
 function askDismissed(){try{return JSON.parse(localStorage.getItem('octa_askx')||'[]')}catch(e){return []}}
 function openAsks(){if(!cur||!isG(cur))return [];const c=conv(cur);if(!c)return [];const ms=convMsgs(cur).filter(m=>!m.tmp&&m.by!=='sys'),gone=askDismissed(),out=[];
   for(const id of c.members){const b=bot(id);if(!b)continue;let i=ms.length-1;while(i>=0&&ms[i].by!==id)i--;
-    if(i<0||!ASKRE.test(String(ms[i].text).slice(-400))||/@\S/.test(String(ms[i].text).trim().split('\n').pop())||gone.includes(ms[i].id))continue;   // a question @ another member isn't for you
+    if(i<0||!ASKRE.test(String(ms[i].text))||/@\S/.test(String(ms[i].text).trim().split('\n').pop())||gone.includes(ms[i].id))continue;   // a question @ another member isn't for you
     const after=ms.slice(i+1),mine=after.filter(m=>m.by==='me');
     if(mine.some(m=>m.text.includes('@'+b.name))||(after[0]&&after[0].by==='me'&&!/@\S/.test(after[0].text)))continue;
     out.push({b,m:ms[i]})}
@@ -1134,7 +1136,7 @@ function renderAsks(){const p=$('askp');if(!p)return;const list=openAsks(),key=l
   if(p.dataset.k===key&&!p.hidden)return;   // same questions: keep what you are typing
   const typed={};p.querySelectorAll('.askc').forEach(c=>{typed[c.dataset.mid]=c.querySelector('textarea').value});
   p.dataset.k=key;p.hidden=false;
-  p.innerHTML=`<div class="askt">機器人有問題要問你 <span class="pill">${list.length}</span></div>`+list.map(({b,m})=>{const q=String(m.text),tail=q.length>320?'…'+q.slice(-320):q;
+  p.innerHTML=`<div class="askt">機器人有問題要問你 <span class="pill">${list.length}</span></div>`+list.map(({b,m})=>{const q=askText(m.text),tail=q.length>400?q.slice(0,400)+'…':q;
     return `<div class="askc" data-mid="${m.id}" data-name="${esc(b.name)}"><div class="askh"><span class="av" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b><small>私下問你</small><button type="button" class="askx" aria-label="之後再說">×</button></div>
       <div class="askq" data-u>${esc(tail)}</div><textarea rows="2" placeholder="回覆給 ${esc(b.name)}（只有它會收到）">${esc(typed[m.id]||'')}</textarea>
       <div class="row2"><button type="button" class="btn askgo">回覆</button><button type="button" class="ghost askto">在對話中查看</button></div></div>`}).join('');
@@ -1228,6 +1230,7 @@ function subSheet(title,html,opts={}){
   $('veil').hidden=false;$('sx').onclick=closeSheet;$('sBack').onclick=()=>(opts.back||openSettings)();}
 function openSettings(){
   const rows=[
+    ['me','🙂','個人資料',S.nick?`機器人稱呼你「${esc(S.nick)}」`:'設定機器人怎麼稱呼你'],
     ['acct','👤','帳號與裝置',CFG.local?'離線模式不使用帳號':esc(S.me)],
     ['pc','🖥','電腦與主機',S.runnerOnline?(CFG.local?'電腦在線':'主機在線'):(CFG.local?'電腦離線':'主機離線')],
     ['ai','🔌','AI 連線','連接 AI、查看剩餘流量'],
@@ -1247,9 +1250,13 @@ function openSettings(){
   $('veil').hidden=false;$('sx').onclick=closeSheet;
   if($('lo'))$('lo').onclick=()=>{closeSheet();logoutAsk()};
   $('sLang').onchange=e=>setLang(e.target.value);
-  const go={warm:openWarm,acct:openAccount,pc:openComputers,ai:()=>openAI(),noti:openNotify,sched:openSched,files:openStore,notes:openNotes,tpl:openTpl,logs:openLogs,guide:openGuide,ver:openVersion};
+  const go={me:openProfile,warm:openWarm,acct:openAccount,pc:openComputers,ai:()=>openAI(),noti:openNotify,sched:openSched,files:openStore,notes:openNotes,tpl:openTpl,logs:openLogs,guide:openGuide,ver:openVersion};
   $('veil').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>go[b.dataset.s]())}
 const when=t=>t?new Date(t).toLocaleString(I18N.lang,{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+/* profile: what the bots call you */
+function openProfile(){subSheet('個人資料',`<label class="field">你的暱稱（機器人會這樣稱呼你）<input id="nick" maxlength="20" value="${esc(S.nick||'')}" placeholder="例如：Yz、阿哲" style="${field}"></label>
+  <p class="hmuted">沒填的話，機器人會直接用「你」稱呼你。規則或資料裡寫的「老闆」，機器人也會當成是你。</p><div class="row2"><button class="btn" id="nickGo">儲存</button></div>`);
+  $('nickGo').onclick=async()=>{const v=$('nick').value.trim();try{await api('settings','PUT',{nick:v});S.nick=v;toast(I18N.t('已儲存 ✓'))}catch(e){toast(e.message)}}}
 /* account & devices */
 async function openAccount(){
   if(CFG.local){subSheet('帳號與裝置','<p>離線模式不使用帳號，資料只在這台電腦。要讓手機使用，請到「電腦與主機」開啟手機遠端，或改用雲端帳號。</p>');return}
