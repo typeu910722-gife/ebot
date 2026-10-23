@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.8.4",
+  "date": "2026-10-23",
+  "notes": [
+   "Grok Bot 進階安裝視窗不再跑會失敗的指令，並說明 Windows 版通常不支援反向連線（不影響交接網址）"
+  ],
+  "notes_en": [
+   "The Grok Bot advanced installer no longer runs a failing command and explains the Windows limitation"
+  ]
+ },
+ {
   "v": "2.8.3",
   "date": "2026-10-23",
   "notes": [

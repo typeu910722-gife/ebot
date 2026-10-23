@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '16.5';
+export const VERSION = '16.6';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -268,7 +268,7 @@ export const ENGINES = {
   // a bot from the user's Grok Bot app, driven through the open-source grok-bot-cli (third party, not by xAI);
   // it uses the signed-in Grok Bot desktop app on this computer
   grokbot: { label: 'Grok Bot（grok-bot-cli）', bin: 'gbot', site: 'https://github.com/ScriptedAlchemy/grok-bot-cli', npm: 'grok-bot-cli',
-    login: 'gbot bots list', loginHint: '先在這台電腦安裝並登入 Grok Bot 桌面 App；這裡會列出你的 Grok Bot 機器人' },
+    login: 'gbot bots list --gateway', loginHint: '這是進階的反向功能，要 Grok Bot App 開放本機連線才會列出機器人（目前 Windows 版通常沒有，出現錯誤是正常的）。這不影響「Grok Bot 交派任務給 OCTA」，那個用交接網址就好' },
   opencode: { label: 'Ollama 本機模型', bin: 'opencode', also: 'ollama', site: 'https://ollama.com', npm: 'opencode-ai',
     pre: { win: 'winget install -e --id Ollama.Ollama --accept-source-agreements --accept-package-agreements', mac: 'brew install --cask ollama' },
     paths: { win: '%LOCALAPPDATA%\\Programs\\Ollama', mac: '/usr/local/bin' },
