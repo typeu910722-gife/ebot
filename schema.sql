@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS bots (
   shot_ts INTEGER,
   page TEXT,                     -- last page the bot reported
   shot_file TEXT,               -- files.id of the last screenshot (kept on the host computer)
-  bpc TEXT                       -- the computer that has its browser (logins)
+  bpc TEXT,                      -- the computer that has its browser (logins)
+  fb TEXT                        -- backup AIs: JSON ["engine|model", …], used in order when the AI runs out of quota
 );
 CREATE TABLE IF NOT EXISTS groups_ (
   id TEXT PRIMARY KEY,
@@ -98,7 +99,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   result TEXT,                   -- for kind='test' (AI connection test)
   progress TEXT,                 -- what the bot is doing right now (shown while it works)
   tokens INTEGER,                -- tokens the run used (when the AI reports it)
-  pc TEXT                        -- only this computer may take it (handing logins over)
+  pc TEXT,                       -- only this computer may take it (handing logins over)
+  eng TEXT                       -- "engine|model" a backup AI runs this job with
 );
 CREATE INDEX IF NOT EXISTS job_user ON jobs(user_id, status, id);
 CREATE TABLE IF NOT EXISTS shots (   -- latest browser screenshot per bot

@@ -1,5 +1,23 @@
 [
  {
+  "v": "2.7.0",
+  "date": "2026-10-23",
+  "notes": [
+   "新增備援 AI：每個機器人可設兩個備援，目前的 AI 額度用完時自動接手把事情做完",
+   "每個機器人的瀏覽器有自己的名稱（視窗標題「OCTA｜名字」）和顏色，一眼分得出是誰的",
+   "群組訊息寫「收到之後」「然後」等順序時，被 @ 的成員會依序做，後面的會拿到前面的結果",
+   "修正 Antigravity 機器人找不到指示檔、回覆夾雜英文工作過程",
+   "修正部分網站登入（例如 LINE）無法共用到其他機器人"
+  ],
+  "notes_en": [
+   "Backup AIs: set two per bot; they take over when the current AI runs out of quota",
+   "Each bot's browser shows its name in the window title and has its own color",
+   "Group messages that say 'after you get it' or 'then' run the mentioned members in order",
+   "Fixed Antigravity bots not finding their instructions and mixing in English work notes",
+   "Fixed some website sign-ins (like LINE) not being shared with other bots"
+  ]
+ },
+ {
   "v": "2.6.2",
   "date": "2026-10-23",
   "notes": [

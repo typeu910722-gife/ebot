@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '15.8';
+export const VERSION = '16.0';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -213,7 +213,7 @@ function buildPrompt(job, here) {
     const recent = i >= hist.length - (small ? 2 : 4), t = recent || h.text.length <= cut ? h.text : h.text.slice(0, cut) + '…（較早的訊息，已截短）';
     lines.push(`【${h.who}】${t}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   });
-  lines.push('', ...tabsNow(job), '', '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們，直接講結果。', '', whoAmI(job), '現在請處理這則指示：', job.prompt);
+  lines.push('', ...tabsNow(job), '', '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」之類的說明，最後只輸出一次給使用者看的繁體中文回覆。', '', whoAmI(job), '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
 
@@ -269,7 +269,7 @@ export const ENGINES = {
     paths: { win: '%LOCALAPPDATA%\\Programs\\Ollama', mac: '/usr/local/bin' },
     login: 'ollama pull qwen3', loginHint: '正在下載 qwen3 模型（約 5 GB），完成後機器人的「模型」填 qwen3' }
 };
-const FILE_INSTR = '請先完整讀取目前資料夾裡的 octa-task.md，依照裡面的指示執行。最後的輸出要直接是給使用者看的回覆。';
+const BASE_INSTR = '請先完整讀取目前資料夾裡的 octa-task.md，依照裡面的指示執行。最後的輸出要直接是給使用者看的回覆。';
 const STDIN_INSTR = '請依照標準輸入中的完整指示執行，最後輸出要給使用者看的回覆。';
 // Windows consoles often answer in the local code page (e.g. Big5), not UTF-8
 function decode(chunks) {
@@ -453,7 +453,9 @@ async function runEngine(engine, prompt, b, model, live = {}) {
   const { dir, server } = b;
   const store = storeDir();
   const m = (flag) => (model ? [flag, model] : []);
-  writeFileSync(join(dir, 'octa-task.md'), prompt);   // for CLIs that take the prompt as an argument (avoids Windows length limits)
+  writeFileSync(join(dir, 'octa-task.md'), prompt);
+  // some CLIs treat another folder as "current" (agy: the store): always give the full path
+  const FILE_INSTR = BASE_INSTR.replace('目前資料夾裡的 octa-task.md', `檔案 ${join(dir, 'octa-task.md')}（用讀檔工具讀這個完整路徑）`);   // for CLIs that take the prompt as an argument (avoids Windows length limits)
   let r, text;
   switch (engine) {
     case 'codex': {
@@ -487,7 +489,7 @@ async function runEngine(engine, prompt, b, model, live = {}) {
         tools: { task: false, todowrite: false, todoread: false, grep: false, glob: false }   // grep/glob need ripgrep, often missing on Windows; small local models misuse sub-agents and to-do lists, then reply about the error
       });
       // /no_think: qwen3-style models skip their long hidden reasoning (several times faster on a laptop)
-      r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, '/no_think ' + FILE_INSTR.replace('目前資料夾裡的 octa-task.md', `檔案 ${join(dir, 'octa-task.md')}（用 read 工具讀這個完整路徑）`)], dir, '', { ctl: live.ctl });
+      r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, '/no_think ' + FILE_INSTR], dir, '', { ctl: live.ctl });
       break;
     }
     default: {
@@ -510,6 +512,8 @@ async function runEngine(engine, prompt, b, model, live = {}) {
     }
   }
   text = (text || r.out || '').replace(/\x1b\[[0-9;]*m/g, '').trim();
+  // agy prints the model's running commentary too ("Let me read…"): keep the reply, drop English narration lines before it
+  if (engine === 'gemini' && /[\u4e00-\u9fff]/.test(text)) text = text.split('\n').filter(l => !/^\s*(Let me|Let's|I'll|I will|I see|I need|I'm going|Found it|Now,? |Next,? |First,? |OK,? |Okay|Great|Perfect|Looking at|Checking|Reading)\b/i.test(l)).join('\n').replace(/\n{3,}/g, '\n\n').trim();
   const E = ENGINES[engine] || ENGINES.claude;
   if (r.missing) return { ok: false, text: `⚠ 這台電腦沒有安裝 ${E.label}。請到「AI 連線」安裝並登入（${E.site}），或在任務設定把這個機器人改用其他 AI。` };
   if (tokens == null) { const tm = String((r.err || '') + (r.out || '')).match(/tokens used[:\s]*([\d,]+)/i); if (tm) tokens = +tm[1].replace(/,/g, ''); }
@@ -622,7 +626,9 @@ function restoreSkills(dir, sk) {   // e.g. on a new host computer
 
 // ---------- handing a bot's website logins to another computer (cookies of its own browser) ----------
 const cookieParams = list => list.filter(c => c.name && c.domain)
-  .map(c => ({ name: c.name, value: c.value, domain: c.domain, path: c.path || '/', secure: !!c.secure, httpOnly: !!c.httpOnly, ...(c.sameSite ? { sameSite: c.sameSite } : {}), ...(c.expires > 0 ? { expires: c.expires } : {}) }));
+  .map(c => ({ name: c.name, value: c.value, path: c.path || '/', secure: !!c.secure, httpOnly: !!c.httpOnly,
+    ...(c.domain.startsWith('.') && !c.name.startsWith('__Host-') ? { domain: c.domain } : { url: `${c.secure ? 'https' : 'http'}://${c.domain.replace(/^\./, '')}${c.path || '/'}` }),
+    ...(c.sameSite ? { sameSite: c.sameSite } : {}), ...(c.expires > 0 ? { expires: c.expires } : {}), ...(c.partitionKey ? { partitionKey: c.partitionKey } : {}), ...(c.sourceScheme ? { sourceScheme: c.sourceScheme } : {}) }));
 // switching to the shared browser: bring the sign-ins from every bot's old browser into it, once
 async function mergeOldProfiles() {   // once: the sign-ins in every bot's browser (and the 2.4.x shared one) go into the shared store
   const mark = join(workDir, '.octa-logins-merged');
@@ -813,7 +819,7 @@ async function warmClaude(job, b, here, live) {
     // only what happened since the last turn, then the new instruction
     const fresh = job.history.filter(h => (h.id || 0) > s.lastId && !(h.who === '使用者' && h.text === job.prompt));
     text = [fresh.length ? '（上次之後的新對話）\n' + fresh.map(h => `【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : '')).join('\n') : '',
-      tabsNow(job).join('\n'), '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們，直接講結果。', whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
+      tabsNow(job).join('\n'), '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」之類的說明，最後只輸出一次給使用者看的繁體中文回覆。', whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
     log(`⚡ ${job.bot.name}：AI 待機中，直接接續`);
   } else {
     if (s) closeSession(job.bot.id);
@@ -913,6 +919,20 @@ export async function ensureBrowser(bot) {
   if (shareBrowser) { await mergeOldProfiles().catch(e => log('合併舊登入失敗：' + e.message)); await syncIn(port); }
   return port;
 }
+// tell the bots' browsers apart: the profile is named after the bot and gets its own theme color
+const BOT_COLORS = [0xFFD93025, 0xFF1A73E8, 0xFF188038, 0xFFF9AB00, 0xFF9334E6, 0xFFE8710A, 0xFF12B5CB, 0xFFE52592];
+function markProfile(profile, name) {
+  try {
+    const f = join(profile, 'Default', 'Preferences');
+    mkdirSync(join(profile, 'Default'), { recursive: true });
+    let pr = {}; try { pr = JSON.parse(readFileSync(f, 'utf8')); } catch { }
+    let h = 0; for (const ch of name) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+    const color = BOT_COLORS[h % BOT_COLORS.length] | 0;
+    pr.profile = { ...(pr.profile || {}), name };
+    pr.browser = { ...(pr.browser || {}), theme: { ...((pr.browser || {}).theme || {}), user_color: color, color_variant: 1 } };
+    writeFileSync(f, JSON.stringify(pr));
+  } catch (e) { log('瀏覽器標記失敗：' + e.message); }
+}
 async function openBrowser(bot) {
   const port = portOf(bot.id);
   const key = bot.id;
@@ -923,7 +943,8 @@ async function openBrowser(bot) {
   mkdirSync(profile, { recursive: true });
   for (let i = 0; i < 10 && profileInUse(profile); i++) await pause(1000);   // an old window may still be closing
   if (profileInUse(profile)) throw new Error('這個機器人的瀏覽器有一個舊視窗開著，請先關掉它');
-  const child = spawn(chrome, [`--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, '--no-first-run', '--no-default-browser-check',
+  markProfile(profile, bot.name);
+  const child = spawn(chrome, [`--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, '--no-first-run', '--no-default-browser-check', `--window-name=OCTA｜${bot.name}`,
     '--restore-last-session', '--window-position=-32000,-32000', '--window-size=1280,860'], { detached: true, stdio: 'ignore', windowsHide: false });
   child.on('error', () => { });
   child.unref();

@@ -960,7 +960,10 @@ function sheet(kind,edit){
   </div></div>
   <label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).filter(([k,v])=>!v.hide||c?.engine===k).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>
   <label class="field">模型<select id="sf_m"></select></label>
-  <p style="margin-top:-6px" id="sf_hint"></p>`}
+  <p style="margin-top:-6px" id="sf_hint"></p>
+  ${(()=>{const opts=Object.entries(ENG).filter(([k,v])=>!v.hide).flatMap(([k,v])=>[[k,v.full+'（預設模型）'],...modelsFor(k).map(m=>[k+'|'+m,v.full+'・'+m])]),fb=c?.fb||[];
+    const sel=i=>`<select id="sf_fb${i}"><option value="">不使用</option>${opts.map(([v,l])=>`<option value="${esc(v)}"${fb[i]===v?' selected':''}>${esc(l)}${engState(v.split('|')[0])==='ok'?'':'（還沒連接）'}</option>`).join('')}</select>`;
+    return `<div class="field">備援 AI（額度用完時自動接手）<div class="row2">${sel(0)}${sel(1)}</div><p class="hmuted">目前的 AI 額度用完，會依序改用備援 1、備援 2 把同一件事做完。</p></div>`})()}`}
   <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option data-u value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
   ${!g&&c&&((S.allow||{})[c.id]||[]).length?`<div class="field">一律允許的事（機器人做這些不會再問你）<div class="picks" id="sf_al">${S.allow[c.id].map((t,i)=>`<div class="pick"><span data-u style="flex:1">${esc(t)}</span><button type="button" class="mv" data-unallow="${i}" aria-label="收回">✕</button></div>`).join('')}</div></div>`:''}
   ${!g&&c&&((S.memory||{})[c.id]||[]).length?`<div class="field">它記得的事（📌）<div class="picks" id="sf_mem">${S.memory[c.id].map((t,i)=>`<div class="pick"><span data-u style="flex:1">${esc(t)}</span><button type="button" class="mv" data-unmem="${i}" aria-label="忘記">✕</button></div>`).join('')}</div></div>`:''}
@@ -1004,7 +1007,7 @@ function sheet(kind,edit){
   if(edit)$('sd').onclick=()=>deleteConv(cur);
   $('sf').onsubmit=async e=>{e.preventDefault();
     const body={name:$('sn').value,task:$('st').value,folder:$('sf_f').value||null};
-    if(!g){body.avatar=sheet.av?.()||'';body.browser=$('veil').querySelector('input[name=sf_b]:checked')?.value||'own';body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();}
+    if(!g){body.avatar=sheet.av?.()||'';body.browser=$('veil').querySelector('input[name=sf_b]:checked')?.value||'own';body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();body.fb=[$('sf_fb0')?.value,$('sf_fb1')?.value].filter(Boolean);}
     if(g)body.members=[...$('veil').querySelectorAll('.picks input:checked')].map(i=>i.value);
     try{const r=await api(edit?(g?'groups/':'bots/')+cur:(g?'groups':'bots'),edit?'PUT':'POST',body);
       if(!edit)cur=r.id;

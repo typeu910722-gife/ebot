@@ -99,13 +99,13 @@ const turnsOf = g => /輪流|依序|按順序|接力/.test(g.task || '');
 const passed = t => /^[（(]?\s*(略過|PASS)\s*[）)]?[。.]?$/i.test(String(t).trim());
 async function loadAll(db, userId) {
   const [b, g, f, r] = await db.batch([
-    db.prepare('SELECT id,name,task,folder,engine,model,avatar,browser,shot_ts,shot_file,page,bpc FROM bots WHERE user_id=? ORDER BY created').bind(userId),
+    db.prepare('SELECT id,name,task,folder,engine,model,avatar,browser,shot_ts,shot_file,page,bpc,fb FROM bots WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,name,task,members,folder FROM groups_ WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,name,notes FROM folders WHERE user_id=? ORDER BY created').bind(userId),
     db.prepare('SELECT id,conv,name,prompt,times,enabled,hook,watch FROM routines WHERE user_id=? ORDER BY created').bind(userId)
   ]);
   return {
-    bots: b.results,
+    bots: b.results.map(x => ({ ...x, fb: fbParse(x.fb) })),
     groups: g.results.map(x => ({ ...x, members: JSON.parse(x.members) })),
     folders: f.results,
     routines: r.results.map(x => ({ ...x, times: JSON.parse(x.times), enabled: !!x.enabled, watch: x.watch ? JSON.parse(x.watch) : null }))
@@ -136,6 +136,11 @@ async function sendNotify(env, st, text) {
 }
 const needsYou = t => /✅待確認|需要使用者|^⚠/m.test(t);
 const ENGINES = ['claude', 'codex', 'gemini', 'grok', 'grokbot', 'copilot', 'cursor', 'qwen', 'opencode'];
+// backup AIs: up to two "engine|model" entries, tried in order when the bot's AI has run out of quota
+const fbParse = v => { try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
+const fbOk = v => JSON.stringify((Array.isArray(v) ? v : []).map(x => String(x || '').split('|')).filter(([e]) => ENGINES.includes(e) && !['copilot', 'cursor', 'qwen', 'grok'].includes(e)).slice(0, 2).map(([e, m]) => e + (clean(m, 80) ? '|' + clean(m, 80) : '')));
+const ENGINE_NAMES = { claude: 'Claude', codex: 'ChatGPT', gemini: 'Antigravity', grokbot: 'Grok Bot', opencode: 'Ollama' };
+const QUOTA = /quota|usage limit|rate.?limit|limit (reached|exceeded)|exceeded your|upgrade your (plan|subscription)|out of credits|insufficient.?credit|too many requests|\b429\b|額度|用量上限|已達上限/i;
 const engineOk = e => (ENGINES.includes(e) ? e : 'claude');
 const avatarOk = a => { const v = clean(a, 16); return v && !/[<>&"']/.test(v) ? v : null; };
 // grokbot: the model field holds the Grok Bot's name. opencode is only used with local Ollama models (no paid APIs): "qwen3" → "ollama/qwen3"
@@ -154,12 +159,13 @@ const MIGRATIONS = [
   'ALTER TABLE jobs ADD COLUMN progress TEXT', 'ALTER TABLE jobs ADD COLUMN tokens INTEGER',
   'ALTER TABLE routines ADD COLUMN hook TEXT', 'ALTER TABLE routines ADD COLUMN watch TEXT', 'ALTER TABLE routines ADD COLUMN wstate TEXT',
   'CREATE INDEX IF NOT EXISTS routine_hook ON routines(hook)',
-  'ALTER TABLE files ADD COLUMN pc TEXT', 'ALTER TABLE bots ADD COLUMN bpc TEXT', 'ALTER TABLE jobs ADD COLUMN pc TEXT'
+  'ALTER TABLE files ADD COLUMN pc TEXT', 'ALTER TABLE bots ADD COLUMN bpc TEXT', 'ALTER TABLE jobs ADD COLUMN pc TEXT',
+  'ALTER TABLE bots ADD COLUMN fb TEXT', 'ALTER TABLE jobs ADD COLUMN eng TEXT'
 ];
 let schemaOk = false;
 async function ensureSchema(db) {
   if (schemaOk) return;
-  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress, tokens FROM jobs LIMIT 0').all(); await db.prepare('SELECT hook, watch, wstate FROM routines LIMIT 0').all(); await db.prepare('SELECT pc FROM files LIMIT 0').all(); await db.prepare('SELECT bpc FROM bots LIMIT 0').all(); await db.prepare('SELECT pc FROM jobs LIMIT 0').all(); schemaOk = true; return; } catch { }
+  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress, tokens FROM jobs LIMIT 0').all(); await db.prepare('SELECT hook, watch, wstate FROM routines LIMIT 0').all(); await db.prepare('SELECT pc FROM files LIMIT 0').all(); await db.prepare('SELECT bpc FROM bots LIMIT 0').all(); await db.prepare('SELECT pc, eng FROM jobs LIMIT 0').all(); await db.prepare('SELECT fb FROM bots LIMIT 0').all(); schemaOk = true; return; } catch { }
   for (const sql of MIGRATIONS) { try { await db.prepare(sql).run(); } catch { } }
   schemaOk = true;
 }
@@ -1007,6 +1013,22 @@ async function route({ request: req, env, params }) {
         const job = await db.prepare("SELECT * FROM jobs WHERE id=? AND user_id=? AND status='running'").bind(+body.id, U).first();
         if (!job) return err('找不到執行中的任務', 404);
         const good = body.ok !== false;
+        // the AI ran out of quota: the next backup AI takes over the same job
+        if (!good && job.kind === 'chat' && QUOTA.test(String(body.text || ''))) {
+          const b = (await loadAll(db, U)).bots.find(x => x.id === job.bot_id);
+          if (b && b.fb.length) {
+            const list = [b.engine + (b.model ? '|' + b.model : ''), ...b.fb], at = Math.max(0, list.indexOf(job.eng || list[0]));
+            const nxt = list[at + 1];
+            if (nxt) {
+              const lab = x => { const [e, mm] = x.split('|'); return (ENGINE_NAMES[e] || e) + (mm ? `（${mm}）` : ''); };
+              await db.prepare("UPDATE jobs SET status='error', finished=? WHERE id=?").bind(now(), job.id).run();
+              await db.prepare('INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,depth,eng) VALUES (?,?,?,?,?,?,?,?)').bind(U, job.conv, job.bot_id, job.chain, job.prompt, now(), job.depth || 0, nxt).run();
+              await addMsg(db, U, job.conv, 'sys', `「${b.name}」的 ${lab(list[at])} 額度用完，改由備援 AI ${lab(nxt)} 接手`);
+              await bump(db, U);
+              return ok();
+            }
+          }
+        }
         if (job.kind === 'export' || job.kind === 'import') {   // handing a bot's website logins to another computer
           await db.prepare('UPDATE jobs SET status=?, finished=?, result=? WHERE id=?').bind(good ? 'done' : 'error', now(), clean(body.text, 3000), job.id).run();
           if (job.kind === 'import' || !good) {
@@ -1274,7 +1296,7 @@ async function route({ request: req, env, params }) {
       const { folders, bots } = await loadAll(db, U);
       if (bots.some(b => b.name === name)) return err('已經有同名的機器人，名字要不同才能用 @ 叫它');
       const id = uid(), engine = engineOk(body.engine);
-      await db.prepare('INSERT INTO bots (id,user_id,name,task,folder,engine,model,avatar,browser,created) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(id, U, name, task, folderOk(folders, body.folder), engine, modelOk(engine, body.model), avatarOk(body.avatar), body.browser === 'mine' ? 'mine' : null, now()).run();
+      await db.prepare('INSERT INTO bots (id,user_id,name,task,folder,engine,model,avatar,browser,created,fb) VALUES (?,?,?,?,?,?,?,?,?,?,?)').bind(id, U, name, task, folderOk(folders, body.folder), engine, modelOk(engine, body.model), avatarOk(body.avatar), body.browser === 'mine' ? 'mine' : null, now(), fbOk(body.fb)).run();
       await addMsg(db, U, id, 'sys', task ? '機器人已建立' : '機器人已建立：直接傳訊息告訴它要做什麼，它會自己整理成指定任務');
       return ok({ id });
     }
@@ -1301,7 +1323,8 @@ async function route({ request: req, env, params }) {
         const { folders, bots } = await loadAll(db, U);
         if (bots.some(b => b.name === name && b.id !== id)) return err('已經有同名的機器人');
         const engine = engineOk(body.engine);
-        await db.prepare('UPDATE bots SET name=?,task=?,folder=?,engine=?,model=?,avatar=?,browser=? WHERE id=? AND user_id=?').bind(name, task, folderOk(folders, body.folder), engine, modelOk(engine, body.model), avatarOk(body.avatar), body.browser === 'mine' ? 'mine' : null, id, U).run();
+        const fb = body.fb === undefined ? JSON.stringify(bots.find(b => b.id === id)?.fb || []) : fbOk(body.fb);
+        await db.prepare('UPDATE bots SET name=?,task=?,folder=?,engine=?,model=?,avatar=?,browser=?,fb=? WHERE id=? AND user_id=?').bind(name, task, folderOk(folders, body.folder), engine, modelOk(engine, body.model), avatarOk(body.avatar), body.browser === 'mine' ? 'mine' : null, fb, id, U).run();
         return ok();
       }
       if (m === 'DELETE') {   // files stay on the host computer; only the records go
@@ -1414,11 +1437,13 @@ async function route({ request: req, env, params }) {
       let chain;
       if (bot) chain = [bot.id];
       else {
-        const named = group.members.filter(id => { const b = bots.find(x => x.id === id); return b && text.includes('@' + b.name); });
+        const at = id => text.indexOf('@' + (bots.find(x => x.id === id)?.name || '\u0000'));
+        const named = group.members.filter(id => at(id) >= 0).sort((a, b) => at(a) - at(b));
         chain = named.length ? named : group.members;
+        var ordered = named.length > 1 && /收到.{0,20}後|之後|然後|接著|再由|再交|完成後|做完|拿到.{0,10}(後|再)|依序|輪流/.test(text);
       }
       // groups: members work at the same time and each decides whether the message is theirs; rules saying 輪流/依序 keep turns
-      if (group && !turnsOf(group)) for (const id of chain) await addJob(db, U, conv, [id], text || '請處理我傳的附件。');
+      if (group && !turnsOf(group) && !ordered) for (const id of chain) await addJob(db, U, conv, [id], text || '請處理我傳的附件。');
       else await addJob(db, U, conv, chain, text || '請處理我傳的附件。');
       return ok();
     }
@@ -1696,7 +1721,7 @@ async function jobPayload(env, db, U, job) {
     canAsk: job.depth < MAX_ASK_DEPTH,
     conv: { id: conv.id, name: conv.name },
     shareBrowser: st.shareBrowser !== false,
-    bot: { id: bot.id, name: bot.name, task: bot.task, page: bot.page, engine: bot.engine || 'claude', model: bot.model || '', browser: bot.browser === 'mine' ? 'mine' : 'own' },
+    bot: { id: bot.id, name: bot.name, task: bot.task, page: bot.page, engine: (job.eng ? job.eng.split('|')[0] : bot.engine) || 'claude', model: job.eng ? job.eng.split('|')[1] || '' : bot.model || '', browser: bot.browser === 'mine' ? 'mine' : 'own' },
     folder: folders.find(f => f.id === bot.folder)?.name || null,
     folderNotes: folders.find(f => f.id === bot.folder)?.notes || '',
     notes: st.notes || '',
