@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.7.1",
+  "date": "2026-10-23",
+  "notes": [
+   "AI 連線頁把 Grok Bot 獨立成「Grok Bot ⇄ OCTA」：說明怎麼讓 Grok Bot 交派任務給 OCTA 機器人，每個機器人一鍵產生並複製給 Grok Bot 的話"
+  ],
+  "notes_en": [
+   "The AI page has a separate 'Grok Bot ⇄ OCTA' section explaining how Grok Bot hands tasks to OCTA bots, with one-click hand-off text per bot"
+  ]
+ },
+ {
   "v": "2.7.0",
   "date": "2026-10-23",
   "notes": [

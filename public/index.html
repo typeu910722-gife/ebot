@@ -398,6 +398,12 @@ details.adv[open]{display:grid;gap:8px}
 @media (max-width:760px){.hl2{display:none}.hb{padding:6px 10px}.ph{gap:8px}.offb{margin-left:max(16px,env(safe-area-inset-left,0px));margin-right:16px}}
 .lf2{display:grid;gap:14px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .gbh{margin:22px 0 8px;font-size:15px;font-weight:600;color:var(--gold2)}
+  .gbbox{border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+  .gbbox .ol{margin:8px 0}
+  .gblist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+  .gbrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+  .gbrow span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1410,8 +1416,16 @@ async function openAI(focus){
     return `<details class="aic" data-k="${k}" ${focus===k?'open':''}><summary><span class="ait"><b>${e.n}</b>${e.tag?` <span class="pill p-pr" style="color:var(--gold2)">${e.tag}</span>`:''} ${badge}<small class="aigood">${esc(e.good)}</small><span class="aiq">${quotaHtml(k,U)}</span></span></summary>
       <div class="aib"><p>適合：${esc(e.who)}。${esc(e.cost)}。</p>${steps}${res}<p><a href="${e.site}" target="_blank" rel="noopener">官方說明</a></p></div></details>`};
   subSheet('AI 連線',`<p>機器人用主機電腦上登入的 AI 工作，用的是你自己的帳號或訂閱。連一個就能開始，之後在每個機器人的「任務設定 → AI 引擎」選要用哪個。點開每一項看安裝方式。</p>
-  <div class="ais">${Object.keys(ENG).filter(k=>!ENG[k].hide).map(card).join('')}</div>
-  <p class="hmuted">剩餘流量每 10 分鐘更新一次。Claude 與 ChatGPT 會顯示方案剩下的比例；其他服務沒有提供查詢，改顯示 OCTA 今天用了幾次。</p>`);
+  <div class="ais">${Object.keys(ENG).filter(k=>!ENG[k].hide&&k!=='grokbot').map(card).join('')}</div>
+  <p class="hmuted">剩餘流量每 10 分鐘更新一次。Claude 與 ChatGPT 會顯示方案剩下的比例；其他服務沒有提供查詢，改顯示 OCTA 今天用了幾次。</p>
+  <h3 class="gbh">Grok Bot ⇄ OCTA</h3>
+  <div class="gbbox"><p>Grok Bot 在 xAI 的雲端工作，可以把任務交派給 OCTA 的機器人：它呼叫一個「交接網址」，指定的 OCTA 機器人就會在你的電腦上自動開始做（例如用你登入好的 LINE 後台、eroom、試算表），結果出現在那個機器人的對話裡。<b>不用安裝任何東西</b>，只要把一段話貼給 Grok Bot。</p>
+  <ol class="ol"><li>在下面選一個要接任務的 OCTA 機器人，按「產生交接網址」。</li><li>按「複製給 Grok Bot 的話」，貼到 Grok Bot 的對話（或它那個機器人的指示／記憶裡），讓它記住。</li><li>之後跟 Grok Bot 說「把○○交給 OCTA 的△△」，它就會自己傳過來；也可以讓 Grok Bot 的排程定時交派。</li></ol>
+  <div class="gblist">${S.bots.length?S.bots.map(b=>{const r=S.routines.find(x=>x.conv===b.id&&x.hook&&x.name==='外部交接');
+    const say=r?`要把工作交給 OCTA 的「${b.name}」時，用 HTTP POST 傳 JSON 到 ${hookUrl(r)} ，格式 {"text":"工作內容","from":"你的名字"}（Content-Type: application/json）。收到 {"ok":true} 就是交接成功，對方會自動開始做。`:'';
+    return `<div class="gbrow"><span data-u>${esc(b.avatar||'🤖')} ${esc(b.name)}</span>${r?`<button class="ghost" data-copy="${esc(say)}">複製給 Grok Bot 的話</button>`:`<button class="ghost" data-gbhook="${b.id}">產生交接網址</button>`}</div>`}).join(''):'<p class="hmuted">還沒有機器人，先建立一個。</p>'}</div>
+  <p class="hmuted">交接網址等同鑰匙，只給你信任的 AI，不要公開。要停用時，到那個機器人的任務設定 → 例行任務，關掉「外部交接」。</p>
+  <details class="aic" data-k="grokbot" ${focus==='grokbot'?'open':''}><summary><span class="ait"><b>進階：把 Grok Bot 的機器人帶進 OCTA</b> ${engState('grokbot')==='ok'?'<span class="pill p-ok">已連接</span>':'<span class="pill p-off">未接上</span>'}<small class="aigood">反方向：在 OCTA 直接指揮 Grok Bot 的機器人。需要第三方工具 grok-bot-cli，目前 Grok Bot App 不一定支援</small></span></summary><div class="aib">${card('grokbot').replace(/^[\s\S]*?<div class="aib">/,'').replace(/<\/div><\/details>$/,'')}</div></details></div>`);
   $('veil').querySelectorAll('pre.code').forEach(p=>{p.insertAdjacentHTML('afterend',`<div class="row2" style="margin-top:4px">${copyBtn(p.textContent)}</div>`)});
   $('veil').querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.copy).then(()=>b.textContent=I18N.t('已複製 ✓')).catch(()=>{})});
   $('veil').querySelectorAll('[data-install]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('desktop/install','POST',{engine:b.dataset.install});b.textContent=I18N.t('已打開安裝視窗')}catch(e){b.disabled=false;alertSheet('無法開啟',e.message)}});
@@ -1421,6 +1435,7 @@ async function openAI(focus){
       while(Date.now()-t0<60000){await new Promise(r=>setTimeout(r,2000));j=await api('job/'+id);if(j.status==='done'||j.status==='error')break}
       say(j&&(j.status==='done'||j.status==='error')?(j.result||''):I18N.t('一分鐘內沒有回應，請確認主機電腦上的 OCTA 開著'))}catch(e){say(e.message)}b.disabled=false});
   $('veil').querySelectorAll('[data-gbimport]').forEach(b=>b.onclick=grokImport);
+  $('veil').querySelectorAll('[data-gbhook]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('routines','POST',{conv:b.dataset.gbhook,name:'外部交接',trigger:'hook',prompt:'其他 AI 把工作交接給你：照交接內容處理，完成後在這裡回報結果；資訊不夠就直接問使用者。'});await refresh();openAI()}catch(e){toast(e.message);b.disabled=false}});
   if(again){keepOpen.forEach(k=>{const d=$('veil').querySelector(`.aic[data-k="${k}"]`);if(d)d.open=true});const sh=$('veil').querySelector('.sheet');if(sh)sh.scrollTop=keepTop}
 }
 /* bring bots from Grok Bot into OCTA: the host computer lists them, you pick */
