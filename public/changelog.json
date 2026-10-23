@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.5.3",
+  "date": "2026-10-23",
+  "notes": [
+   "機器人同時工作時，網站登入也會即時共用：一隻剛登入，其他隻馬上能用，不必等它做完"
+  ],
+  "notes_en": [
+   "Website sign-ins are shared right away between bots working at the same time"
+  ]
+ },
+ {
   "v": "2.5.2",
   "date": "2026-10-23",
   "notes": [

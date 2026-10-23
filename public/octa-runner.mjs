@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '15.1';
+export const VERSION = '15.2';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -866,7 +866,10 @@ function addToJar(list) {   // newest values win; expired ones drop out
   mkdirSync(workDir, { recursive: true }); writeFileSync(jarFile(), JSON.stringify(out)); return out.length;
 }
 // before a bot works: give its browser everyone's sign-ins; after: add what it signed in to
-async function syncIn(port) { const jar = readJar(); if (jar.length) await cdp(port, send => send('Storage.setCookies', { cookies: cookieParams(jar) })).catch(e => log('帶入共用登入失敗：' + e.message)); }
+async function syncIn(port) {   // also take sign-ins from other bots' browsers that are open right now (they only save theirs when their job ends)
+  let m = {}; try { m = JSON.parse(readFileSync(join(workDir, 'ports.json'), 'utf8')); } catch { }
+  await Promise.all(Object.values(m).filter(p => p !== port).map(async p => { if (await cdpInfo(p)) await syncOut(p); }));
+  const jar = readJar(); if (jar.length) await cdp(port, send => send('Storage.setCookies', { cookies: cookieParams(jar) })).catch(e => log('帶入共用登入失敗：' + e.message)); }
 async function syncOut(port) { try { const { cookies = [] } = await cdp(port, send => send('Storage.getCookies')); addToJar(cookies); } catch (e) { log('儲存共用登入失敗：' + e.message); } }
 const busyBots = new Set();
 const pause = ms => new Promise(r => setTimeout(r, ms));
