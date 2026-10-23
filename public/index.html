@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=23"></script>
+<script src="/i18n-dict.js?v=24"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -955,7 +955,7 @@ function sheet(kind,edit){
   ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
   ${g?'':`<div class="field">頭貼<div class="emos" id="sf_av" data-u>${['',...EMOJIS].map(e=>`<button type="button" class="emo-b${(c?.avatar||'')===e?' on':''}" data-emo="${e}" aria-label="${e||'文字'}">${e||esc((($('sn')?.value)||c?.name||'字').slice(0,1))}</button>`).join('')}<input id="sf_avc" class="emo-in" maxlength="8" placeholder="其他" value="${c?.avatar&&!EMOJIS.includes(c.avatar)?esc(c.avatar):''}" aria-label="自訂 Emoji"></div></div>
   <div class="field">瀏覽器<div class="bchoice" id="sf_b">
-    <label class="bc"><input type="radio" name="sf_b" value="own" ${c?.browser!=='mine'?'checked':''}><span><b>機器人專屬瀏覽器</b><small>${S.shareBrowser!==false?'所有機器人共用一個瀏覽器（各自的分頁），登入一次大家都能用，不會動到你的 Chrome。':'這個機器人自己的瀏覽器和登入，不會動到你的 Chrome。第一次用某網站要在「瀏覽器」幫它登入一次。'}</small></span></label>
+    <label class="bc"><input type="radio" name="sf_b" value="own" ${c?.browser!=='mine'?'checked':''}><span><b>機器人專屬瀏覽器</b><small>${S.shareBrowser!==false?'它自己的瀏覽器，可以和其他機器人同時工作；登入共用，在任何一個機器人登入過的網站它也能用。不會動到你的 Chrome。':'這個機器人自己的瀏覽器和登入，不會動到你的 Chrome。第一次用某網站要在「瀏覽器」幫它登入一次。'}</small></span></label>
     <label class="bc"><input type="radio" name="sf_b" value="mine" ${c?.browser==='mine'?'checked':''}><span><b>使用我的 Chrome</b><small>直接用你 Chrome 已登入的網站和已儲存的密碼。需要先在設定裡連接 Chrome。</small></span></label>
   </div></div>
   <label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).filter(([k,v])=>!v.hide||c?.engine===k).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>
@@ -966,6 +966,8 @@ function sheet(kind,edit){
   ${!g&&c&&((S.memory||{})[c.id]||[]).length?`<div class="field">它記得的事（📌）<div class="picks" id="sf_mem">${S.memory[c.id].map((t,i)=>`<div class="pick"><span data-u style="flex:1">${esc(t)}</span><button type="button" class="mv" data-unmem="${i}" aria-label="忘記">✕</button></div>`).join('')}</div></div>`:''}
   ${!g&&c&&((S.skills||{})[c.id]||[]).length?`<div class="field">它會的技能（🧩，輸入 / 叫用）<div class="picks" id="sf_sk">${S.skills[c.id].map((k,i)=>`<div class="pick"><span data-u style="flex:1" title="${esc(k.steps)}">${esc(k.name)}</span><button type="button" class="mv" data-unsk="${i}" aria-label="刪除">✕</button></div>`).join('')}</div></div>`:''}
   ${!g&&c&&((S.nsk||{})[c.id]||[]).length?`<div class="field">Claude Code 技能（存在它的資料夾，會跟著帳號到任何主機）<div class="picks">${S.nsk[c.id].map(n=>`<div class="pick"><span data-u>${esc(n)}</span></div>`).join('')}</div></div>`:''}
+  ${!g&&edit?(()=>{const r=S.routines.find(x=>x.conv===c.id&&x.hook&&x.name==='外部交接');return `<div class="field">從其他 AI 交接工作（例如 Grok Bot）${r?`<div class="row2"><input readonly value="${esc(hookUrl(r))}" style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--ink);font:inherit;font-size:12px" data-u><button type="button" class="ghost" id="sf_hcopy">複製</button></div>
+    <p class="hmuted">把這段話給你的 Grok Bot（或其他 AI）：「要把工作交給 OCTA 的${esc(c.name)}時，用 POST 傳 JSON 到 ${esc(hookUrl(r))} ，格式是 {"text":"工作內容","from":"你的名字"}。」收到後${esc(c.name)}會自動開始做，結果在這個對話裡。網址等同鑰匙，不要公開。</p>`:`<div class="row2"><button type="button" class="ghost" id="sf_hmake">產生交接網址</button></div><p class="hmuted">其他 AI 用這個網址把工作交給這個機器人，它會自動開始做。</p>`}</div>`})():''}
   ${!g&&c&&c.bpc&&c.bpc!==S.host?`<div class="field">網站登入<p class="hmuted" style="margin:4px 0">它登入過的網站存在「<span data-u>${esc(c.bpc.replace(/^desktop:/,''))}</span>」電腦的瀏覽器裡，不在目前的主機上。</p><div class="row2"><button type="button" class="ghost" id="sf_bring">把網站登入帶到主機</button><span id="sf_bmsg" class="hmuted"></span></div></div>`:''}
   <label class="field">常用指令（一行一個，會變成輸入框上方的快速按鈕）<textarea id="sf_q" maxlength="2000" style="min-height:70px" placeholder="例如：整理今天的訂單&#10;把結果寫進試算表">${esc(((S.quick||{})[c?.id]||[]).join('\n'))}</textarea></label>
   ${edit?`<div class="field">例行任務<div class="rt" id="rt"></div></div>`:'<p>建立後可以在「任務設定」加入例行任務（每天固定時間自動執行）。</p>'}
@@ -986,6 +988,8 @@ function sheet(kind,edit){
   if(edit)renderRoutines();
   if($('sf_mem'))$('sf_mem').onclick=async e=>{const x=e.target.closest('[data-unmem]');if(!x)return;const list=[...S.memory[c.id]];list.splice(+x.dataset.unmem,1);
     try{await api('settings','PUT',{memory:{bot:c.id,list}});S.memory[c.id]=list;x.closest('.pick').remove();toast(I18N.t('已忘記'))}catch(err){toast(err.message)}};
+  if($('sf_hmake'))$('sf_hmake').onclick=async()=>{$('sf_hmake').disabled=true;try{await api('routines','POST',{conv:c.id,name:'外部交接',trigger:'hook',prompt:'其他 AI 把工作交接給你：照交接內容處理，完成後在這裡回報結果；資訊不夠就直接問使用者。'});await refresh();sheet('b',true)}catch(e){toast(e.message);$('sf_hmake').disabled=false}};
+  if($('sf_hcopy'))$('sf_hcopy').onclick=()=>{const r=S.routines.find(x=>x.conv===c.id&&x.hook&&x.name==='外部交接');navigator.clipboard?.writeText(hookUrl(r)).then(()=>toast(I18N.t('已複製'))).catch(()=>{})};
   if($('sf_bring'))$('sf_bring').onclick=async()=>{$('sf_bring').disabled=true;try{await api('bots/'+c.id+'/bring-logins','POST');$('sf_bmsg').textContent=I18N.t('開始搬移，完成後對話裡會通知你')}catch(e){$('sf_bmsg').textContent=e.message;$('sf_bring').disabled=false}};
   if($('sf_sk'))$('sf_sk').onclick=async e=>{const x=e.target.closest('[data-unsk]');if(!x)return;const list=[...S.skills[c.id]];list.splice(+x.dataset.unsk,1);
     try{await api('settings','PUT',{skills:{bot:c.id,list}});S.skills[c.id]=list;x.closest('.pick').remove();toast(I18N.t('已刪除'))}catch(err){toast(err.message)}};
@@ -1233,8 +1237,8 @@ async function openComputers(){
   ${window.octaDesktop?`<div class="row2"><button class="ghost" id="dMode">${CFG.local?'改用雲端帳號（同步）':'改用離線模式（不同步）'}</button></div>`:''}`:'';
   subSheet('電腦與主機',`${CFG.local?'<p>離線模式：機器人在這台電腦上工作。</p>':`<p>機器人在「主機」電腦上工作。手機、平板和其他電腦打開 <b data-u>${esc(location.host)}</b> 登入同一個帳號，就能指揮、看結果。有多台電腦裝了 OCTA 時，只有主機會接工作，其他電腦待命。</p><div id="pcs"><p class="fade">讀取中…</p></div>`}
   <h3>瀏覽器</h3>
-  <label class="toggle">所有機器人共用一個瀏覽器<button type="button" class="sw ${S.shareBrowser!==false?'on':''}" id="dShare"></button></label>
-  <p class="hmuted">開著：在任何一個機器人的瀏覽器登入過的網站（LINE、Google…），其他機器人也直接能用，各自開自己的分頁。同一時間只有一個機器人操作瀏覽器，其他的會排隊。關掉：每個機器人用自己獨立的瀏覽器和登入，可以同時工作。</p>
+  <label class="toggle">所有機器人共用登入<button type="button" class="sw ${S.shareBrowser!==false?'on':''}" id="dShare"></button></label>
+  <p class="hmuted">開著：在任何一個機器人的瀏覽器登入過的網站（LINE、Google…），其他機器人下次工作時也直接能用。每個機器人還是有自己的瀏覽器，可以同時工作。關掉：每個機器人的登入各自獨立。</p>
   ${here}
   ${DESK()?'':`<h3>沒有安裝桌面版的電腦</h3>
   <p>也可以用指令列執行器（需要 Node 18 以上與 Google Chrome）：</p>
@@ -1242,7 +1246,7 @@ async function openComputers(){
 curl.exe -o octa-runner.mjs ${location.origin}/octa-runner.mjs</pre>
   <div class="row2"><button class="ghost" id="gen">產生執行器金鑰</button></div><pre class="code" id="cmd" hidden></pre>`}`);
   if($('dShare'))$('dShare').onclick=async()=>{const on=!$('dShare').classList.contains('on');$('dShare').classList.toggle('on',on);
-    try{await api('settings','PUT',{shareBrowser:on});S.shareBrowser=on;toast(I18N.t(on?'已改成共用瀏覽器，下次工作時生效':'已改成每個機器人獨立瀏覽器，下次工作時生效'))}catch(e){$('dShare').classList.toggle('on',!on);toast(e.message)}};
+    try{await api('settings','PUT',{shareBrowser:on});S.shareBrowser=on;toast(I18N.t(on?'已改成共用登入，下次工作時生效':'已改成每個機器人的登入各自獨立，下次工作時生效'))}catch(e){$('dShare').classList.toggle('on',!on);toast(e.message)}};
   if($('gen'))$('gen').onclick=async()=>{const d=await api('runner-token','POST');$('cmd').hidden=false;$('cmd').textContent=`node octa-runner.mjs ${location.origin} ${d.token}`};
   if(DESK()){
     const saveExt=async t=>{try{await api('desktop/ext-token','POST',{token:t});toast(t?'已連接 Chrome':'已移除');openComputers()}catch(e){toast(e.message)}};

@@ -972,3 +972,14 @@ T.update({
  '所有機器人共用一個瀏覽器（各自的分頁），登入一次大家都能用，不會動到你的 Chrome。': ('All bots share one browser (each in its own tab): sign in once and everyone can use it. Your own Chrome is untouched.', 'すべてのボットで 1 つのブラウザを共有（それぞれ自分のタブ）。一度ログインすれば全員が使え、あなたの Chrome には影響しません。'),
  '這個機器人自己的瀏覽器和登入，不會動到你的 Chrome。第一次用某網站要在「瀏覽器」幫它登入一次。': ('This bot’s own browser and sign-ins; your Chrome is untouched. Sign it in once in “Browser” the first time it uses a site.', 'このボット専用のブラウザとログイン。あなたの Chrome には影響しません。初めて使うサイトは「ブラウザ」で一度ログインしてください。'),
 })
+
+T.update({
+ '所有機器人共用登入': ('All bots share sign-ins', 'すべてのボットでログインを共有'),
+ '開著：在任何一個機器人的瀏覽器登入過的網站（LINE、Google…），其他機器人下次工作時也直接能用。每個機器人還是有自己的瀏覽器，可以同時工作。關掉：每個機器人的登入各自獨立。': ('On: sites any bot signed in to (LINE, Google…) work for every bot from its next task. Each bot still has its own browser, so they work at the same time. Off: each bot keeps its own sign-ins.', 'オン：どれかのボットでログインしたサイト（LINE、Google など）は、他のボットも次の作業からそのまま使えます。ボットはそれぞれ自分のブラウザを持つので同時に作業できます。オフ：ログインはボットごとに独立。'),
+ '它自己的瀏覽器，可以和其他機器人同時工作；登入共用，在任何一個機器人登入過的網站它也能用。不會動到你的 Chrome。': ('Its own browser, so it can work alongside other bots; sign-ins are shared, so sites any bot signed in to work here too. Your Chrome is untouched.', '自分専用のブラウザで他のボットと同時に作業でき、ログインは共有されます。あなたの Chrome には影響しません。'),
+ '已改成共用登入，下次工作時生效': ('Sign-ins are now shared — applies from the next task', 'ログイン共有をオンにしました（次の作業から適用）'),
+ '已改成每個機器人的登入各自獨立，下次工作時生效': ('Each bot now keeps its own sign-ins — applies from the next task', 'ボットごとのログインに切り替えました（次の作業から適用）'),
+ '從其他 AI 交接工作（例如 Grok Bot）': ('Hand-off from other AIs (e.g. Grok Bot)', '他の AI からの引き継ぎ（Grok Bot など）'),
+ '產生交接網址': ('Create hand-off URL', '引き継ぎ URL を作成'),
+ '其他 AI 用這個網址把工作交給這個機器人，它會自動開始做。': ('Other AIs use this URL to hand work to this bot; it starts right away.', '他の AI はこの URL でこのボットに作業を渡せます。受け取るとすぐ始めます。'),
+})

@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '14.2';
+export const VERSION = '15.0';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -99,7 +99,7 @@ function botDir(id, mode = 'own', port = 0) {
   const mine = mode === 'mine';
   const pwArgs = mine ? ['--extension', '--output-dir', join(dir, 'shots')]
     : port ? ['--cdp-endpoint', `http://127.0.0.1:${port}`, '--output-dir', join(dir, 'shots')]   // the bot's own browser that stays open
-    : ['--browser', 'chrome', '--user-data-dir', (!mine && shareBrowser) ? sharedProfile() : profile, '--output-dir', join(dir, 'shots')];
+    : ['--browser', 'chrome', '--user-data-dir', profile, '--output-dir', join(dir, 'shots')];
   const env = { ...(cfg.pwCli ? cfg.nodeEnv || {} : {}), ...(mine && extToken() ? { PLAYWRIGHT_MCP_EXTENSION_TOKEN: extToken() } : {}) };
   const server = cfg.pwCli
     ? { command: cfg.nodeBin || process.execPath, args: [cfg.pwCli, ...pwArgs], env }   // bundled (desktop app)
@@ -203,8 +203,10 @@ function buildPrompt(job, here) {
     '對話紀錄（舊到新）：'
   );
   // older messages are shortened; the last few stay whole
-  job.history.forEach((h, i) => {
-    const recent = i >= job.history.length - 4, t = recent || h.text.length <= 600 ? h.text : h.text.slice(0, 600) + '…（較早的訊息，已截短）';
+  // small local models (Ollama) get a shorter history: they are slower and get confused by long conversations
+  const small = (job.bot.engine || 'claude') === 'opencode', hist = small ? job.history.slice(-8) : job.history, cut = small ? 300 : 600;
+  hist.forEach((h, i) => {
+    const recent = i >= hist.length - (small ? 2 : 4), t = recent || h.text.length <= cut ? h.text : h.text.slice(0, cut) + '…（較早的訊息，已截短）';
     lines.push(`【${h.who}】${t}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   });
   lines.push('', ...tabsNow(job), '', '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。', '', whoAmI(job), '現在請處理這則指示：', job.prompt);
@@ -480,7 +482,8 @@ async function runEngine(engine, prompt, b, model, live = {}) {
         mcp: { browser: { type: 'local', command: [server.command, ...server.args], environment: server.env || {}, enabled: true } },
         tools: { task: false, todowrite: false, todoread: false }   // small local models misuse sub-agents and to-do lists, then reply about the error
       });
-      r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, FILE_INSTR], dir, '', { ctl: live.ctl });
+      // /no_think: qwen3-style models skip their long hidden reasoning (several times faster on a laptop)
+      r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, '/no_think ' + FILE_INSTR], dir, '', { ctl: live.ctl });
       break;
     }
     default: {
@@ -521,11 +524,9 @@ function failText(r, prompt) {
 }
 
 // ---------- job handlers ----------
-// with the shared Chrome, one bot uses it at a time, from opening it to the closing screenshot
 async function chatJob(job) {
   if (typeof job.shareBrowser === 'boolean') shareBrowser = job.shareBrowser;
-  const release = shareBrowser && job.bot.browser !== 'mine' && job.bot.engine !== 'grokbot' ? await browserGate() : null;
-  try { return await chatRun(job); } finally { release?.(); }
+  return chatRun(job);
 }
 async function chatRun(job) {
   const own = job.bot.browser !== 'mine';
@@ -568,7 +569,8 @@ async function chatRun(job) {
       ? await warmClaude(job, b, here, { progress, ctl })        // AI 待機: reuse the running Claude session
       : await runEngine(engine, buildPrompt(job, here), b, job.bot.model, { progress, ctl });
   }
-  finally { clearTimeout(timerP); clearInterval(beat); busyBots.delete(job.bot.id); if (port) touchBrowser(shareBrowser ? 'shared' : job.bot.id); }
+  finally { clearTimeout(timerP); clearInterval(beat); busyBots.delete(job.bot.id); if (port) touchBrowser(job.bot.id); }
+  if (port && shareBrowser) await syncOut(port);
   // what the browser shows now: taken by OCTA itself (no need for the bot to remember)
   let page = (res.text.match(/📍\s*目前頁面[:：]\s*(\S+)/) || [])[1];
   const d = new Date(), z = n => String(n).padStart(2, '0'), stamp = `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`;
@@ -618,31 +620,37 @@ function restoreSkills(dir, sk) {   // e.g. on a new host computer
 const cookieParams = list => list.filter(c => c.name && c.domain)
   .map(c => ({ name: c.name, value: c.value, domain: c.domain, path: c.path || '/', secure: !!c.secure, httpOnly: !!c.httpOnly, ...(c.sameSite ? { sameSite: c.sameSite } : {}), ...(c.expires > 0 ? { expires: c.expires } : {}) }));
 // switching to the shared browser: bring the sign-ins from every bot's old browser into it, once
-async function mergeOldProfiles(sharedPort) {
-  const mark = join(sharedProfile(), '.octa-merged');
+async function mergeOldProfiles() {   // once: the sign-ins in every bot's browser (and the 2.4.x shared one) go into the shared store
+  const mark = join(workDir, '.octa-logins-merged');
   if (existsSync(mark)) return;
   const root = join(workDir, 'bots'), chrome = findChrome();
   const when = p => { for (const f of [join(p, 'Default', 'Network', 'Cookies'), join(p, 'Default', 'Cookies'), p]) { try { return statSync(f).mtimeMs; } catch { } } return 0; };
   let dirs = []; try { dirs = readdirSync(root).map(d => join(root, d, 'profile')).filter(p => existsSync(p)); } catch { }
+  if (existsSync(sharedProfile())) dirs.push(sharedProfile());
   dirs.sort((a, b) => when(a) - when(b));   // newest last: its sign-in wins when two have the same site
   const all = []; let n = 0;
   for (const p of dirs) {
-    if (!chrome || profileInUse(p)) continue;
-    const port = 9390 + (n++ % 9);
-    const child = spawn(chrome, [`--user-data-dir=${p}`, `--remote-debugging-port=${port}`, '--headless=new', '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio: 'ignore', windowsHide: true });
-    child.on('error', () => { });
+    let port = 0;
+    for (const [, b] of browsers) if (b.profile === p) port = b.port;   // already open: read it directly
+    let child = null;
+    if (!port) {
+      if (!chrome || profileInUse(p)) continue;
+      port = 9390 + (n++ % 9);
+      child = spawn(chrome, [`--user-data-dir=${p}`, `--remote-debugging-port=${port}`, '--headless=new', '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio: 'ignore', windowsHide: true });
+      child.on('error', () => { });
+    }
     try {
       for (let i = 0; i < 40 && !(await cdpInfo(port)); i++) await pause(300);
       const { cookies = [] } = await cdp(port, send => send('Storage.getCookies'));
       all.push(...cookies);
-      await cdp(port, send => send('Browser.close')).catch(() => { });
+      if (child) await cdp(port, send => send('Browser.close')).catch(() => { });
     } catch (e) { log('讀取舊瀏覽器登入失敗：' + e.message); }
-    finally { try { child.kill(); } catch { } }
+    finally { try { child?.kill(); } catch { } }
   }
-  if (all.length) await cdp(sharedPort, send => send('Storage.setCookies', { cookies: cookieParams(all) }));
-  mkdirSync(sharedProfile(), { recursive: true }); writeFileSync(mark, String(all.length));
+  const total = all.length ? addToJar(all) : 0;
+  mkdirSync(workDir, { recursive: true }); writeFileSync(mark, String(total));
   const sites = new Set(all.map(c => String(c.domain).replace(/^\./, '').split('.').slice(-2).join('.')));
-  if (all.length) log(`🔑 已把各機器人舊瀏覽器的登入合併到共用瀏覽器（${sites.size} 個網站）`);
+  if (all.length) log(`🔑 已把各機器人瀏覽器的登入合併成共用登入（${sites.size} 個網站）`);
 }
 
 async function exportJob(job) {
@@ -659,6 +667,7 @@ async function importJob(job) {
   const cookies = cookieParams(JSON.parse(Buffer.from(data || '', 'base64').toString('utf8') || '[]'));
   const port = await ensureBrowser(job.bot);
   await cdp(port, send => send('Storage.setCookies', { cookies }));
+  if (shareBrowser) addToJar(cookies);
   const sites = new Set(cookies.map(c => c.domain.replace(/^\./, '').split('.').slice(-2).join('.')));
   log(`🔑 已帶入 ${job.bot.name} 的網站登入（${sites.size} 個網站）`);
   await api('runner/done', { id: job.id, ok: true, text: `已把「${job.bot.name}」的網站登入帶到這台主機（${sites.size} 個網站）。有些網站會綁定裝置，可能還是要再登入一次。` });
@@ -842,12 +851,20 @@ async function testJob(job) {
 // It starts in the background (off screen). The AI connects to it over CDP, so tabs and logins carry over.
 // 「在電腦上顯示」 brings the same window forward: you see what the bot sees, and can log in right there.
 const browsers = new Map();   // key ('shared' or bot id) → { port, last }
-const SHARED_PORT = 9310;                  // the one shared Chrome's debug port (below the per-bot range)
-let shareBrowser = true;                   // all bots share one Chrome: logins shared, tabs separate
-const sharedProfile = () => join(workDir, 'profile-shared');
-// only one bot drives the shared Chrome at a time (avoids two bots fighting over the same tabs)
-let browserBusy = Promise.resolve();
-function browserGate() { let rel; const mine = new Promise(r => rel = r); const prev = browserBusy; browserBusy = browserBusy.then(() => mine); return prev.then(() => rel); }
+let shareBrowser = true;   // sign-ins shared between bots; each bot still has its own browser, so bots work in parallel
+const sharedProfile = () => join(workDir, 'profile-shared');   // 2.4.0–2.4.2 used one shared Chrome here: its sign-ins get merged in
+const jarFile = () => join(workDir, 'shared-logins.json');
+const readJar = () => { try { return JSON.parse(readFileSync(jarFile(), 'utf8')); } catch { return []; } };
+const ckKey = c => `${c.name}|${c.domain}|${c.path || '/'}`;
+function addToJar(list) {   // newest values win; expired ones drop out
+  const now = Date.now() / 1000, m = new Map(readJar().map(c => [ckKey(c), c]));
+  for (const c of list) if (c.name && c.domain) m.set(ckKey(c), c);
+  const out = [...m.values()].filter(c => !(c.expires > 0 && c.expires < now));
+  mkdirSync(workDir, { recursive: true }); writeFileSync(jarFile(), JSON.stringify(out)); return out.length;
+}
+// before a bot works: give its browser everyone's sign-ins; after: add what it signed in to
+async function syncIn(port) { const jar = readJar(); if (jar.length) await cdp(port, send => send('Storage.setCookies', { cookies: cookieParams(jar) })).catch(e => log('帶入共用登入失敗：' + e.message)); }
+async function syncOut(port) { try { const { cookies = [] } = await cdp(port, send => send('Storage.getCookies')); addToJar(cookies); } catch (e) { log('儲存共用登入失敗：' + e.message); } }
 const busyBots = new Set();
 const pause = ms => new Promise(r => setTimeout(r, ms));
 function profileInUse(profile) {   // a Chrome window (without the debugging port) still has this profile open
@@ -859,7 +876,6 @@ function profileInUse(profile) {   // a Chrome window (without the debugging por
   try { lstatSync(join(profile, 'SingletonLock')); return true; } catch { return false; }
 }
 function portOf(id) {   // a fixed local port per bot, kept in work/ports.json
-  if (shareBrowser) return SHARED_PORT;
   const f = join(workDir, 'ports.json');
   let m = {}; try { m = JSON.parse(readFileSync(f, 'utf8')); } catch { }
   if (!m[id]) { const used = new Set(Object.values(m)); let p = 9311; while (used.has(p)) p++; m[id] = p; writeFileSync(f, JSON.stringify(m)); }
@@ -887,28 +903,28 @@ const pagesOf = async send => (await send('Target.getTargets')).targetInfos.filt
 const touchBrowser = id => { const b = browsers.get(id); if (b) b.last = Date.now(); };
 export async function ensureBrowser(bot) {
   const port = await openBrowser(bot);
-  if (shareBrowser) await mergeOldProfiles(port).catch(e => log('合併舊登入失敗：' + e.message));
+  if (shareBrowser) { await mergeOldProfiles().catch(e => log('合併舊登入失敗：' + e.message)); await syncIn(port); }
   return port;
 }
 async function openBrowser(bot) {
   const port = portOf(bot.id);
-  const key = shareBrowser ? 'shared' : bot.id;
+  const key = bot.id;
   if (await cdpInfo(port)) { browsers.set(key, { port, last: Date.now() }); return port; }
   const chrome = findChrome();
   if (!chrome) throw new Error('找不到 Google Chrome');
-  const profile = shareBrowser ? sharedProfile() : botDir(bot.id).profile;
+  const profile = botDir(bot.id).profile;
   mkdirSync(profile, { recursive: true });
   for (let i = 0; i < 10 && profileInUse(profile); i++) await pause(1000);   // an old window may still be closing
-  if (profileInUse(profile)) throw new Error(shareBrowser ? '共用瀏覽器有一個舊視窗開著，請先關掉它' : '這個機器人的瀏覽器有一個舊視窗開著，請先關掉它');
+  if (profileInUse(profile)) throw new Error('這個機器人的瀏覽器有一個舊視窗開著，請先關掉它');
   const child = spawn(chrome, [`--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, '--no-first-run', '--no-default-browser-check',
     '--restore-last-session', '--window-position=-32000,-32000', '--window-size=1280,860'], { detached: true, stdio: 'ignore', windowsHide: false });
   child.on('error', () => { });
   child.unref();
   for (let i = 0; i < 40; i++) { if (await cdpInfo(port)) break; await pause(500); }
   if (!(await cdpInfo(port))) throw new Error('Chrome 沒有啟動');
-  browsers.set(key, { port, last: Date.now() });
+  browsers.set(key, { port, last: Date.now(), profile });
   if (sessions.has(bot.id)) closeSession(bot.id);   // a waiting AI was connected to the old browser
-  log(shareBrowser ? '🌐 共用瀏覽器已在背景開啟' : `🌐 ${bot.name} 的瀏覽器已在背景開啟`);
+  log(`🌐 ${bot.name} 的瀏覽器已在背景開啟`);
   // some systems pull an off-screen window back on screen: then keep it minimised instead
   try {
     await cdp(port, async send => {
@@ -951,7 +967,8 @@ async function openJob(job) {
     if (hide && !(await cdpInfo(portOf(job.bot.id)))) return done(true, '我的瀏覽器已經收起來了。');
     const port = await ensureBrowser(job.bot);
     await showBrowser(port, hide ? '' : job.url, hide);
-    touchBrowser(shareBrowser ? 'shared' : job.bot.id);
+    touchBrowser(job.bot.id);
+    if (hide && shareBrowser) await syncOut(port);   // signed in by hand: every bot gets it
     return done(true, hide ? '我的瀏覽器已收到背景，我會繼續在裡面工作。'
       : busyBots.has(job.bot.id) ? '我的瀏覽器已經在電腦上顯示，我正在裡面工作，先別操作；要幫我登入請等我停下來。'
       : '我的瀏覽器已經在電腦上顯示。需要登入就直接在裡面登入，好了回來按「登入好了，繼續」。');
@@ -994,7 +1011,7 @@ async function checkWatches() {
 // browsers idle for 30 minutes and not on screen are closed to save memory (tabs come back next time)
 async function reapBrowsers(all) {
   for (const [id, b] of browsers) {
-    const inUse = id === 'shared' ? (busyBots.size > 0 || sessions.size > 0) : (busyBots.has(id) || sessions.has(id));
+    const inUse = busyBots.has(id) || sessions.has(id);
     if (!all && inUse) continue;   // in use, or an AI is waiting (待機)
     if (!all && Date.now() - b.last < 30 * 60000) continue;
     try {

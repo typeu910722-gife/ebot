@@ -1,5 +1,30 @@
 [
  {
+  "v": "2.5.0",
+  "date": "2026-10-23",
+  "notes": [
+   "機器人可以同時工作，不用一個等一個：每個機器人有自己的瀏覽器，但登入共用。在任何一個機器人登入 LINE、Google 等網站，其他機器人下次工作時直接能用",
+   "第一次使用會自動把各機器人舊瀏覽器裡的登入合併成共用登入",
+   "Ollama 本機模型變快：關掉 qwen3 等模型的長時間「思考」，並給小模型較短的對話紀錄",
+   "從其他 AI 交接工作：在機器人的任務設定按「產生交接網址」，把網址給 Grok Bot 等 AI，它要交接工作時傳過來，這個機器人就會自動開始做",
+   "其他 AI（例如 Grok Bot）用 {\"text\":…,\"from\":…} 呼叫觸發網址時，會顯示是誰交接了什麼工作"
+  ],
+  "notes_en": [
+   "Bots work at the same time instead of waiting for each other: each has its own browser, but sign-ins are shared. Sign in to LINE, Google and so on in any bot and the others can use it from their next task",
+   "On first use, sign-ins from every bot’s old browser are merged into the shared sign-ins",
+   "Faster Ollama local models: qwen3-style long hidden “thinking” is turned off, and small models get a shorter history",
+   "Hand-offs from other AIs: in a bot’s settings press “Create hand-off URL” and give it to Grok Bot or another AI; when it hands work over, the bot starts right away",
+   "When another AI calls a trigger URL with {\"text\":…,\"from\":…}, the chat shows who handed over what"
+  ],
+  "notes_ja": [
+   "ボットが順番待ちせず同時に作業できるようになりました。各ボットは自分のブラウザを使い、ログインは共有されます。どれかのボットで LINE や Google にログインすれば、他のボットも次の作業からそのまま使えます",
+   "初回は各ボットの旧ブラウザのログインを自動で共有ログインに統合します",
+   "Ollama ローカルモデルを高速化：qwen3 などの長い「思考」をオフにし、小型モデルには短い会話履歴を渡します",
+   "他の AI からの引き継ぎ：ボットの設定で「引き継ぎ URL を作成」を押し、Grok Bot などに渡すと、引き継がれた作業をボットがすぐ始めます",
+   "他の AI が {\"text\":…,\"from\":…} で起動 URL を呼ぶと、誰が何を引き継いだかを表示します"
+  ]
+ },
+ {
   "v": "2.4.2",
   "date": "2026-10-23",
   "notes": [

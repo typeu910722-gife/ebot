@@ -271,6 +271,9 @@ function describeEvent(raw, body) {
       return `LINE 事件 ${e.type}${who}`;
     }).join('\n');
   }
+  // another AI (e.g. Grok Bot) handing work over: {"text": "...", "from": "..."}
+  const t = body && typeof body === 'object' ? body.text || body.task || body.message || body.content : null;
+  if (typeof t === 'string' && t.trim()) return `${body.from ? `「${String(body.from).slice(0, 40)}」` : '外部'}交接的工作：${t.slice(0, 4000)}`;
   return raw.slice(0, 4000);
 }
 
