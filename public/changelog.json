@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.9.7",
+  "date": "2026-10-23",
+  "notes": [
+   "工作筆記一定存得進去：機器人自己寫不進檔案時（例如 ChatGPT 的安全模式擋住），改由 OCTA 幫它存"
+  ],
+  "notes_en": [
+   "Work notes always save: if a bot can't write the file itself (e.g. ChatGPT's sandbox), OCTA saves it"
+  ]
+ },
+ {
   "v": "2.9.6",
   "date": "2026-10-23",
   "notes": [

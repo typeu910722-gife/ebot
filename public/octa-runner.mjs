@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '17.4';
+export const VERSION = '17.5';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -169,7 +169,7 @@ const notesFile = job => join(workDir, 'bots', String(job.bot.id).replace(/[^\w-
 function workNotes(job) {
   let t = ''; try { t = readFileSync(notesFile(job), 'utf8').trim(); } catch { }
   if (t.length > 6000) t = '…' + t.slice(-6000);
-  return [`你的工作筆記（檔案 ${notesFile(job)}，由你自己維護）：查到值得留下的資料就更新這個檔案，例如今天的名單與房況、網站上東西在哪、做到哪一步，每段寫上查到的時間；舊日期、用不到的就刪掉。下次先看筆記，只補查可能變動的部分，不用每次從頭查。使用者再問一樣的事、而筆記裡已經有今天整理好的結果時，先告訴他「上次幾點查的、結果是什麼」，再用 ❓ 問他要不要重新查（A. 現在重新查 B. 用剛才那份就好）。`,
+  return [`你的工作筆記（檔案 ${notesFile(job)}，由你自己維護）：查到值得留下的資料就更新這個檔案，例如今天的名單與房況、網站上東西在哪、做到哪一步，每段寫上查到的時間；舊日期、用不到的就刪掉。檔案寫不進去（例如顯示唯讀）時，改在回覆最後寫「📒工作筆記：」換行接完整的新筆記，最後一行寫「📒結束」，OCTA 會幫你存，不用跟使用者提這件事。下次先看筆記，只補查可能變動的部分，不用每次從頭查。使用者再問一樣的事、而筆記裡已經有今天整理好的結果時，先告訴他「上次幾點查的、結果是什麼」，再用 ❓ 問他要不要重新查（A. 現在重新查 B. 用剛才那份就好）。`,
     t ? '目前筆記內容：\n' + t : '（目前筆記是空的）'];
 }
 function buildPrompt(job, here) {
@@ -615,6 +615,8 @@ async function chatRun(job) {
   }
   finally { clearTimeout(timerP); clearInterval(beat); busyBots.delete(job.bot.id); if (port) touchBrowser(job.bot.id); }
   if (port && shareBrowser) await syncOut(port);
+  // 📒工作筆記：…📒結束 — the bot couldn't write its notes file itself (sandbox): OCTA saves it
+  if (res?.text) res.text = res.text.replace(/📒\s*工作筆記[:：]\s*([\s\S]*?)📒\s*結束/g, (_, n) => { try { mkdirSync(dirname(notesFile(job)), { recursive: true }); writeFileSync(notesFile(job), n.trim() + '\n'); log(`📒 已更新 ${job.bot.name} 的工作筆記`); } catch (e) { log('工作筆記寫入失敗：' + e.message); } return ''; }).trim() || '（已更新工作筆記）';
   // what the browser shows now: taken by OCTA itself (no need for the bot to remember)
   let page = (res.text.match(/📍\s*目前頁面[:：]\s*(\S+)/) || [])[1];
   const d = new Date(), z = n => String(n).padStart(2, '0'), stamp = `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`;
