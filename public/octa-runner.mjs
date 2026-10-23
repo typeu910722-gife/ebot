@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '15.6';
+export const VERSION = '15.7';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -249,7 +249,7 @@ export const ENGINES = {
     paths: { win: '%USERPROFILE%\\.local\\bin', mac: '$HOME/.local/bin' } },
   codex: { label: 'Codex CLI（ChatGPT）', bin: 'codex', site: 'https://developers.openai.com/codex/cli', npm: '@openai/codex', login: 'codex login', loginHint: '瀏覽器會打開，用 ChatGPT 帳號登入' },
   // Google moved personal accounts from Gemini CLI to the Antigravity CLI (agy) in June 2026; the key stays 'gemini' so existing bots keep working
-  gemini: { label: 'Antigravity CLI（Gemini）', bin: 'agy', site: 'https://antigravity.google/docs/cli', login: 'agy', loginHint: '瀏覽器會打開，用 Google 帳號登入（免費帳號也可以），完成後輸入 /quit 離開',
+  gemini: { label: 'Antigravity CLI（Gemini／Claude）', bin: 'agy', site: 'https://antigravity.google/docs/cli', login: 'agy', loginHint: '瀏覽器會打開，用 Google 帳號登入（免費帳號也可以），完成後輸入 /quit 離開',
     install: { win: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://antigravity.google/cli/install.ps1 | iex"', mac: 'curl -fsSL https://antigravity.google/cli/install.sh | bash' },
     paths: { win: '%USERPROFILE%\\.local\\bin', mac: '$HOME/.local/bin' } },
   copilot: { label: 'GitHub Copilot CLI', bin: 'copilot', site: 'https://github.com/github/copilot-cli', npm: '@github/copilot', login: 'copilot', loginHint: '視窗出現後輸入 /login，用 GitHub 帳號登入' },
@@ -383,7 +383,7 @@ async function modelReport() {   // every 30 minutes
   }
   if (await has('agy')) {
     const t = (await runText('agy', ['models'])).replace(/\x1b\[[0-9;]*m/g, '');
-    out.gemini = [...new Set(t.split('\n').map(l => (l.match(/\b(gemini-[\w.\-]+)/i) || [])[1]).filter(Boolean))].slice(0, 30);
+    out.gemini = [...new Set(t.split("\n").map(l => (l.match(/^\s*([a-z][\w.\-]*-[\w.\-]+)\s/i) || [])[1]).filter(Boolean))].slice(0, 30);   // agy also serves Claude and GPT-OSS models (separate weekly quota)
   }
   if (await has('gbot')) { try { out.grokbot = (await grokBots()).map(b => b.name).slice(0, 40); } catch { } }
   if (await has('copilot')) {

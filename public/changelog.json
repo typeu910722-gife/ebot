@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.6.1",
+  "date": "2026-10-23",
+  "notes": [
+   "Antigravity 引擎也能選 Claude Sonnet／Opus 和 GPT-OSS 模型（和 Gemini 分開算額度）"
+  ],
+  "notes_en": [
+   "The Antigravity engine can now use Claude Sonnet/Opus and GPT-OSS models (separate quota from Gemini)"
+  ]
+ },
+ {
   "v": "2.6.0",
   "date": "2026-10-23",
   "notes": [
