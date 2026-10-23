@@ -302,7 +302,8 @@ export async function has(bin, fresh) {   // a missing command can't be told apa
   installed[bin] = { ok: !!p, t: Date.now(), path: p };
   return !!p;
 }
-const engineReady = async (k, fresh) => (await has(ENGINES[k].bin, fresh)) && (!ENGINES[k].also || await has(ENGINES[k].also, fresh));
+const engineReady = async (k, fresh) => (await has(ENGINES[k].bin, fresh)) && (!ENGINES[k].also || await has(ENGINES[k].also, fresh))
+  && (k !== 'grokbot' || !grokBotEnv().missing);   // Grok Bot: the tool alone isn't enough, the app's sign-in must be readable
 let lastReport = 0;
 const engineReport = async () => {   // tell the app which AI tools this computer has, about once a minute
   if (Date.now() - lastReport < 60000) return undefined;
@@ -453,18 +454,18 @@ async function runEngine(engine, prompt, b, model, live = {}) {
         `mcp_servers.browser.command=${toml(server.command)}`, `mcp_servers.browser.args=${toml(server.args)}`,
         'mcp_servers.browser.startup_timeout_sec=60', 'mcp_servers.browser.default_tools_approval_mode="approve"',
         ...Object.entries(server.env || {}).map(([k, v]) => `mcp_servers.browser.env.${k}=${toml(v)}`)];
-      r = await spawnCli('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'workspace-write', '-C', dir, '-o', last, ...m('-m'), ...c.flatMap(x => ['-c', x]), '-'], dir, prompt);
+      r = await spawnCli('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'workspace-write', '-C', dir, '-o', last, ...m('-m'), ...c.flatMap(x => ['-c', x]), '-'], dir, prompt, { ctl: live.ctl });
       // Codex's sandbox isn't available on every Windows setup: run without it rather than not at all (other engines run unsandboxed too)
-      if (r.code !== 0 && /sandbox/i.test(r.err || '')) r = await spawnCli('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'danger-full-access', '-C', dir, '-o', last, ...m('-m'), ...c.flatMap(x => ['-c', x]), '-'], dir, prompt);
+      if (r.code !== 0 && /sandbox/i.test(r.err || '')) r = await spawnCli('codex', ['exec', '--skip-git-repo-check', '--sandbox', 'danger-full-access', '-C', dir, '-o', last, ...m('-m'), ...c.flatMap(x => ['-c', x]), '-'], dir, prompt, { ctl: live.ctl });
       try { text = readFileSync(last, 'utf8').trim(); } catch { }
       break;
     }
-    case 'gemini': r = await spawnCli('agy', ['-p', FILE_INSTR, '--dangerously-skip-permissions', '--output-format', 'text', '--print-timeout', '15m', '--add-dir', store, ...m('--model')], dir, ''); break;
-    case 'qwen': r = await spawnCli('qwen', ['--yolo', '--include-directories', store, ...m('-m'), '-p', STDIN_INSTR], dir, prompt); break;
+    case 'gemini': r = await spawnCli('agy', ['-p', FILE_INSTR, '--dangerously-skip-permissions', '--output-format', 'text', '--print-timeout', '15m', '--add-dir', store, ...m('--model')], dir, '', { ctl: live.ctl }); break;
+    case 'qwen': r = await spawnCli('qwen', ['--yolo', '--include-directories', store, ...m('-m'), '-p', STDIN_INSTR], dir, prompt, { ctl: live.ctl }); break;
     case 'copilot': r = await spawnCli('copilot', ['-p', FILE_INSTR, '-s', '--allow-all-tools', '--allow-all-paths', '--no-color',
-      '--additional-mcp-config', '@' + join(dir, 'copilot-mcp.json'), ...m('--model')], dir, ''); break;
-    case 'grok': r = await spawnCli('grok', ['--no-auto-update', '--no-alt-screen', '--always-approve', '--cwd', dir, '--output-format', 'plain', ...m('-m'), '-p', FILE_INSTR], dir, ''); break;
-    case 'cursor': r = await spawnCli('agent', ['-p', '--force', '--approve-mcps', '--output-format', 'text', ...m('--model'), FILE_INSTR], dir, ''); break;
+      '--additional-mcp-config', '@' + join(dir, 'copilot-mcp.json'), ...m('--model')], dir, '', { ctl: live.ctl }); break;
+    case 'grok': r = await spawnCli('grok', ['--no-auto-update', '--no-alt-screen', '--always-approve', '--cwd', dir, '--output-format', 'plain', ...m('-m'), '-p', FILE_INSTR], dir, '', { ctl: live.ctl }); break;
+    case 'cursor': r = await spawnCli('agent', ['-p', '--force', '--approve-mcps', '--output-format', 'text', ...m('--model'), FILE_INSTR], dir, '', { ctl: live.ctl }); break;
     case 'opencode': {
       if (!(await has('ollama'))) { r = { missing: true }; break; }
       const name = ollamaModel(model);
@@ -476,7 +477,7 @@ async function runEngine(engine, prompt, b, model, live = {}) {
         mcp: { browser: { type: 'local', command: [server.command, ...server.args], environment: server.env || {}, enabled: true } },
         tools: { task: false, todowrite: false, todoread: false }   // small local models misuse sub-agents and to-do lists, then reply about the error
       });
-      r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, FILE_INSTR], dir, '');
+      r = await spawnCli('opencode', ['run', '--auto', '--dir', dir, '-m', 'ollama/' + name, FILE_INSTR], dir, '', { ctl: live.ctl });
       break;
     }
     default: {
@@ -611,6 +612,36 @@ function restoreSkills(dir, sk) {   // e.g. on a new host computer
 }
 
 // ---------- handing a bot's website logins to another computer (cookies of its own browser) ----------
+const cookieParams = list => list.filter(c => c.name && c.domain)
+  .map(c => ({ name: c.name, value: c.value, domain: c.domain, path: c.path || '/', secure: !!c.secure, httpOnly: !!c.httpOnly, ...(c.sameSite ? { sameSite: c.sameSite } : {}), ...(c.expires > 0 ? { expires: c.expires } : {}) }));
+// switching to the shared browser: bring the sign-ins from every bot's old browser into it, once
+async function mergeOldProfiles(sharedPort) {
+  const mark = join(sharedProfile(), '.octa-merged');
+  if (existsSync(mark)) return;
+  const root = join(workDir, 'bots'), chrome = findChrome();
+  const when = p => { for (const f of [join(p, 'Default', 'Network', 'Cookies'), join(p, 'Default', 'Cookies'), p]) { try { return statSync(f).mtimeMs; } catch { } } return 0; };
+  let dirs = []; try { dirs = readdirSync(root).map(d => join(root, d, 'profile')).filter(p => existsSync(p)); } catch { }
+  dirs.sort((a, b) => when(a) - when(b));   // newest last: its sign-in wins when two have the same site
+  const all = []; let n = 0;
+  for (const p of dirs) {
+    if (!chrome || profileInUse(p)) continue;
+    const port = 9390 + (n++ % 9);
+    const child = spawn(chrome, [`--user-data-dir=${p}`, `--remote-debugging-port=${port}`, '--headless=new', '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio: 'ignore', windowsHide: true });
+    child.on('error', () => { });
+    try {
+      for (let i = 0; i < 40 && !(await cdpInfo(port)); i++) await pause(300);
+      const { cookies = [] } = await cdp(port, send => send('Storage.getCookies'));
+      all.push(...cookies);
+      await cdp(port, send => send('Browser.close')).catch(() => { });
+    } catch (e) { log('讀取舊瀏覽器登入失敗：' + e.message); }
+    finally { try { child.kill(); } catch { } }
+  }
+  if (all.length) await cdp(sharedPort, send => send('Storage.setCookies', { cookies: cookieParams(all) }));
+  mkdirSync(sharedProfile(), { recursive: true }); writeFileSync(mark, String(all.length));
+  const sites = new Set(all.map(c => String(c.domain).replace(/^\./, '').split('.').slice(-2).join('.')));
+  if (all.length) log(`🔑 已把各機器人舊瀏覽器的登入合併到共用瀏覽器（${sites.size} 個網站）`);
+}
+
 async function exportJob(job) {
   if (typeof job.shareBrowser === 'boolean') shareBrowser = job.shareBrowser;
   const port = await ensureBrowser(job.bot);
@@ -622,8 +653,7 @@ async function exportJob(job) {
 async function importJob(job) {
   if (typeof job.shareBrowser === 'boolean') shareBrowser = job.shareBrowser;
   const { data } = await api('runner/xfer/' + encodeURIComponent(job.xfer), undefined, 'GET');
-  const cookies = JSON.parse(Buffer.from(data || '', 'base64').toString('utf8') || '[]').filter(c => c.name && c.domain)
-    .map(c => ({ name: c.name, value: c.value, domain: c.domain, path: c.path || '/', secure: !!c.secure, httpOnly: !!c.httpOnly, ...(c.sameSite ? { sameSite: c.sameSite } : {}), ...(c.expires > 0 ? { expires: c.expires } : {}) }));
+  const cookies = cookieParams(JSON.parse(Buffer.from(data || '', 'base64').toString('utf8') || '[]'));
   const port = await ensureBrowser(job.bot);
   await cdp(port, send => send('Storage.setCookies', { cookies }));
   const sites = new Set(cookies.map(c => c.domain.replace(/^\./, '').split('.').slice(-2).join('.')));
@@ -853,6 +883,11 @@ async function cdp(port, fn) {   // a short CDP session on the browser
 const pagesOf = async send => (await send('Target.getTargets')).targetInfos.filter(t => t.type === 'page' && !t.url.startsWith('devtools://'));
 const touchBrowser = id => { const b = browsers.get(id); if (b) b.last = Date.now(); };
 export async function ensureBrowser(bot) {
+  const port = await openBrowser(bot);
+  if (shareBrowser) await mergeOldProfiles(port).catch(e => log('合併舊登入失敗：' + e.message));
+  return port;
+}
+async function openBrowser(bot) {
   const port = portOf(bot.id);
   const key = shareBrowser ? 'shared' : bot.id;
   if (await cdpInfo(port)) { browsers.set(key, { port, last: Date.now() }); return port; }

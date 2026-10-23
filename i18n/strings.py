@@ -964,3 +964,11 @@ T.update({
  '已改成每個機器人獨立瀏覽器，下次工作時生效': ('Switched to a browser per bot — applies from the next task', 'ボットごとのブラウザに切り替えました（次の作業から適用）'),
  '🌐 共用瀏覽器已在背景開啟': ('🌐 Shared browser opened in the background', '🌐 共有ブラウザをバックグラウンドで開きました'),
 })
+
+T.update({
+ '協作規則（選填）': ('Collaboration rules (optional)', '協力ルール（任意）'),
+ '可以不填：成員依上面的順序輪流做；也可以寫誰先做、做完交給誰': ('Optional: members take turns in the order above; or say who goes first and who takes over', '空欄可：上の順番で交代で作業します。誰が先で誰に引き継ぐかも書けます'),
+ '名稱和成員都要填': ('Name and members are required', '名前とメンバーは必須です'),
+ '所有機器人共用一個瀏覽器（各自的分頁），登入一次大家都能用，不會動到你的 Chrome。': ('All bots share one browser (each in its own tab): sign in once and everyone can use it. Your own Chrome is untouched.', 'すべてのボットで 1 つのブラウザを共有（それぞれ自分のタブ）。一度ログインすれば全員が使え、あなたの Chrome には影響しません。'),
+ '這個機器人自己的瀏覽器和登入，不會動到你的 Chrome。第一次用某網站要在「瀏覽器」幫它登入一次。': ('This bot’s own browser and sign-ins; your Chrome is untouched. Sign it in once in “Browser” the first time it uses a site.', 'このボット専用のブラウザとログイン。あなたの Chrome には影響しません。初めて使うサイトは「ブラウザ」で一度ログインしてください。'),
+})

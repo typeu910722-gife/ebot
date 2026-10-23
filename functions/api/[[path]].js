@@ -1304,7 +1304,7 @@ async function route({ request: req, env, params }) {
       const name = clean(body.name, 20), task = clean(body.task, 4000);
       const { bots, folders } = await loadAll(db, U);
       const members = (Array.isArray(body.members) ? body.members : []).filter(x => bots.some(b => b.id === x));
-      if (!name || !task || !members.length) throw new Error('名稱、成員、協作規則都要填');
+      if (!name || !members.length) throw new Error('名稱和成員都要填');   // rules are optional: members take turns in order
       return { name, task, members: JSON.stringify(members), folder: folderOk(folders, body.folder) };
     };
     if (path === 'groups' && m === 'POST') {

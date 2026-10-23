@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=22"></script>
+<script src="/i18n-dict.js?v=23"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -601,11 +601,14 @@ async function refresh(){
 async function live(){
   if(liveOn)return;liveOn=true;let fails=0;
   while(liveOn&&TOKEN||liveOn&&CFG.local){
-    try{const d=await api('wait?rev='+S.rev);fails=0;if(!liveOn)break;if(d.rev!==S.rev)await refresh()}
+    try{const d=await Promise.race([api('wait?rev='+S.rev),new Promise((_,no)=>setTimeout(()=>no(new Error('timeout')),45000))]);fails=0;if(!liveOn)break;if(d.rev!==S.rev)await refresh()}
     catch(e){fails++;await new Promise(r=>setTimeout(r,Math.min(30000,1000*2**fails)))}
   }
   liveOn=false}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(TOKEN||CFG.local)&&S.loaded){refresh();if(!liveOn)live()}});
+// after sleep or a network drop the long-poll can hang: catch up on focus / reconnect, and every minute regardless
+['focus','online'].forEach(ev=>window.addEventListener(ev,()=>{if((TOKEN||CFG.local)&&S.loaded){refresh();if(!liveOn)live()}}));
+setInterval(()=>{if((TOKEN||CFG.local)&&S.loaded&&!document.hidden)refresh()},60000);
 async function loadMsgs(id,mode){   // mode: 'first' | 'new' | 'older'
   const c=MSG[id]||(MSG[id]={list:[],more:false,loaded:false});
   const real=c.list.filter(m=>!m.tmp);
@@ -948,11 +951,11 @@ function sheet(kind,edit){
   $('veil').innerHTML=`<form class="sheet" id="sf"><h2>${edit?'任務設定':g?'新群組':'新機器人'}</h2>
   <label class="field">名稱<input id="sn" required maxlength="20" value="${c?esc(c.name):''}" placeholder="${g?'例如：退房檢查':'例如：評論員'}"></label>
   ${g?`<div class="field">成員（由上到下依序執行，用 ↑↓ 調整順序）<div class="picks" id="picks">${(c?[...c.members.filter(bot),...S.bots.map(b=>b.id).filter(x=>!c.members.includes(x))]:S.bots.map(b=>b.id)).map(id=>{const b=bot(id);return `<label class="pick"><input type="checkbox" value="${b.id}" ${!c||c.members.includes(b.id)?'checked':''}><span class="av sm" data-u>${avOf(b.id)}</span><span data-u style="flex:1">${esc(b.name)}</span><button type="button" class="mv" data-up aria-label="往上">↑</button><button type="button" class="mv" data-down aria-label="往下">↓</button></label>`}).join('')}</div></div>`:''}
-  <label class="field">${g?'協作規則':'指定任務（選填）'}<textarea id="st" ${g?'required':''} maxlength="4000" placeholder="${g?'誰先做、做完交給誰':'可以先不填：建立後直接傳訊息告訴它要做什麼，它會自己整理成指定任務'}">${c?esc(c.task):''}</textarea></label>
+  <label class="field">${g?'協作規則（選填）':'指定任務（選填）'}<textarea id="st" maxlength="4000" placeholder="${g?'可以不填：成員依上面的順序輪流做；也可以寫誰先做、做完交給誰':'可以先不填：建立後直接傳訊息告訴它要做什麼，它會自己整理成指定任務'}">${c?esc(c.task):''}</textarea></label>
   ${g?'':`<div class="tpl">${TPL.map(t=>`<button type="button">${t}</button>`).join('')}</div>`}
   ${g?'':`<div class="field">頭貼<div class="emos" id="sf_av" data-u>${['',...EMOJIS].map(e=>`<button type="button" class="emo-b${(c?.avatar||'')===e?' on':''}" data-emo="${e}" aria-label="${e||'文字'}">${e||esc((($('sn')?.value)||c?.name||'字').slice(0,1))}</button>`).join('')}<input id="sf_avc" class="emo-in" maxlength="8" placeholder="其他" value="${c?.avatar&&!EMOJIS.includes(c.avatar)?esc(c.avatar):''}" aria-label="自訂 Emoji"></div></div>
   <div class="field">瀏覽器<div class="bchoice" id="sf_b">
-    <label class="bc"><input type="radio" name="sf_b" value="own" ${c?.browser!=='mine'?'checked':''}><span><b>機器人專屬瀏覽器</b><small>獨立的分頁與登入，不會動到你的 Chrome。第一次用某網站要在「瀏覽器」幫它登入一次。</small></span></label>
+    <label class="bc"><input type="radio" name="sf_b" value="own" ${c?.browser!=='mine'?'checked':''}><span><b>機器人專屬瀏覽器</b><small>${S.shareBrowser!==false?'所有機器人共用一個瀏覽器（各自的分頁），登入一次大家都能用，不會動到你的 Chrome。':'這個機器人自己的瀏覽器和登入，不會動到你的 Chrome。第一次用某網站要在「瀏覽器」幫它登入一次。'}</small></span></label>
     <label class="bc"><input type="radio" name="sf_b" value="mine" ${c?.browser==='mine'?'checked':''}><span><b>使用我的 Chrome</b><small>直接用你 Chrome 已登入的網站和已儲存的密碼。需要先在設定裡連接 Chrome。</small></span></label>
   </div></div>
   <label class="field">AI 引擎<select id="sf_e">${Object.entries(ENG).filter(([k,v])=>!v.hide||c?.engine===k).map(([k,v])=>`<option value="${k}" ${(c?.engine||'claude')===k?'selected':''}>${v.full}${engState(k)==='ok'?'　✓ 已連接':engState(k)==='no'?'　（還沒連接）':''}</option>`).join('')}</select></label>

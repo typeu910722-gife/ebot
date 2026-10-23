@@ -177,22 +177,21 @@ handle('octa:update-install', () => {
 // OCTA.exe copies running as node) — end them all first
 function freeInstallDir() {
   if (process.platform !== 'win32') return;
-  const dir = dirname(process.execPath).replace(/'/g, "''");
-  const ps = `$me=${process.pid}; $all=Get-CimInstance Win32_Process; ` +
+  // the folder goes in through an environment variable: non-ASCII paths (e.g. E:\哲\OCTA) got garbled inside the command line
+  const ps = `$me=${process.pid}; $dir=$env:OCTA_DIR; $all=Get-CimInstance Win32_Process; ` +
     `function Kids($p){ $all | ? { $_.ParentProcessId -eq $p } | % { Kids $_.ProcessId; $_.ProcessId } }; ` +
-    `$ids=@(Kids $me) + @($all | ? { $_.ExecutablePath -and $_.ExecutablePath.StartsWith('${dir}', 'OrdinalIgnoreCase') -and $_.ProcessId -ne $me } | % { $_.ProcessId }); ` +
-    `$ids | Select-Object -Unique | % { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }`;
-  try { execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { timeout: 15000, windowsHide: true }); } catch (e) { logError('free-install-dir', e); }
+    `$ids=@(Kids $me) + @($all | ? { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($dir, 'OrdinalIgnoreCase') -and $_.ProcessId -ne $me } | % { $_.ProcessId }); ` +
+    `$ids | Select-Object -Unique | % { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; exit 0`;
+  try { execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { timeout: 15000, windowsHide: true, env: { ...process.env, OCTA_DIR: dirname(process.execPath) } }); } catch (e) { logError('free-install-dir', e); }
 }
 // the silent installer doesn't always start OCTA again: a small background helper waits for the installer
 // to finish, then opens OCTA if it isn't running
 function reopenAfterUpdate() {
   if (process.platform !== 'win32') return;
-  const exe = process.execPath.replace(/'/g, "''");
-  const ps = `Start-Sleep 6; $end=(Get-Date).AddMinutes(6); ` +
+  const ps = `$exe=$env:OCTA_EXE; Start-Sleep 6; $end=(Get-Date).AddMinutes(6); ` +
     `while ((Get-Date) -lt $end -and (Get-Process | ? { $_.ProcessName -like '*octa*setup*' -or $_.ProcessName -like 'Un_A*' })) { Start-Sleep 2 }; ` +
-    `Start-Sleep 3; if (-not (Get-Process -Name '${basename(process.execPath, '.exe').replace(/'/g, "''")}' -ErrorAction SilentlyContinue)) { Start-Process -FilePath '${exe}' }`;
-  try { spawn('powershell', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref(); } catch (e) { logError('reopen', e); }
+    `Start-Sleep 3; if (-not (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($exe)) -ErrorAction SilentlyContinue)) { Start-Process -FilePath $exe }`;
+  try { spawn('powershell', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', ps], { detached: true, stdio: 'ignore', windowsHide: true, env: { ...process.env, OCTA_EXE: process.execPath } }).unref(); } catch (e) { logError('reopen', e); }
 }
 // tell the user when the last silent update didn't go through, and offer the installer
 function checkLastUpdate() {
