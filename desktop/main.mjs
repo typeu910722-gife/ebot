@@ -113,11 +113,18 @@ async function bundledRunnerOpts() {
     // notifications are shown by the page itself (same as on phones and other computers)
   };
 }
+let runnerMod = null, browsersClosed = false;
+// close the bots' browsers before OCTA exits (at most a few seconds)
+async function closeBrowsers() {
+  if (browsersClosed || !runnerMod?.closeAllBrowsers) return; browsersClosed = true;
+  await Promise.race([runnerMod.closeAllBrowsers().catch(e => logError('close-browsers', e)), new Promise(r => setTimeout(r, 4000))]);
+}
 function stopRunner() { runner?.stop(); runner = null; runnerFor = ''; }
 async function startRunnerFor(url, token) {
   if (runner && runnerFor === url + token) return;
   stopRunner();
-  const { startRunner } = await import(pathToFileURL(join(server.webDir, 'octa-runner.mjs')).href);
+  const mod = await import(pathToFileURL(join(server.webDir, 'octa-runner.mjs')).href); runnerMod = mod;
+  const { startRunner } = mod;
   runner = startRunner({ url, token, openInstall: k => server.installEngine(k), ...(await bundledRunnerOpts()) });
   runnerFor = url + token;
 }
@@ -169,7 +176,7 @@ handle('octa:update-install', () => {
   if (upd.state === 'ready') {
     quitting = true; stopRunner();
     cfg = { ...cfg, updating: { to: upd.version, from: app.getVersion(), at: Date.now() } }; writeCfg(cfg);
-    setTimeout(() => { freeInstallDir(); reopenAfterUpdate(); autoUpdater.quitAndInstall(true, true); }, 800);
+    setTimeout(async () => { await closeBrowsers(); freeInstallDir(); reopenAfterUpdate(); autoUpdater.quitAndInstall(true, true); }, 800);
   }
   return upd;
 });
@@ -226,7 +233,11 @@ app.on('second-instance', () => {
   const r = dialog.showMessageBoxSync({ type: 'info', title: 'OCTA', message: 'OCTA 還在啟動中。', detail: '如果一直沒有出現，按「重新啟動」。', buttons: ['重新啟動', '再等一下'], defaultId: 0, cancelId: 1 });
   if (r === 0) { app.relaunch(); app.exit(0); }
 });
-app.on('before-quit', () => (quitting = true));
+app.on('before-quit', e => {
+  quitting = true;
+  if (browsersClosed || !runnerMod?.closeAllBrowsers) return;
+  e.preventDefault(); closeBrowsers().finally(() => app.quit());
+});
 app.on('window-all-closed', e => e.preventDefault());   // keep running in the tray
 
 app.whenReady().then(start).catch(e => {
@@ -274,7 +285,7 @@ async function start() {
     { label: '開啟 OCTA', click: showWindow },
     { label: '打開檔案資料夾', click: () => { const p = cfg.store || join(dataDir, 'files'); mkdirSync(p, { recursive: true }); shell.openPath(p); } },
     { type: 'separator' },
-    { label: '結束（機器人會停止工作）', click: async () => { quitting = true; stopRunner(); await server.close(); app.quit(); } }
+    { label: '結束（機器人會停止工作）', click: async () => { quitting = true; await closeBrowsers(); stopRunner(); await server.close(); app.quit(); } }
   ]));
   tray.on('click', showWindow);
 

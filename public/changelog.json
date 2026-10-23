@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.9.2",
+  "date": "2026-10-23",
+  "notes": [
+   "關閉主機的 OCTA（包含更新時）會一起關掉所有機器人的瀏覽器，下次開啟不會重複堆疊視窗"
+  ],
+  "notes_en": [
+   "Closing OCTA on the host (including for updates) also closes all bot browsers, so windows don't pile up"
+  ]
+ },
+ {
   "v": "2.9.1",
   "date": "2026-10-23",
   "notes": [

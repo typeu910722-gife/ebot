@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '16.9';
+export const VERSION = '17.0';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -1099,7 +1099,15 @@ async function checkWatches() {
 }
 
 // browsers idle for 30 minutes and not on screen are closed to save memory (tabs come back next time)
+// OCTA is closing: close every bot's browser (also ones a previous run left open), so the next start doesn't pile up windows
+export async function closeAllBrowsers() {
+  let m = {}; try { m = JSON.parse(readFileSync(join(workDir, 'ports.json'), 'utf8')); } catch { }
+  await Promise.all(Object.values(m).map(async p => { if (await cdpInfo(p)) await cdp(p, send => send('Browser.close')).catch(() => { }); }));
+  for (const ws of tags.values()) { try { ws.close(); } catch { } }
+  tags.clear(); browsers.clear(); onDesk.clear();
+}
 async function reapBrowsers(all) {
+  if (all) return closeAllBrowsers();
   for (const [id, b] of browsers) {
     const inUse = busyBots.has(id) || sessions.has(id);
     if (!all && inUse) continue;   // in use, or an AI is waiting (待機)
