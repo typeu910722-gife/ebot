@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '14.1';
+export const VERSION = '14.2';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -147,6 +147,9 @@ function newFiles(dir, since) {   // what the bot put in its 輸出 folder durin
 const q = a => (WIN && /[\s"&|<>^]/.test(a) ? '"' + a.replace(/"/g, '\\"') + '"' : a);
 
 // ---------- prompts ----------
+// said again right before the instruction: in groups, models (small ones especially) took on another member's name and duties
+const whoAmI = job => { const E = ENGINES[job.bot.engine || 'claude'] || ENGINES.claude;
+  return `提醒：你是「${job.bot.name}」，用的 AI 是 ${E.label}${job.bot.model ? `（${job.bot.model}）` : ''}。` + (job.group ? '對話裡其他機器人的發言是它們自己的，不是你的；不要用它們的名字、模型或任務介紹自己。' : ''); };
 function buildPrompt(job, here) {
   const lines = [
     `你是 OCTA（奧克塔）裡的機器人「${job.bot.name}」，在使用者自己的電腦上執行。`,
@@ -204,7 +207,7 @@ function buildPrompt(job, here) {
     const recent = i >= job.history.length - 4, t = recent || h.text.length <= 600 ? h.text : h.text.slice(0, 600) + '…（較早的訊息，已截短）';
     lines.push(`【${h.who}】${t}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   });
-  lines.push('', ...tabsNow(job), '', '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。', '', '現在請處理這則指示：', job.prompt);
+  lines.push('', ...tabsNow(job), '', '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。', '', whoAmI(job), '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
 
@@ -797,7 +800,7 @@ async function warmClaude(job, b, here, live) {
     // only what happened since the last turn, then the new instruction
     const fresh = job.history.filter(h => (h.id || 0) > s.lastId && !(h.who === '使用者' && h.text === job.prompt));
     text = [fresh.length ? '（上次之後的新對話）\n' + fresh.map(h => `【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : '')).join('\n') : '',
-      tabsNow(job).join('\n'), '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。', '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
+      tabsNow(job).join('\n'), '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。', whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
     log(`⚡ ${job.bot.name}：AI 待機中，直接接續`);
   } else {
     if (s) closeSession(job.bot.id);

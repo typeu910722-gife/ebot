@@ -1026,9 +1026,11 @@ async function route({ request: req, env, params }) {
         const remember = [];
         // 🧩技能：名稱 … 🧩結束 — a workflow saved to rerun later (shown in the / menu)
         const skillsNew = [];
+        // small local models (Ollama) fire these on everything ("已記住：自我介紹已完成…"): their markers are dropped, not saved
+        const small = (await db.prepare('SELECT engine FROM bots WHERE id=? AND user_id=?').bind(job.bot_id, U).first())?.engine === 'opencode';
         if (good && job.kind === 'chat') {
-          text = text.replace(/^\s*📌\s*記住[:：]\s*(.+)$/gm, (_, t) => { const v = clean(t, 300); if (v) remember.push(v); return ''; });
-          text = text.replace(/🧩\s*技能[:：]\s*([^\n]+)\n([\s\S]*?)🧩\s*結束/g, (_, n, st2) => { const name = clean(n, 40), steps = clean(st2, 3000); if (name && steps) skillsNew.push({ name, steps }); return ''; });
+          text = text.replace(/^\s*📌\s*記住[:：]\s*(.+)$/gm, (_, t) => { const v = clean(t, 300); if (v && !small) remember.push(v); return ''; });
+          text = text.replace(/🧩\s*技能[:：]\s*([^\n]+)\n([\s\S]*?)🧩\s*結束/g, (_, n, st2) => { const name = clean(n, 40), steps = clean(st2, 3000); if (name && steps && !small) skillsNew.push({ name, steps }); return ''; });
           text = text.trim() || '（已記下）';
         }
         // ⏰例行任務：名稱｜08:00,13:30｜要做的事 — the bot sets up a daily routine the user asked for

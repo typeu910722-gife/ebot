@@ -1,5 +1,36 @@
 [
  {
+  "v": "2.4.2",
+  "date": "2026-10-23",
+  "notes": [
+   "改成共用瀏覽器後，會把各機器人舊瀏覽器裡的登入（例如 LINE 官方帳號）自動合併進共用瀏覽器，不用重新登入",
+   "修正「停止」對 ChatGPT、Gemini、Ollama 機器人無效：以前按了只標示停止，AI 其實還在背景跑，還會卡住後面的工作",
+   "群組裡每個機器人回覆前會再被提醒自己是誰、用哪個 AI，避免小模型冒用別人的名字和任務；Ollama 機器人不再亂存記憶和技能",
+   "Grok Bot 要讀得到 Grok Bot App 的登入才算「已連接」",
+   "修正 OCTA 裝在中文路徑（例如 E:\\哲\\OCTA）時，更新前無法關閉背景程式、更新後不會自動重開",
+   "頁面在電腦睡眠或斷線後會自動恢復，不再一直顯示「主機離線」直到重新整理",
+   "群組的協作規則改成選填；新增機器人時瀏覽器說明會依共用設定顯示"
+  ],
+  "notes_en": [
+   "After switching to the shared browser, sign-ins from each bot’s old browser (e.g. LINE Official Account) are merged into it automatically — no need to sign in again",
+   "Fixed Stop not working for ChatGPT, Gemini and Ollama bots: the AI kept running in the background and blocked the next jobs",
+   "In groups each bot is reminded who it is and which AI it uses right before replying, so small models don’t take another member’s name or duties; Ollama bots no longer save junk memories and skills",
+   "Grok Bot only shows “Connected” when the Grok Bot app’s sign-in can be read",
+   "Fixed updates when OCTA is installed in a folder with Chinese characters (e.g. E:\\哲\\OCTA): background processes are closed before updating and OCTA reopens afterwards",
+   "The page recovers after sleep or a network drop instead of showing “host offline” until reloaded",
+   "Group collaboration rules are optional; the browser option in the bot form matches the sharing setting"
+  ],
+  "notes_ja": [
+   "共有ブラウザに切り替えると、各ボットの旧ブラウザのログイン（LINE 公式アカウントなど）を自動で統合します。再ログイン不要",
+   "ChatGPT・Gemini・Ollama ボットで「停止」が効かない問題を修正（AI が裏で動き続け、後の作業を止めていました）",
+   "グループでは返信直前に自分の名前と AI を再確認させ、小型モデルが他メンバーの名前や役割を名乗らないようにしました。Ollama ボットが不要な記憶やスキルを保存しなくなりました",
+   "Grok Bot はアプリのログインを読めるときだけ「接続済み」になります",
+   "中国語を含むフォルダ（例：E:\\哲\\OCTA）にインストールした場合の更新を修正（更新前に裏の処理を終了し、更新後に自動で再起動）",
+   "スリープやネットワーク切断後もページが自動で回復し、再読み込みするまで「ホストオフライン」と表示され続けなくなりました",
+   "グループの協力ルールは任意に。ボット作成画面のブラウザ説明は共有設定に合わせて表示"
+  ]
+ },
+ {
   "v": "2.4.1",
   "date": "2026-10-23",
   "notes": [
