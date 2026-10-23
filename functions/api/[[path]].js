@@ -213,6 +213,13 @@ async function fireRoutines(env, db, userId, byHost) {
     all = all || await loadAll(db, userId);
     const g = all.groups.find(x => x.id === r.conv), b = all.bots.find(x => x.id === r.conv);
     if (!g && !b) continue;
+    // the bot is waiting for the user to sign in: don't run (and report the same thing) again until they reply
+    const lastReal = await db.prepare("SELECT by_, text FROM messages WHERE user_id=? AND conv=? AND by_<>'sys' ORDER BY id DESC LIMIT 1").bind(userId, r.conv).first();
+    if (lastReal && lastReal.by_ !== 'me' && /需要使用者在電腦上登入/.test(lastReal.text)) {
+      const last = await db.prepare('SELECT by_, text FROM messages WHERE user_id=? AND conv=? ORDER BY id DESC LIMIT 1').bind(userId, r.conv).first();
+      if (!(last?.by_ === 'sys' && last.text.startsWith('例行任務先暫停'))) { await addMsg(db, userId, r.conv, 'sys', `例行任務先暫停：「${r.name}」要等你在機器人的瀏覽器登入。登入後按「登入好了，繼續」或傳任何訊息，就會恢復。`); n++; }
+      continue;
+    }
     await addMsg(db, userId, r.conv, 'sys', `${t} 例行任務：${r.name}`);
     await addJob(db, userId, r.conv, g ? g.members : [b.id], `（例行任務「${r.name}」）${r.prompt || '請執行你的指定任務，完成後回報結果。'}`);
     if (!byHost) {

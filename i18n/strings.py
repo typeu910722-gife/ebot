@@ -954,3 +954,4 @@ P.extend([
  (r'^這個檔案存在「(.+)」電腦上，那台電腦目前離線。打開那台電腦的 OCTA 就能讀取$', 'This file is on the “$1” computer, which is offline. Open OCTA on that computer to read it', 'このファイルは「$1」パソコンにあり、オフラインです。そのパソコンで OCTA を開くと読めます'),
  (r'^「(.+)」電腦目前離線，請先打開那台電腦的 OCTA$', 'The “$1” computer is offline — open OCTA on it first', '「$1」パソコンがオフラインです。先に OCTA を開いてください'),
 ])
+P.extend([(r'^例行任務先暫停：「(.+)」要等你在機器人的瀏覽器登入。登入後按「登入好了，繼續」或傳任何訊息，就會恢復。$', 'Routine paused: “$1” waits for you to sign in in the bot’s browser. Press “Signed in, continue” or send any message to resume.', '定期タスクを一時停止：「$1」はボットのブラウザでのログイン待ちです。「ログインしました、続ける」を押すか、何かメッセージを送ると再開します。')])
