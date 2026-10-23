@@ -1,5 +1,15 @@
 [
  {
+  "v": "2.8.3",
+  "date": "2026-10-23",
+  "notes": [
+   "機器人的瀏覽器每一頁左下角都有自己顏色的名牌，分頁和視窗標題前面也會顯示【機器人名字】"
+  ],
+  "notes_en": [
+   "Every page in a bot's browser shows a colored name badge, and tab and window titles start with the bot's name"
+  ]
+ },
+ {
   "v": "2.8.2",
   "date": "2026-10-23",
   "notes": [

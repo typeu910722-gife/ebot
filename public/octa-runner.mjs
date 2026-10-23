@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '16.4';
+export const VERSION = '16.5';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -921,6 +921,32 @@ async function cdp(port, fn) {   // a short CDP session on the browser
 }
 const pagesOf = async send => (await send('Target.getTargets')).targetInfos.filter(t => t.type === 'page' && !t.url.startsWith('devtools://'));
 const touchBrowser = id => { const b = browsers.get(id); if (b) b.last = Date.now(); };
+// a name tag on every page of a bot's browser: a colored badge in the corner, and its name before the tab title
+const tags = new Map();   // port → open CDP connection that tags new pages
+const colorOf = name => { let h = 0; for (const ch of name) h = (h * 31 + ch.codePointAt(0)) >>> 0; return '#' + (BOT_COLORS[h % BOT_COLORS.length] & 0xFFFFFF).toString(16).padStart(6, '0'); };
+const tagScript = (name, color) => `(() => { if (window.top !== window) return; const N = ${JSON.stringify(name)}, C = ${JSON.stringify(color)}, P = '【' + N + '】';
+  const fix = () => { if (document.title && !document.title.startsWith(P)) document.title = P + document.title; else if (!document.title) document.title = P + location.hostname; };
+  const put = () => { if (!document.documentElement || document.getElementById('__octa_tag')) return; const d = document.createElement('div'); d.id = '__octa_tag'; d.textContent = '🐙 ' + N;
+    d.setAttribute('style', 'position:fixed;left:10px;bottom:10px;z-index:2147483647;background:' + C + ';color:#fff;font:600 13px/1 system-ui,sans-serif;padding:7px 12px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.35);pointer-events:none;opacity:.92');
+    document.documentElement.appendChild(d); fix(); new MutationObserver(fix).observe(document.querySelector('title') || document.head || document.documentElement, { childList: true, subtree: true, characterData: true }); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', put); else put(); })()`;
+async function tagBrowser(port, name) {
+  if (tags.has(port) || typeof WebSocket === 'undefined') return;
+  const v = await cdpInfo(port); if (!v) return;
+  const ws = new WebSocket(v.webSocketDebuggerUrl), src = tagScript(name, colorOf(name)), done = new Set(), sess = new Map();
+  tags.set(port, ws);
+  let n = 0; const send = (method, params = {}, sessionId) => ws.send(JSON.stringify({ id: ++n, method, params, ...(sessionId ? { sessionId } : {}) }));
+  const attach = t => { if (t.type === 'page' && !t.attached && !done.has(t.targetId)) { done.add(t.targetId); send('Target.attachToTarget', { targetId: t.targetId, flatten: true }); } };
+  ws.onopen = () => { send('Target.setDiscoverTargets', { discover: true }); };
+  ws.onmessage = e => { const m = JSON.parse(e.data);
+    if (m.method === 'Target.targetCreated' || m.method === 'Target.targetInfoChanged') attach(m.params.targetInfo);
+    // a page that was already loading when we attached: tag it again once its address changes
+    if (m.method === 'Target.targetInfoChanged' && sess.has(m.params.targetInfo.targetId)) send('Runtime.evaluate', { expression: src }, sess.get(m.params.targetInfo.targetId));
+    if (m.method === 'Target.attachedToTarget' && m.params.targetInfo.type === 'page') { const sid = m.params.sessionId; sess.set(m.params.targetInfo.targetId, sid);
+      send('Page.addScriptToEvaluateOnNewDocument', { source: src }, sid); send('Runtime.evaluate', { expression: src }, sid); send('Runtime.runIfWaitingForDebugger', {}, sid); }
+    if (m.method === 'Target.targetDestroyed') { done.delete(m.params.targetId); sess.delete(m.params.targetId); } };
+  ws.onclose = ws.onerror = () => { tags.delete(port); };
+}
 export async function ensureBrowser(bot) {
   const port = await openBrowser(bot);
   if (shareBrowser) { await mergeOldProfiles().catch(e => log('合併舊登入失敗：' + e.message)); await syncIn(port); }
@@ -951,6 +977,7 @@ async function openBrowser(bot) {
       const { windowId, bounds } = await send('Browser.getWindowForTarget', { targetId: p.targetId });
       if (bounds.windowState === 'minimized' || bounds.left < -5000) { await send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } }).catch(() => { }); await send('Browser.setWindowBounds', { windowId, bounds: { left: 40 + ((port - 9311) % 6) * 60, top: 30 + ((port - 9311) % 6) * 40, width: 1200, height: 820 } }).catch(() => { }); }
     }).catch(() => { }); }
+    await tagBrowser(port, bot.name).catch(() => { });
     return port;
   }
   const chrome = findChrome();
@@ -961,6 +988,7 @@ async function openBrowser(bot) {
   if (profileInUse(profile)) throw new Error('這個機器人的瀏覽器有一個舊視窗開著，請先關掉它');
   markProfile(profile, bot.name);
   const child = spawn(chrome, [`--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, '--no-first-run', '--no-default-browser-check', `--window-name=OCTA｜${bot.name}`,
+    `data:text/html;charset=utf-8,${encodeURIComponent(`<title>${bot.name} 的瀏覽器</title><body style="margin:0;display:grid;place-items:center;height:100vh;background:${colorOf(bot.name)};color:#fff;font:600 32px system-ui,sans-serif">🐙 ${bot.name.replace(/[<&]/g, '')} 的瀏覽器<div style="font:400 15px system-ui;opacity:.85;margin-top:12px">OCTA 機器人專用，登入後網站會共用給其他機器人</div></body>`)}`,
     '--restore-last-session', `--window-position=${40 + ((port - 9311) % 6) * 60},${30 + ((port - 9311) % 6) * 40}`, '--window-size=1200,820'], { detached: true, stdio: 'ignore', windowsHide: false });
   child.on('error', () => { });
   child.unref();
@@ -970,6 +998,7 @@ async function openBrowser(bot) {
   if (sessions.has(bot.id)) closeSession(bot.id);   // a waiting AI was connected to the old browser
   log(`🌐 ${bot.name} 的瀏覽器已在背景開啟`);
   // the window stays on the desktop (cascaded per bot) so you can click into any bot's browser at any time
+  await tagBrowser(port, bot.name).catch(() => { });
   return port;
 }
 async function browserSnapshot(port, since) {   // screenshot + address of the tab the bot used last
