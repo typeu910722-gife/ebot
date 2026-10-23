@@ -955,3 +955,12 @@ P.extend([
  (r'^「(.+)」電腦目前離線，請先打開那台電腦的 OCTA$', 'The “$1” computer is offline — open OCTA on it first', '「$1」パソコンがオフラインです。先に OCTA を開いてください'),
 ])
 P.extend([(r'^例行任務先暫停：「(.+)」要等你在機器人的瀏覽器登入。登入後按「登入好了，繼續」或傳任何訊息，就會恢復。$', 'Routine paused: “$1” waits for you to sign in in the bot’s browser. Press “Signed in, continue” or send any message to resume.', '定期タスクを一時停止：「$1」はボットのブラウザでのログイン待ちです。「ログインしました、続ける」を押すか、何かメッセージを送ると再開します。')])
+
+T.update({
+ '瀏覽器': ('Browser', 'ブラウザ'),
+ '所有機器人共用一個瀏覽器': ('All bots share one browser', 'すべてのボットで 1 つのブラウザを共有'),
+ '開著：在任何一個機器人的瀏覽器登入過的網站（LINE、Google…），其他機器人也直接能用，各自開自己的分頁。同一時間只有一個機器人操作瀏覽器，其他的會排隊。關掉：每個機器人用自己獨立的瀏覽器和登入，可以同時工作。': ('On: sites any bot signed in to (LINE, Google…) work for every bot, each in its own tab. One bot uses the browser at a time; the others wait their turn. Off: each bot has its own browser and sign-ins and they can work at the same time.', 'オン：どれかのボットでログインしたサイト（LINE、Google など）は他のボットもそのまま使え、それぞれ自分のタブで作業します。ブラウザを操作するのは同時に 1 体だけで、他は順番待ちです。オフ：ボットごとに独立したブラウザとログインで、同時に作業できます。'),
+ '已改成共用瀏覽器，下次工作時生效': ('Switched to a shared browser — applies from the next task', '共有ブラウザに切り替えました（次の作業から適用）'),
+ '已改成每個機器人獨立瀏覽器，下次工作時生效': ('Switched to a browser per bot — applies from the next task', 'ボットごとのブラウザに切り替えました（次の作業から適用）'),
+ '🌐 共用瀏覽器已在背景開啟': ('🌐 Shared browser opened in the background', '🌐 共有ブラウザをバックグラウンドで開きました'),
+})

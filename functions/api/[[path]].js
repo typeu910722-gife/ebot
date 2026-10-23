@@ -1169,7 +1169,7 @@ async function route({ request: req, env, params }) {
         me: me.name, local: me.kind === 'local', rev: rev.results[0]?.rev ?? 0,
         engines: h ? h.engines : JSON.parse((await db.prepare('SELECT engines FROM users WHERE id=?').bind(U).first())?.engines || 'null'),
         runnerOnline: env.runnerOnline ? env.runnerOnline() : h.online,
-        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {}, pins: st.pins || [], mute: st.mute || {}, memory: st.memory || {}, skills: st.skills || {}, nsk: Object.fromEntries(Object.entries(st.nskills || {}).map(([k, v]) => [k, [...new Set(Object.keys(v.files || {}).map(p => p.split('/')[0]))]])), warm: WARM.includes(+st.warm) ? +st.warm : 120, models: h ? h.models : st._models || null,
+        host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, shareBrowser: st.shareBrowser !== false, sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {}, pins: st.pins || [], mute: st.mute || {}, memory: st.memory || {}, skills: st.skills || {}, nsk: Object.fromEntries(Object.entries(st.nskills || {}).map(([k, v]) => [k, [...new Set(Object.keys(v.files || {}).map(p => p.split('/')[0]))]])), warm: WARM.includes(+st.warm) ? +st.warm : 120, models: h ? h.models : st._models || null,
         ...all, last: last.results, ur: ur.results.map(r => [r.conv, r.id]), busy: busy.results
       });
     }
@@ -1427,7 +1427,7 @@ async function route({ request: req, env, params }) {
     }
     if (path === 'settings' && m === 'GET') {
       const st = await getSettings(db, U);
-      return J({ warm: WARM.includes(+st.warm) ? +st.warm : 120, notes: st.notes || '', notifyAll: !!st.notifyAll, sched: st.sched === 'pc' ? 'pc' : 'cloud', tg: { token: mask(st.tg?.token), chat: st.tg?.chat || '' }, line: { token: mask(st.line?.token), to: st.line?.to || '' } });
+      return J({ warm: WARM.includes(+st.warm) ? +st.warm : 120, shareBrowser: st.shareBrowser !== false, notes: st.notes || '', notifyAll: !!st.notifyAll, sched: st.sched === 'pc' ? 'pc' : 'cloud', tg: { token: mask(st.tg?.token), chat: st.tg?.chat || '' }, line: { token: mask(st.line?.token), to: st.line?.to || '' } });
     }
     if (path === 'settings' && m === 'PUT') {
       const st = await getSettings(db, U);
@@ -1435,6 +1435,7 @@ async function route({ request: req, env, params }) {
       if (body.notifyAll !== undefined) st.notifyAll = !!body.notifyAll;
       if (['cloud', 'pc'].includes(body.sched)) st.sched = body.sched;
       if (body.warm !== undefined && WARM.includes(+body.warm)) st.warm = +body.warm;
+      if (body.shareBrowser !== undefined) st.shareBrowser = !!body.shareBrowser;
       if (['zh-TW', 'zh-CN', 'en', 'ja'].includes(body.lang)) st.lang = body.lang;
       // per-bot extras kept with the account: 置頂, notifications, memory (📌), skills (🧩)
       if (Array.isArray(body.pins)) { st.pins = body.pins.map(x => clean(x, 64)).filter(Boolean).slice(0, 50); await putSettings(db, U, st); await bump(db, U); return J({ ok: true }); }
@@ -1638,7 +1639,8 @@ async function jobPayload(env, db, U, job) {
   if (job.kind === 'export' || job.kind === 'import') {
     const b = await db.prepare('SELECT id,name,browser FROM bots WHERE id=? AND user_id=?').bind(job.bot_id, U).first();
     if (!b) { await db.prepare("UPDATE jobs SET status='error' WHERE id=?").bind(job.id).run(); return null; }
-    return { id: job.id, kind: job.kind, bot: { id: b.id, name: b.name, browser: 'own' }, xfer: job.kind === 'import' ? job.url : undefined };
+    const st = await getSettings(db, U);
+    return { id: job.id, kind: job.kind, shareBrowser: st.shareBrowser !== false, bot: { id: b.id, name: b.name, browser: 'own' }, xfer: job.kind === 'import' ? job.url : undefined };
   }
   const { bots, groups, folders } = await loadAll(db, U);
   const name = id => id === 'me' ? '使用者' : id === 'sys' ? '系統' : (bots.find(b => b.id === id)?.name || '已刪除的機器人');
@@ -1660,6 +1662,7 @@ async function jobPayload(env, db, U, job) {
     routines: (await db.prepare('SELECT name,times,enabled FROM routines WHERE user_id=? AND conv=?').bind(U, job.conv).all()).results.map(r => ({ name: r.name, times: JSON.parse(r.times), enabled: !!r.enabled })),
     canAsk: job.depth < MAX_ASK_DEPTH,
     conv: { id: conv.id, name: conv.name },
+    shareBrowser: st.shareBrowser !== false,
     bot: { id: bot.id, name: bot.name, task: bot.task, page: bot.page, engine: bot.engine || 'claude', model: bot.model || '', browser: bot.browser === 'mine' ? 'mine' : 'own' },
     folder: folders.find(f => f.id === bot.folder)?.name || null,
     folderNotes: folders.find(f => f.id === bot.folder)?.notes || '',

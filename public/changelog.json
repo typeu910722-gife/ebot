@@ -1,5 +1,27 @@
 [
  {
+  "v": "2.4.0",
+  "date": "2026-10-23",
+  "notes": [
+   "所有機器人共用一個瀏覽器（預設開啟）：在任何一個機器人的瀏覽器登入 LINE、Google 等網站，其他機器人也直接能用，各自開自己的分頁；同一時間只有一個機器人操作瀏覽器，其他的排隊",
+   "可在「設定 → 電腦與主機 → 瀏覽器」關掉，改回每個機器人獨立的瀏覽器（可以同時工作）",
+   "例行任務遇到機器人在等你登入時會先暫停，不再每次重跑、重複回報；你登入後回覆就恢復",
+   "網路錯誤會顯示原因代碼，方便查問題"
+  ],
+  "notes_en": [
+   "All bots share one browser (on by default): sign in to LINE, Google and other sites in any bot’s browser and every bot can use it, each in its own tab; one bot uses the browser at a time and the others wait",
+   "Turn it off in Settings → Computers & host → Browser to give each bot its own browser again (they can then work at the same time)",
+   "Routines pause while a bot is waiting for you to sign in, instead of re-running and repeating the same report; they resume once you reply",
+   "Network errors now show a status code to help track problems down"
+  ],
+  "notes_ja": [
+   "すべてのボットで 1 つのブラウザを共有（初期設定でオン）：どれかのボットのブラウザで LINE や Google などにログインすれば、他のボットもそのまま使え、それぞれ自分のタブで作業します。ブラウザを操作するのは同時に 1 体だけで、他は順番待ちです",
+   "「設定 → パソコンとホスト → ブラウザ」でオフにすると、ボットごとの独立したブラウザに戻せます（同時に作業可能）",
+   "ボットがログイン待ちの間は定期タスクを一時停止し、同じ報告を繰り返さなくなりました。返信すると再開します",
+   "ネットワークエラーに原因コードを表示するようにしました"
+  ]
+ },
+ {
   "v": "2.3.1",
   "date": "2026-10-23",
   "notes": [

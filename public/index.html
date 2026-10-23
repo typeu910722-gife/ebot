@@ -10,7 +10,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
 <link rel="icon" href="/icon.png?v=octopus">
-<script src="/i18n-dict.js?v=21"></script>
+<script src="/i18n-dict.js?v=22"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -588,7 +588,7 @@ async function refresh(){
   try{const d=await api('state');if(!S.loaded)boot.set(85,'整理畫面…');
     const prevTop=S.loaded?topBotId():null,prevEng=JSON.stringify(S.engines||null);
     Object.assign(S,{me:d.me,bots:d.bots,groups:d.groups,folders:d.folders,routines:d.routines,busy:d.busy,runnerOnline:d.runnerOnline,engines:d.engines,
-      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120,tokens:d.tokens||{},models:d.models||{},pins:d.pins||[],mute:d.mute||{},memory:d.memory||{},skills:d.skills||{},nsk:d.nsk||{}});
+      last:d.last,ur:d.ur,rev:d.rev,host:d.host,computers:d.computers,sched:d.sched,quick:d.quick||{},allow:d.allow||{},warm:d.warm??120,tokens:d.tokens||{},models:d.models||{},pins:d.pins||[],mute:d.mute||{},memory:d.memory||{},skills:d.skills||{},nsk:d.nsk||{},shareBrowser:d.shareBrowser!==false});
     if(cur&&!conv(cur))cur=null;
     if(cur)await loadMsgs(cur,'new');
     if(prevTop!==null)notifyNew(prevTop);
@@ -1229,12 +1229,17 @@ async function openComputers(){
   <div id="dRemoteInfo">${ds?.remote?.on?remoteInfo(ds.remote):''}</div>`:''}
   ${window.octaDesktop?`<div class="row2"><button class="ghost" id="dMode">${CFG.local?'改用雲端帳號（同步）':'改用離線模式（不同步）'}</button></div>`:''}`:'';
   subSheet('電腦與主機',`${CFG.local?'<p>離線模式：機器人在這台電腦上工作。</p>':`<p>機器人在「主機」電腦上工作。手機、平板和其他電腦打開 <b data-u>${esc(location.host)}</b> 登入同一個帳號，就能指揮、看結果。有多台電腦裝了 OCTA 時，只有主機會接工作，其他電腦待命。</p><div id="pcs"><p class="fade">讀取中…</p></div>`}
+  <h3>瀏覽器</h3>
+  <label class="toggle">所有機器人共用一個瀏覽器<button type="button" class="sw ${S.shareBrowser!==false?'on':''}" id="dShare"></button></label>
+  <p class="hmuted">開著：在任何一個機器人的瀏覽器登入過的網站（LINE、Google…），其他機器人也直接能用，各自開自己的分頁。同一時間只有一個機器人操作瀏覽器，其他的會排隊。關掉：每個機器人用自己獨立的瀏覽器和登入，可以同時工作。</p>
   ${here}
   ${DESK()?'':`<h3>沒有安裝桌面版的電腦</h3>
   <p>也可以用指令列執行器（需要 Node 18 以上與 Google Chrome）：</p>
   <pre class="code">mkdir C:\\octa; cd C:\\octa
 curl.exe -o octa-runner.mjs ${location.origin}/octa-runner.mjs</pre>
   <div class="row2"><button class="ghost" id="gen">產生執行器金鑰</button></div><pre class="code" id="cmd" hidden></pre>`}`);
+  if($('dShare'))$('dShare').onclick=async()=>{const on=!$('dShare').classList.contains('on');$('dShare').classList.toggle('on',on);
+    try{await api('settings','PUT',{shareBrowser:on});S.shareBrowser=on;toast(I18N.t(on?'已改成共用瀏覽器，下次工作時生效':'已改成每個機器人獨立瀏覽器，下次工作時生效'))}catch(e){$('dShare').classList.toggle('on',!on);toast(e.message)}};
   if($('gen'))$('gen').onclick=async()=>{const d=await api('runner-token','POST');$('cmd').hidden=false;$('cmd').textContent=`node octa-runner.mjs ${location.origin} ${d.token}`};
   if(DESK()){
     const saveExt=async t=>{try{await api('desktop/ext-token','POST',{token:t});toast(t?'已連接 Chrome':'已移除');openComputers()}catch(e){toast(e.message)}};
