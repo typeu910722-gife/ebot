@@ -73,3 +73,4 @@
 - 2.8.0：群組提問側窗（#askp，回覆=@bot）、無@回答回給發問者（asksUser，你們/大家除外）、聊聊/討論→輪流、st.spent 記住額度用完到 reset、瀏覽器留在桌面（cascade，不最小化/不移出畫面）、【回覆】標記切掉工作旁白。
 - 2.9.0：tagScript 加即時游標（mousemove/mousedown/keydown/focusin）；playwright-mcp 加 --caps vision（browser_mouse_click_xy）；網站操作步驟提示；🗺️網站筆記 → st.sites 共用注入 prompt。
 - 2.9.3：dayInfo（今天/昨天/明天＋住宿分類規則、搜尋前幾天）、workNotes（bots/<id>/工作筆記.md 自動注入 prompt，機器人自行維護）。待查：Grok Bot 對同問題的回答（使用者中止電腦操作）。
+- 2.9.5/2.9.6：無年份日期當今年、疑點另列不整份拒給；自動接續（（自動接續 n）最多 2 次）；codex model_reasoning_effort=high。貳宿首席已設任務並移入兩館每日作業。比對結論：Grok 有記憶/新鮮度判斷/eroom 對照/做幾分鐘；OCTA 目前只剩 ChatGPT Free 可用（Antigravity、Claude 額度皆用完）。

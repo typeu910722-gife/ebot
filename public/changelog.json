@@ -1,5 +1,17 @@
 [
  {
+  "v": "2.9.6",
+  "date": "2026-10-23",
+  "notes": [
+   "機器人說「還沒做完」時會自動叫它接著做完（最多兩次），不用你再打「繼續」",
+   "ChatGPT 機器人改用較深入的思考模式，比較不會半途停下"
+  ],
+  "notes_en": [
+   "When a bot says it isn't done, OCTA sends it back to finish (up to twice)",
+   "ChatGPT bots use deeper reasoning so they stop halfway less often"
+  ]
+ },
+ {
   "v": "2.9.5",
   "date": "2026-10-23",
   "notes": [

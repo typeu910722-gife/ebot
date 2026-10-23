@@ -1141,6 +1141,15 @@ async function route({ request: req, env, params }) {
         }
         if (body.page) await db.prepare('UPDATE bots SET page=? WHERE id=? AND user_id=?').bind(clean(body.page, 500), job.bot_id, U).run();
         if (!good || job.kind !== 'chat') return ok();
+        // the bot stopped halfway ("還沒完成…"): send it straight back to finish, at most twice
+        const round = +((job.prompt.match(/^（自動接續 (\d)）/) || [])[1] || 0);
+        if (round < 2 && !passed(text) && /(還沒|尚未|沒能|未能|無法)[^。\n]{0,8}(完成|核對|查完|核完|查到|整理|列出)|還沒查|先供參考|不能當作完整|不足以/.test(text) && !/需要使用者在電腦上登入/.test(text)) {
+          const orig = job.prompt.replace(/^（自動接續 \d）[\s\S]*?原本的指示：/, '');
+          await addMsg(db, U, job.conv, 'sys', '還沒做完，請它接著把剩下的做完…');
+          await addJob(db, U, job.conv, [{ b: job.bot_id, p: `（自動接續 ${round + 1}）你上一則說還沒做完。現在直接接著做完剩下的部分：用你的工作筆記和剛才查到的資料，補查還沒查的地方（兩館都要），不要再停下來問，最後給完整的結果；真的做不到的項目才在最後列出原因。\n原本的指示：${orig}` }, ...JSON.parse(job.chain)], orig, job.depth);
+          await bump(db, U);
+          return ok();
+        }
         let rest = JSON.parse(job.chain).map(s => (typeof s === 'string' ? { b: s, p: job.prompt } : s));
         // a bot asks a colleague in the same 分區: a line starting with "@名字 問題"
         const { bots, groups } = await loadAll(db, U);

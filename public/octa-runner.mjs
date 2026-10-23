@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 
-export const VERSION = '17.3';
+export const VERSION = '17.4';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -495,7 +495,7 @@ async function runEngine(engine, prompt, b, model, live = {}) {
     case 'codex': {
       const last = join(dir, '.codex-last.txt');
       try { writeFileSync(last, ''); } catch { }
-      const c = ['approval_policy="never"', `sandbox_workspace_write.writable_roots=${toml([store, dir])}`,
+      const c = ['approval_policy="never"', 'model_reasoning_effort="high"', `sandbox_workspace_write.writable_roots=${toml([store, dir])}`,
         `mcp_servers.browser.command=${toml(server.command)}`, `mcp_servers.browser.args=${toml(server.args)}`,
         'mcp_servers.browser.startup_timeout_sec=60', 'mcp_servers.browser.default_tools_approval_mode="approve"',
         ...Object.entries(server.env || {}).map(([k, v]) => `mcp_servers.browser.env.${k}=${toml(v)}`)];
