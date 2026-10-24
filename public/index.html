@@ -79,6 +79,9 @@ a.btn{text-decoration:none}
 .errmsg{color:var(--prio);font-size:13px;min-height:1em}
 /* ---------- app ---------- */
 .app{height:100%;display:grid;grid-template-columns:300px minmax(0,1fr);max-width:1200px;margin:0 auto}
+.app.rail-collapsed{grid-template-columns:minmax(0,1fr)}
+.app.rail-collapsed .rail{display:none}
+@media (max-width:760px){.app.rail-collapsed{grid-template-columns:minmax(0,1fr)}.app.rail-collapsed .rail{display:flex}}
 .rail{border-right:1px solid var(--line2);display:flex;flex-direction:column;min-height:0;min-width:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px}
 .rail header{padding-block:18px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .rail h1{margin:4px 0 0;font-family:var(--tc);font-size:22px;font-weight:700}
@@ -165,6 +168,9 @@ form.in .send,form.in .clip{height:46px}
 /* ---------- sheet ---------- */
 .veil{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:20;padding:16px}
 .sheet{width:min(480px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:14px;max-height:90vh;overflow:auto}
+.sheet.wide{width:min(860px,100%)}
+.cstat{display:flex;gap:6px;flex-wrap:wrap}
+.cdiff{max-height:260px}
 .sheet>*,.sheet .field{min-width:0}
 .sheet select{width:100%;max-width:100%;text-overflow:ellipsis}
 .sheet h2{margin:0;font-family:var(--tc);font-size:18px}
@@ -522,8 +528,8 @@ details.adv[open]{display:grid;gap:8px}
   </aside>
   <section class="pane" id="pane">
     <div class="blank" id="blank"></div>
-    <div class="ph" id="ph" hidden><button class="back" id="back" aria-label="返回">‹</button><div class="av" id="pav"></div>
-      <div class="t"><b id="pname" data-u></b><small id="psub"></small></div><button class="ghost hb" id="browser" aria-label="瀏覽器"><span class="hi">🌐</span><span class="hl2">瀏覽器</span></button><button class="ghost hb" id="edit" aria-label="任務設定"><span class="hi">⚙</span><span class="hl2">任務設定</span></button><button class="ghost hb" id="more2" aria-label="更多"><span class="hi">⋯</span></button></div>
+    <div class="ph" id="ph" hidden><button class="back" id="back" aria-label="返回">‹</button><button class="ghost hb" id="railToggle" aria-label="收合對話列表"><span class="hi">☰</span></button><div class="av" id="pav"></div>
+      <div class="t"><b id="pname" data-u></b><small id="psub"></small></div><button class="ghost hb" id="modelBtn" aria-label="模型與備援"><span class="hi">✦</span><span class="hl2">模型</span></button><button class="ghost hb" id="browser" aria-label="瀏覽器"><span class="hi">🌐</span><span class="hl2">瀏覽器</span></button><button class="ghost hb" id="edit" aria-label="任務設定"><span class="hi">⚙</span><span class="hl2">任務設定</span></button><button class="ghost hb" id="more2" aria-label="更多"><span class="hi">⋯</span></button></div>
     <div class="task" id="task" hidden></div>
     <div class="offb" id="offb" hidden></div>
     <div class="msgs" id="msgs" aria-live="polite" hidden></div>
@@ -557,7 +563,7 @@ const ybar={n:0,t:null,on(block){this.n++;clearTimeout(this.t);this.t=setTimeout
   off(){if(--this.n<=0){this.n=0;clearTimeout(this.t);document.body.classList.remove('yloading','yblock')}}};
 const HEAVY=/^(template|signup|login|pair|runner-token|engine-test|desktop\/install|desktop\/remote|desktop\/autostart)/;
 async function api(path,method='GET',body){
-  const quiet=/^(state|wait|job\/|file\/|messages|shot\/|ai-usage|devices$|me$)/.test(path);
+  const quiet=/^(state|wait|job\/|file\/|messages|shot\/|ai-usage|devices$|me$|code\/)/.test(path);
   if(!quiet)ybar.on(HEAVY.test(path));
   try{return await api_(path,method,body)}finally{if(!quiet)ybar.off()}
 }
@@ -777,6 +783,7 @@ function render(scroll){
   S.folders.forEach(f=>h+=sect(f.id,f.name));
   h+=sect(null,S.folders.length?'未分區':'全部');
   if(q&&!h.includes('class="iw"'))h+=`<div class="empty">找不到「${esc(q)}」</div>`;
+  if(!q&&(S.codeTasks||[]).length)h+=`<div class="sec"><span>程式任務</span></div>`+(S.codeTasks||[]).map(t=>`<button type="button" class="item" data-code="${esc(t.id)}"><span class="av">{}</span><span class="t" data-u><b>${esc(t.title)}</b><small>${esc(t.status)} · ${esc(t.engine)}${t.model?' / '+esc(t.model):''}</small></span></button>`).join('');
   setHTML($('list'),h);
   const tot=[...S.bots,...S.groups].reduce((a,x)=>a+(x.id===cur&&!document.hidden?0:unread(x.id)),0);document.title=(tot?`(${tot}) `:'')+'OCTA｜奧克塔';
   const c=cur&&conv(cur);
@@ -790,7 +797,12 @@ function render(scroll){
   const tkOf=ids=>ids.reduce((a,id)=>{const x=(S.tokens||{})[id];return x?{t:a.t+(x.t||0),n:a.n+x.n,known:a.known||x.t!=null}:a},{t:0,n:0,known:false});
   const tk=tkOf(g?c.members:[c.id]);
   const tkHtml=tk.n?` · <span class="tk" title="${esc(I18N.t('今天執行'))} ${tk.n} ${esc(I18N.t('次'))}">${tk.known?`${I18N.t('今天')} ${fmtTok(tk.t)} tokens`:`${I18N.t('今天')} ${tk.n} ${I18N.t('次')}`}</span>`:'';
-  $('psub').innerHTML=(fn?`<span data-u>${esc(fn)}</span> · `:'')+(g?`<span data-u>${esc(c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'))}</span>`:esc((ENG[c.engine]||ENG.claude).n)+(c.model?` <span data-u>${esc(c.model)}</span>`:''))+(rn?` · <span>${esc(I18N.t('例行任務'))} ${rn}</span>`:'')+tkHtml;
+  const runNow=busyIn(cur).find(x=>x.status==='running'&&x.kind==='chat'&&x.eng);
+  const activeEng=runNow?String(runNow.eng).split('|')[0]:(c.engine||'claude');
+  const activeModel=runNow?String(runNow.eng).split('|')[1]||'':(c.model||'');
+  const chief=(ENG[c.engine]||ENG.claude).n, running=(ENG[activeEng]||{n:activeEng}).n;
+  const modelHtml=g?`<span data-u>${esc(c.members.map(id=>bot(id)?.name).filter(Boolean).join('、'))}</span>`:`首席 ${esc(chief)}${c.model?` <span data-u>${esc(c.model)}</span>`:''} · 執行 ${esc(running)}${activeModel?` <span data-u>${esc(activeModel)}</span>`:''}${activeEng!==(c.engine||'claude')?' · 已改用備援':''}`;
+  $('psub').innerHTML=(fn?`<span data-u>${esc(fn)}</span> · `:'')+modelHtml+(rn?` · <span>${esc(I18N.t('例行任務'))} ${rn}</span>`:'')+tkHtml;
   const off=!S.runnerOnline&&!CFG.local;$('offb').hidden=!off;
   if(off)setHTML($('offb'),`<span>⚠ 主機電腦離線，訊息會先排隊，電腦連上後自動處理。</span><button type="button" class="ghost" onclick="openGuide()">怎麼連上？</button>`);
   setHTML($('task'),'<em>'+(g?'協作規則':'指定任務')+'</em>'+(c.task?'<span data-u>'+esc(c.task)+'</span>':'<span class="tlearn">還沒有指定任務：直接傳訊息告訴它要做什麼，它會自己整理並填進來。</span>'));
@@ -809,7 +821,7 @@ function render(scroll){
     return `<div class="m" data-mid="${m.id}"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}${optsHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
   const bz=busyIn(cur);
   if(bz.length){const run=bz.find(b=>b.status==='running');
-    mh+=`<div class="work"><span class="fade">${run&&run.kind==='chat'&&run.started?`<span class="el" data-since="${run.started}">${elapsed(run.started)}</span> `:''}${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器正在顯示…':esc(nameOf(run.bot_id))+' 處理中…'+(run.progress?`<span class="prog" data-u>${esc(run.progress)}</span>`:'')):S.runnerOnline?'排隊中…':'等待主機電腦上線…'}</span><button id="stop">停止</button></div>`}
+    mh+=`<div class="work"><span class="fade">${run&&run.kind==='chat'&&run.started?`<span class="el" data-since="${run.started}">${elapsed(run.started)}</span> `:''}${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器正在顯示…':esc(nameOf(run.bot_id))+' '+(run.kind==='code'?'程式任務':run.progress&&/搜尋/.test(run.progress)?'搜尋':run.progress&&/測試/.test(run.progress)?'測試':run.progress&&/修復|修改|寫入/.test(run.progress)?'修改':'處理')+'中…'+(run.progress?`<span class="prog" data-u>${esc(run.progress)}</span>`:'')+(run.eng&&run.eng.split('|')[0]!==(c.engine||'claude')?` · 備援 ${esc((ENG[run.eng.split('|')[0]]||{n:run.eng.split('|')[0]}).n)}`:'')):S.runnerOnline?'排隊中…':'等待主機電腦上線…'}</span><button id="stop">停止</button></div>`}
   const changed=setHTML(box,mh);if(changed)loadThumbs(box);
   if(switched||scroll){box.scrollTop=box.scrollHeight;$('jump').hidden=true}
   else if(changed){if(atBottom)box.scrollTo({top:box.scrollHeight,behavior:'smooth'});else $('jump').hidden=false}
@@ -821,6 +833,7 @@ function render(scroll){
 $('list').onclick=e=>{
   const mo=e.target.closest('[data-more]');if(mo){e.stopPropagation();itemMenu(mo,mo.dataset.more);return}
   const fo=e.target.closest('[data-folder]');if(fo){e.stopPropagation();folderMenu(fo,fo.dataset.folder);return}
+  const ct=e.target.closest('[data-code]');if(ct){openCode(ct.dataset.code);return}
   const it=e.target.closest('.item');if(!it)return;openConv(it.dataset.id)};
 function openConv(id){saveDraft();cur=id;try{localStorage.setItem('ebot_cur',cur)}catch(e){}
   pending=[];renderAtt();loadDraft();render(true);$('app').classList.add('chat');
@@ -845,6 +858,12 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cur)rende
 function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.className='toast';document.body.appendChild(el)}
   el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),1800)}
 $('back').onclick=()=>{saveDraft();$('app').classList.remove('chat')};
+$('railToggle').onclick=()=>{
+  if(innerWidth<=760){$('app').classList.remove('chat');return}
+  $('app').classList.toggle('rail-collapsed');
+  try{localStorage.setItem('octa_rail',$('app').classList.contains('rail-collapsed')?'0':'1')}catch(e){}
+};
+$('modelBtn').onclick=()=>{if(isG(cur)){toast('模型與備援在各機器人的任務設定裡');return}sheet('b',true)};
 $('quick').onclick=e=>{const b=e.target.closest('[data-q]');if(!b)return;const q=(S.quick||{})[cur]?.[+b.dataset.q];if(!q)return;
   if(e.shiftKey||$('msg').value.trim()){const i=$('msg');i.value=(i.value?i.value+'\n':'')+q;grow();i.focus()}else sendMsg(q)};
 $('mention').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=$('msg');i.value=(i.value+' @'+b.dataset.at+' ').trimStart();i.focus()};
@@ -972,7 +991,7 @@ const TEMPLATES=[{k:'assistant',n:'一般助理',d:'一個機器人，什麼都�
 const tplHtml=()=>`<div class="tpls">${TEMPLATES.map(t=>`<button type="button" class="tplc" data-t="${t.k}"><b>${t.n}</b><small>${t.d}</small></button>`).join('')}</div>`;
 function bindTpl(root,after){root.querySelectorAll('[data-t]').forEach(b=>b.onclick=async()=>{b.disabled=true;
   try{await api('template','POST',{name:b.dataset.t,lang:I18N.lang});b.querySelector('small').textContent='已加入 ✓';await refresh();after&&after()}catch(e){b.disabled=false}})}
-function closeSheet(){$('veil').hidden=true;$('veil').innerHTML='';rtEdit=null}
+function closeSheet(){if(typeof stopCodePoll==='function')stopCodePoll();$('veil').hidden=true;$('veil').innerHTML='';rtEdit=null}
 $('veil').onclick=e=>{if(e.target.id==='veil')closeSheet()};
 function sheet(kind,edit){
   const g=kind==='g',c=edit?conv(cur):null;
@@ -991,8 +1010,8 @@ function sheet(kind,edit){
   <label class="field">模型<select id="sf_m"></select></label>
   <p style="margin-top:-6px" id="sf_hint"></p>
   ${(()=>{const opts=Object.entries(ENG).filter(([k,v])=>!v.hide).flatMap(([k,v])=>[[k,v.full+'（預設模型）'],...modelsFor(k).map(m=>[k+'|'+m,v.full+'・'+m])]),fb=c?.fb||[];
-    const sel=i=>`<select id="sf_fb${i}"><option value="">不使用</option>${opts.map(([v,l])=>`<option value="${esc(v)}"${fb[i]===v?' selected':''}>${esc(l)}${engState(v.split('|')[0])==='ok'?'':'（還沒連接）'}</option>`).join('')}</select>`;
-    return `<div class="field">備援 AI（額度用完時自動接手）<div class="row2">${sel(0)}${sel(1)}</div><p class="hmuted">目前的 AI 額度用完，會依序改用備援 1、備援 2 把同一件事做完。</p></div>`})()}`}
+    const sel=(i,only)=>`<select id="sf_fb${i}"><option value="">不使用</option>${opts.filter(([v])=>!only||v.split('|')[0]===only).map(([v,l])=>`<option value="${esc(v)}"${fb[i]===v?' selected':''}>${esc(l)}${engState(v.split('|')[0])==='ok'?'':'（還沒連接）'}</option>`).join('')}</select>`;
+    return `<div class="field">備援 AI<div class="row2">${sel(0)}${sel(1)}</div><div class="row2" style="margin-top:8px">${sel(2,'opencode')}</div><p class="hmuted">第一、第二備援，以及可選的本機 Ollama。額度用完會切換備援；HTTP 429 先重試一次再切換；登入或 API Key 無效不會重複呼叫；程式錯誤不會因此換模型。</p></div>`})()}`}
   <label class="field">分區<select id="sf_f"><option value="">未分區</option>${S.folders.map(f=>`<option data-u value="${f.id}" ${(c?c.folder:(conv(cur)?.folder||null))===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}</select></label>
   ${!g&&c&&((S.allow||{})[c.id]||[]).length?`<div class="field">一律允許的事（機器人做這些不會再問你）<div class="picks" id="sf_al">${S.allow[c.id].map((t,i)=>`<div class="pick"><span data-u style="flex:1">${esc(t)}</span><button type="button" class="mv" data-unallow="${i}" aria-label="收回">✕</button></div>`).join('')}</div></div>`:''}
   ${!g&&c&&((S.memory||{})[c.id]||[]).length?`<div class="field">它記得的事（📌）<div class="picks" id="sf_mem">${S.memory[c.id].map((t,i)=>`<div class="pick"><span data-u style="flex:1">${esc(t)}</span><button type="button" class="mv" data-unmem="${i}" aria-label="忘記">✕</button></div>`).join('')}</div></div>`:''}
@@ -1036,7 +1055,7 @@ function sheet(kind,edit){
   if(edit)$('sd').onclick=()=>deleteConv(cur);
   $('sf').onsubmit=async e=>{e.preventDefault();
     const body={name:$('sn').value,task:$('st').value,folder:$('sf_f').value||null};
-    if(!g){body.avatar=sheet.av?.()||'';body.browser=$('veil').querySelector('input[name=sf_b]:checked')?.value||'own';body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();body.fb=[$('sf_fb0')?.value,$('sf_fb1')?.value].filter(Boolean);}
+    if(!g){body.avatar=sheet.av?.()||'';body.browser=$('veil').querySelector('input[name=sf_b]:checked')?.value||'own';body.engine=$('sf_e').value;body.model=$('sf_m').value.trim();body.fb=[$('sf_fb0')?.value,$('sf_fb1')?.value,$('sf_fb2')?.value].filter(Boolean);}
     if(g)body.members=[...$('veil').querySelectorAll('.picks input:checked')].map(i=>i.value);
     try{const r=await api(edit?(g?'groups/':'bots/')+cur:(g?'groups':'bots'),edit?'PUT':'POST',body);
       if(!edit)cur=r.id;
@@ -1255,6 +1274,7 @@ function openSettings(){
     ['files','📁','檔案儲存','附件、截圖、機器人的輸出'],
     ['notes','📝','共用資料','所有機器人都會讀'],
     ['tpl','🧩','範本','一鍵建立常用的機器人'],
+    ['code','{}','程式任務','隔離工作區、測試與差異審查'],
     ['logs','📋','工作紀錄','最近 100 筆'],
     ['guide','🧭','設定指引','從頭設定一次'],
     ['ver','✨','最新版本',(window._upd&&['available','ready'].includes(window._upd.state))?'有新版本':'版本與更新內容']];
@@ -1265,7 +1285,7 @@ function openSettings(){
   $('veil').hidden=false;$('sx').onclick=closeSheet;
   if($('lo'))$('lo').onclick=()=>{closeSheet();logoutAsk()};
   $('sLang').onchange=e=>setLang(e.target.value);
-  const go={me:openProfile,warm:openWarm,acct:openAccount,pc:openComputers,ai:()=>openAI(),noti:openNotify,sched:openSched,files:openStore,notes:openNotes,tpl:openTpl,logs:openLogs,guide:openGuide,ver:openVersion};
+  const go={me:openProfile,warm:openWarm,acct:openAccount,pc:openComputers,ai:()=>openAI(),noti:openNotify,sched:openSched,files:openStore,notes:openNotes,tpl:openTpl,code:()=>openCode(),logs:openLogs,guide:openGuide,ver:openVersion};
   $('veil').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>go[b.dataset.s]())}
 const when=t=>t?new Date(t).toLocaleString(I18N.lang,{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
 /* profile: what the bots call you */
@@ -1438,7 +1458,7 @@ async function openLogs(){
   let d={logs:[]};try{d=await api('logs')}catch(e){}
   const dur=l=>l.finished&&l.started?new Intl.NumberFormat(I18N.lang,{style:'unit',unit:'second',unitDisplay:'short'}).format(Math.max(1,Math.round((l.finished-l.started)/1000))):'';
   const stc={done:['p-ok','完成'],error:['p-pr','失敗'],running:['','執行中'],pending:['p-off','排隊']};
-  subSheet('工作紀錄',`<div class="logs">${d.logs.length?d.logs.map(l=>`<div class="log"><span class="pill st ${stc[l.status]?.[0]||''}">${stc[l.status]?.[1]||l.status}</span><b style="font-weight:500"><span data-u>${esc(l.kind==='test'?(ENG[l.url]?.n||l.url):l.bot)}</span>${l.kind==='open'?'（開瀏覽器）':l.kind==='test'?'（連線測試）':''}</b><span style="font-size:12px;color:var(--faint)">${when(l.created)} ${dur(l)}</span><small data-u>${esc(l.convName)}${l.convName?'：':''}${esc(l.prompt)}</small></div>`).join(''):'<p>還沒有紀錄</p>'}</div>`)}
+  subSheet('工作紀錄',`<div class="logs">${d.logs.length?d.logs.map(l=>`<div class="log"><span class="pill st ${stc[l.status]?.[0]||''}">${stc[l.status]?.[1]||l.status}</span><b style="font-weight:500"><span data-u>${esc(l.kind==='test'?(ENG[l.url]?.n||l.url):l.bot)}</span>${l.kind==='open'?'（開瀏覽器）':l.kind==='test'?'（連線測試）':l.kind==='code'?'（程式任務）':''}</b><span style="font-size:12px;color:var(--faint)">${when(l.created)} ${dur(l)}</span><small data-u>${esc(l.convName)}${l.convName?'：':''}${esc(l.prompt)}</small></div>`).join(''):'<p>還沒有紀錄</p>'}</div>`)}
 
 /* ---------- AI connections ---------- */
 const aiTests={},rmsgs={};
@@ -1590,6 +1610,101 @@ function renderUpd(u){const el=$('upd');if(!el||!u)return;window._upd=u;
   if(u.state==='downloading'&&!$('boot').hidden)boot.set(u.percent,'下載新版本中…');}
 if(UPD){UPD.onChange(renderUpd);UPD.status().then(renderUpd).catch(()=>{})}
 
+/* ---------- coding tasks ---------- */
+let codeTimer=null, codeFlash='';
+function stopCodePoll(){clearInterval(codeTimer);codeTimer=null}
+const CODE_DONE=new Set(['tested','failed','cancelled','blocked']);
+function codeBadge(on,yes,no){return `<span class="pill ${on?'p-ok':'p-off'}">${on?yes:no}</span>`}
+async function openCode(focus){
+  stopCodePoll();
+  $('veil').innerHTML=`<div class="sheet wide"><div class="shd"><button type="button" class="back2" id="sBack" aria-label="返回設定">‹</button><h2>程式任務</h2></div><p class="fade">讀取中…</p></div>`;
+  $('veil').hidden=false;$('sBack').onclick=()=>{stopCodePoll();openSettings()};
+  let repos=[],tasks=[],prov=null;
+  try{
+    const [a,b,c]=await Promise.all([api('code/repos'),api('code/tasks'),api('code/providers')]);
+    repos=a.repos||[];tasks=b.tasks||[];prov=c;
+  }catch(e){
+    $('veil').innerHTML=`<div class="sheet wide"><div class="shd"><button type="button" class="back2" id="sBack">‹</button><h2>程式任務</h2></div><p class="errmsg">${esc(e.message)}</p><div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
+    $('sBack').onclick=()=>{stopCodePoll();openSettings()};$('sx').onclick=()=>{stopCodePoll();closeSheet()};return;
+  }
+  const labels={queued:'排隊',inspecting:'檢查儲存庫',planning:'規劃',editing:'修改',testing:'測試',repairing:'修復',reviewing:'審查差異',paused:'暫停',tested:'已測試',failed:'失敗',cancelled:'已取消',blocked:'受阻'};
+  if(focus){
+    let detail=null;
+    try{detail=await api('code/tasks/'+encodeURIComponent(focus))}catch(e){detail={error:e.message}}
+    const task=detail.task||tasks.find(t=>t.id===focus);
+    if(!task){openCode();return}
+    const s=task.summary||{}, tests=s.tests||[], files=s.files||[], ev=detail.events||s.events||[];
+    const last=tests[tests.length-1];
+    const html=`<div class="sheet wide"><div class="shd"><button type="button" class="back2" id="sBack">‹</button><h2 data-u>${esc(task.title)}</h2></div>
+      <div class="cstat">
+        <span class="pill ${CODE_DONE.has(task.status)&&(task.status!=='tested')?'p-off':'p-pr'}">${esc(labels[task.status]||task.status)}</span>
+        <span class="pill">${esc(task.role||'—')} · ${esc(task.phase||'')}</span>
+        ${codeBadge(!!s.plan,'計畫已產生','計畫未產生')}
+        ${codeBadge(files.length,'已修改檔案','尚未修改')}
+        ${codeBadge(!!s.testsPassed,'測試通過','測試未通過')}
+        ${codeBadge(!!(task.approval&&task.approval.merge),'已核准合併','未核准')}
+        ${codeBadge(false,'已部署','未部署')}
+      </div>
+      <p class="hmuted">完成只看測試結束碼和驗收條件，不看模型自己說的成功。${s.providerNote?esc(s.providerNote):''} ${s.providerId?('提供者 '+esc(s.providerId)):''} ${task.engine?('引擎 '+esc(task.engine)+(task.model?' / '+esc(task.model):'')):''} ${task.branch?('分支 '+esc(task.branch)):''}</p>
+      ${(s.modelSwitches||[]).length?`<div class="field">模型切換${s.modelSwitches.map(x=>`<div data-u>${esc(x.kind||'')} → ${esc(x.action||'')} ${esc(x.engine||'')}${x.model?' / '+esc(x.model):''}</div>`).join('')}</div>`:''}
+      ${s.reason||s.error?`<p class="errmsg" data-u>${esc(s.reason||'')} ${esc(s.error||'')}</p>`:''}
+      <p data-u>${esc(task.prompt)}</p>
+      <div class="field">驗收條件<div data-u>${(s.criteria||[]).map(c=>`<div>${c.met?'✓':'○'} ${esc(c.text)}${c.evidence?' — '+esc(c.evidence):''}</div>`).join('')||esc(task.criteria||'')}</div></div>
+      <div class="field">測試${tests.length?tests.map(t=>`<div class="log"><span class="pill ${t.passed?'p-ok':'p-off'}">${t.passed?'通過':'失敗'} ${t.code??''}</span><b>${esc(t.cmd)}</b><small data-u>${esc((t.stderr||t.stdout||'').slice(0,500))}</small></div>`).join(''):'<p>還沒有測試紀錄</p>'}</div>
+      <div class="field">變更的檔案${files.length?files.map(f=>`<div data-u>${esc(f.path)}</div>`).join(''):'<p>還沒有變更</p>'}</div>
+      <div class="field">git diff<pre class="code cdiff" data-u>${esc(s.diff||'（還沒有差異）')}</pre></div>
+      <div class="field">紀錄${ev.length?ev.slice(-12).map(e=>`<div class="log"><span class="pill">${esc(e.role||'')}</span><b>${esc(e.kind||'')}</b><small data-u>${esc(e.text||'')}</small></div>`).join(''):'<p>還沒有紀錄</p>'}</div>
+      <div class="row2">
+        ${CODE_DONE.has(task.status)?'':`<button class="ghost" id="cCancel">取消</button>`}
+        <button class="ghost" id="cMerge">核准合併（不執行）</button>
+        <button class="ghost" id="cDeploy">核准正式部署（不執行）</button>
+        <button class="ghost" id="cBack">回列表</button>
+      </div>
+      <p class="errmsg" id="cMsg">${esc(codeFlash)}</p>
+      <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
+    codeFlash='';
+    $('veil').innerHTML=html;
+    $('sBack').onclick=()=>{stopCodePoll();openCode()};
+    $('sx').onclick=()=>{stopCodePoll();closeSheet()};
+    $('cBack').onclick=()=>{stopCodePoll();openCode()};
+    if($('cCancel'))$('cCancel').onclick=async()=>{try{await api('code/tasks/'+task.id+'/cancel','POST',{});openCode(task.id)}catch(e){$('cMsg').textContent=e.message}};
+    $('cMerge').onclick=async()=>{try{await api('code/tasks/'+task.id+'/approve','POST',{action:'merge',allow:true});codeFlash='已記錄合併核准，合併尚未執行';openCode(task.id)}catch(e){$('cMsg').textContent=e.message}};
+    $('cDeploy').onclick=async()=>{try{const r=await api('code/tasks/'+task.id+'/approve','POST',{action:'deploy',allow:true,target:'production'});codeFlash='已記錄正式部署核准。deployed='+r.deployed+'，這次沒有部署。';openCode(task.id)}catch(e){$('cMsg').textContent=e.message}};
+    if(!CODE_DONE.has(task.status))codeTimer=setInterval(()=>openCode(task.id),2000);
+    return;
+  }
+  const provHtml=(prov?.providers||[]).map(p=>`<span class="pill ${p.available?'p-ok':'p-off'}">${esc(p.label)}：${p.available?'可用':esc(p.reason||'不可用')}</span>`).join(' ');
+  const repoOpts=repos.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
+  $('veil').innerHTML=`<div class="sheet wide"><div class="shd"><button type="button" class="back2" id="sBack">‹</button><h2>程式任務</h2></div>
+    <p>在主機電腦的隔離 git worktree 裡檢查、修改、測試、最多自動修復 3 次，再給你看實際 diff。正式部署一定要核准，而且核准後也不會自動部署。</p>
+    <div class="cstat">${provHtml||'<span class="pill p-off">主機尚未回報模型</span>'}</div>
+    <form class="rform" id="cRepo"><b>授權儲存庫</b>
+      <input id="crName" maxlength="40" placeholder="名稱" style="${field}">
+      <input id="crPath" maxlength="500" placeholder="主機上的絕對路徑，例如 /home/me/app" style="${field}">
+      <button class="btn" type="submit">登記儲存庫</button>
+    </form>
+    <form class="rform" id="cTask"><b>新任務</b>
+      <input id="ctTitle" maxlength="80" placeholder="標題" style="${field}">
+      <textarea id="ctPrompt" maxlength="4000" placeholder="要做的修改" style="${field};min-height:72px"></textarea>
+      <textarea id="ctCrit" maxlength="2000" placeholder="驗收條件，一行一條。例如：測試要通過" style="${field};min-height:60px"></textarea>
+      <div class="row2"><select id="ctEngine" style="${field}"><option value="ollama">Ollama</option><option value="opencode">OpenCode</option><option value="claude">Claude</option><option value="codex">ChatGPT</option><option value="gemini">Antigravity</option></select>
+      <input id="ctModel" maxlength="80" placeholder="模型（Ollama 可留空）" style="${field}"></div>
+      <div class="row2"><select id="ctFb0" style="${field}"><option value="">第一備援：不使用</option><option value="ollama">Ollama</option><option value="opencode">OpenCode</option><option value="claude">Claude</option><option value="codex">ChatGPT</option><option value="gemini">Antigravity</option></select>
+      <select id="ctFb1" style="${field}"><option value="">第二備援：不使用</option><option value="ollama">Ollama</option><option value="opencode">OpenCode</option><option value="claude">Claude</option><option value="codex">ChatGPT</option><option value="gemini">Antigravity</option></select></div>
+      <select id="ctRepo" style="${field}">${repoOpts||'<option value="">先登記儲存庫</option>'}</select>
+      <button class="btn" type="submit">建立任務</button>
+    </form>
+    <div class="logs">${tasks.length?tasks.map(t=>`<button class="rrow" data-ct="${esc(t.id)}"><span class="t"><b data-u>${esc(t.title)}</b><small>${esc(labels[t.status]||t.status)} · ${esc(t.engine)}${t.model?' / '+esc(t.model):''}</small></span><span class="pill ${t.status==='tested'?'p-ok':CODE_DONE.has(t.status)?'p-off':'p-pr'}">${esc(labels[t.status]||t.status)}</span></button>`).join(''):'<p>還沒有程式任務</p>'}</div>
+    <p class="errmsg" id="cMsg"></p>
+    <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
+  $('sBack').onclick=()=>{stopCodePoll();openSettings()};
+  $('sx').onclick=()=>{stopCodePoll();closeSheet()};
+  $('cRepo').onsubmit=async ev=>{ev.preventDefault();try{await api('code/repos','POST',{name:$('crName').value.trim(),path:$('crPath').value.trim()});openCode()}catch(e){$('cMsg').textContent=e.message}};
+  $('cTask').onsubmit=async ev=>{ev.preventDefault();try{const r=await api('code/tasks','POST',{repoId:$('ctRepo').value,title:$('ctTitle').value.trim(),prompt:$('ctPrompt').value.trim(),criteria:$('ctCrit').value.trim(),engine:$('ctEngine').value,model:$('ctModel').value.trim(),fallbacks:[$('ctFb0').value,$('ctFb1').value].filter(Boolean)});openCode(r.id)}catch(e){$('cMsg').textContent=e.message}};
+  $('veil').querySelectorAll('[data-ct]').forEach(b=>b.onclick=()=>openCode(b.dataset.ct));
+  if(tasks.some(t=>!CODE_DONE.has(t.status)))codeTimer=setInterval(()=>{const a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;openCode()},2500);
+}
+
 /* ---------- boot ---------- */
 let CFG={};
 async function start(){$('login').hidden=true;$('home').hidden=true;
@@ -1597,7 +1712,7 @@ async function start(){$('login').hidden=true;$('home').hidden=true;
   if(window.octaDesktop&&TOKEN&&!CFG.local)window.octaDesktop.connect(TOKEN).catch(e=>toast(e.message));   // this computer works for the signed-in account
   await refresh();
   if(cur)await loadMsgs(cur,'first').catch(()=>{});
-  boot.set(100,'完成');$('app').hidden=false;boot.hide();render(true);live();
+  boot.set(100,'完成');$('app').hidden=false;try{if(localStorage.getItem('octa_rail')==='0'&&innerWidth>760)$('app').classList.add('rail-collapsed')}catch(e){}boot.hide();render(true);live();
   let g=null;try{g=localStorage.getItem('ebot_guided')}catch(e){}if(!S.bots.length&&!g)openGuide();else whatsNew()}
 // once after every update: show what the latest version added
 async function whatsNew(){const log=await changelog(),x=log[0];if(!x)return;let seen=null;try{seen=localStorage.getItem('octa_seen_v');localStorage.setItem('octa_seen_v',x.v)}catch(e){return}

@@ -1,3 +1,4 @@
+import { classifyModelFailure, decideRoute } from '../../public/model-route.mjs';
 // OCTA API — Cloudflare Pages Function, single router.
 // Web app uses a "web" session token; each computer's runner uses its own "runner" token.
 // One computer per account is the 主機 (host): it runs every bot. Phones and other computers
@@ -136,15 +137,16 @@ async function sendNotify(env, st, text) {
 }
 const needsYou = t => /✅待確認|需要使用者|^⚠/m.test(t);
 const ENGINES = ['claude', 'codex', 'gemini', 'grok', 'grokbot', 'copilot', 'cursor', 'qwen', 'opencode'];
-// backup AIs: up to two "engine|model" entries, tried in order when the bot's AI has run out of quota
+// backup AIs: up to three "engine|model" entries (two backups plus an optional local Ollama / opencode)
 const fbParse = v => { try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
-const fbOk = v => JSON.stringify((Array.isArray(v) ? v : []).map(x => String(x || '').split('|')).filter(([e]) => ENGINES.includes(e) && !['copilot', 'cursor', 'qwen', 'grok'].includes(e)).slice(0, 2).map(([e, m]) => e + (clean(m, 80) ? '|' + clean(m, 80) : '')));
+const fbOk = v => JSON.stringify((Array.isArray(v) ? v : []).map(x => String(x || '').split('|')).filter(([e]) => ENGINES.includes(e) && !['copilot', 'cursor', 'qwen', 'grok'].includes(e)).slice(0, 3).map(([e, m]) => e + (clean(m, 80) ? '|' + clean(m, 80) : '')));
+const CODE_FB = ['ollama', 'opencode', 'claude', 'codex', 'gemini'];
+const codeFbOk = v => JSON.stringify((Array.isArray(v) ? v : []).map(x => String(x || '').split('|')).filter(([e]) => CODE_FB.includes(e)).slice(0, 2).map(([e, m]) => e + (clean(m, 80) ? '|' + clean(m, 80) : '')));
 // a bot's message that waits on the user (a question, something to confirm or decide)
 const asksUser = t => /❓/.test(String(t || '')) || (!/@\S/.test(String(t || '').trim().split('\n').pop()) && /[？?]\s*$/.test(String(t || '').trim()));
 // "Resets in 156h16m" → when that AI can be used again
 const resetAt = t => { const m = String(t).match(/resets? in\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?/i); return m && (m[1] || m[2]) ? now() + ((+m[1] || 0) * 60 + (+m[2] || 0)) * 60000 : now() + 60 * 60000; };
 const ENGINE_NAMES = { claude: 'Claude', codex: 'ChatGPT', gemini: 'Antigravity', grokbot: 'Grok Bot', opencode: 'Ollama' };
-const QUOTA = /quota|usage limit|rate.?limit|limit (reached|exceeded)|exceeded your|upgrade your (plan|subscription)|out of credits|insufficient.?credit|too many requests|\b429\b|額度|用量上限|已達上限/i;
 const engineOk = e => (ENGINES.includes(e) ? e : 'claude');
 const avatarOk = a => { const v = clean(a, 16); return v && !/[<>&"']/.test(v) ? v : null; };
 // grokbot: the model field holds the Grok Bot's name. opencode is only used with local Ollama models (no paid APIs): "qwen3" → "ollama/qwen3"
@@ -164,14 +166,21 @@ const MIGRATIONS = [
   'ALTER TABLE routines ADD COLUMN hook TEXT', 'ALTER TABLE routines ADD COLUMN watch TEXT', 'ALTER TABLE routines ADD COLUMN wstate TEXT',
   'CREATE INDEX IF NOT EXISTS routine_hook ON routines(hook)',
   'ALTER TABLE files ADD COLUMN pc TEXT', 'ALTER TABLE bots ADD COLUMN bpc TEXT', 'ALTER TABLE jobs ADD COLUMN pc TEXT',
-  'ALTER TABLE bots ADD COLUMN fb TEXT', 'ALTER TABLE jobs ADD COLUMN eng TEXT'
+  'ALTER TABLE bots ADD COLUMN fb TEXT', 'ALTER TABLE jobs ADD COLUMN eng TEXT', 'ALTER TABLE jobs ADD COLUMN tries INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE code_tasks ADD COLUMN fb TEXT',
+  'CREATE TABLE IF NOT EXISTS code_repos (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, path TEXT NOT NULL, validated INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS code_tasks (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, repo_id TEXT NOT NULL, title TEXT NOT NULL, prompt TEXT NOT NULL, criteria TEXT NOT NULL DEFAULT \'\', engine TEXT NOT NULL, model TEXT, fb TEXT, status TEXT NOT NULL DEFAULT \'queued\', phase TEXT NOT NULL DEFAULT \'queued\', role TEXT, workspace_id TEXT, branch TEXT, base_ref TEXT, head_ref TEXT, retries INTEGER NOT NULL DEFAULT 0, max_retries INTEGER NOT NULL DEFAULT 3, job_id INTEGER, summary TEXT, approval TEXT, cancel INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL, updated INTEGER NOT NULL, finished INTEGER)',
+  'ALTER TABLE code_tasks ADD COLUMN fb TEXT',
+  'CREATE INDEX IF NOT EXISTS code_task_user ON code_tasks(user_id, created)',
+  'CREATE TABLE IF NOT EXISTS code_events (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, user_id TEXT NOT NULL, ts INTEGER NOT NULL, role TEXT, kind TEXT NOT NULL, text TEXT, data TEXT)',
+  'CREATE INDEX IF NOT EXISTS code_event_task ON code_events(task_id, id)'
 ];
-let schemaOk = false;
+const schemaReady = new WeakSet();
 async function ensureSchema(db) {
-  if (schemaOk) return;
-  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress, tokens FROM jobs LIMIT 0').all(); await db.prepare('SELECT hook, watch, wstate FROM routines LIMIT 0').all(); await db.prepare('SELECT pc FROM files LIMIT 0').all(); await db.prepare('SELECT bpc FROM bots LIMIT 0').all(); await db.prepare('SELECT pc, eng FROM jobs LIMIT 0').all(); await db.prepare('SELECT fb FROM bots LIMIT 0').all(); schemaOk = true; return; } catch { }
+  if (schemaReady.has(db)) return;
+  try { await db.prepare('SELECT want FROM files LIMIT 0').all(); await db.prepare('SELECT k FROM logins LIMIT 0').all(); await db.prepare('SELECT progress, tokens FROM jobs LIMIT 0').all(); await db.prepare('SELECT hook, watch, wstate FROM routines LIMIT 0').all(); await db.prepare('SELECT pc FROM files LIMIT 0').all(); await db.prepare('SELECT bpc FROM bots LIMIT 0').all(); await db.prepare('SELECT pc, eng, tries FROM jobs LIMIT 0').all(); await db.prepare('SELECT fb FROM bots LIMIT 0').all(); await db.prepare('SELECT id, fb FROM code_tasks LIMIT 0').all(); schemaReady.add(db); return; } catch { }
   for (const sql of MIGRATIONS) { try { await db.prepare(sql).run(); } catch { } }
-  schemaOk = true;
+  schemaReady.add(db);
 }
 
 // requests that don't change anything other devices need to see
@@ -733,6 +742,26 @@ const TEMPLATES_I18N = {
  }
 };
 
+const CODE_ENGINES = ['ollama', 'opencode', 'claude', 'codex', 'gemini', 'grok', 'grokbot', 'copilot', 'cursor', 'qwen', 'fixture'];
+const codeEngineOk = e => (CODE_ENGINES.includes(e) ? e : '');
+const repoPathOk = p => {
+  const v = String(p || '').trim();
+  if (v.length < 2 || v.length > 500 || v.includes('\0') || v.split(/[\\/]/).includes('..')) return null;
+  if (!v.startsWith('/') && !/^[a-zA-Z]:[\\/]/.test(v)) return null;
+  return v;
+};
+const parseJson = (s, fallback = null) => { try { return s ? JSON.parse(s) : fallback; } catch { return fallback; } };
+function publicCodeTask(row) {
+  return {
+    id: row.id, repoId: row.repo_id, title: row.title, prompt: row.prompt, criteria: row.criteria,
+    engine: row.engine, model: row.model || '', fb: fbParse(row.fb), status: row.status, phase: row.phase, role: row.role || '',
+    workspaceId: row.workspace_id || '', branch: row.branch || '', baseRef: row.base_ref || '', headRef: row.head_ref || '',
+    retries: row.retries, maxRetries: row.max_retries, jobId: row.job_id, summary: parseJson(row.summary),
+    approval: parseJson(row.approval), cancel: !!row.cancel, created: row.created, updated: row.updated, finished: row.finished,
+    deployed: false, merged: false
+  };
+}
+
 export async function onRequest(ctx) {
   const { request: req, env, params } = ctx;
   const path = (params.path || []).join('/');
@@ -889,7 +918,8 @@ async function route({ request: req, env, params }) {
       // heartbeat and computer info, written only every few minutes or when something changed
       if (me.kind === 'runner' && (path === 'runner/next' || path === 'runner/hello')) {
         const info = { engines: body.engines && typeof body.engines === 'object' ? Object.fromEntries(ENGINES.map(k => [k, !!body.engines[k]])) : undefined, version: clean(body.version, 20) || undefined, app: clean(body.app, 20) || undefined, store: clean(body.store, 300) || undefined, usage: body.usage && typeof body.usage === 'object' && JSON.stringify(body.usage).length < 3000 ? body.usage : undefined,
-          models: body.models && typeof body.models === 'object' && JSON.stringify(body.models).length < 6000 ? body.models : undefined };
+          models: body.models && typeof body.models === 'object' && JSON.stringify(body.models).length < 6000 ? body.models : undefined,
+          coding: body.coding && typeof body.coding === 'object' && JSON.stringify(body.coding).length < 4000 ? body.coding : undefined };
         const old = me.info ? JSON.parse(me.info) : {};
         const merged = { ...old, ...Object.fromEntries(Object.entries(info).filter(([, v]) => v !== undefined)) };
         if (now() - (me.seen || 0) > 4 * MIN || JSON.stringify(merged) !== JSON.stringify(old))
@@ -898,7 +928,7 @@ async function route({ request: req, env, params }) {
       }
       if (me.kind === 'local' && body.engines && typeof body.engines === 'object')
         await db.prepare('UPDATE users SET engines=? WHERE id=?').bind(JSON.stringify(Object.fromEntries(ENGINES.map(k => [k, !!body.engines[k]]))), U).run();
-      if (me.kind === 'local' && ((body.usage && typeof body.usage === 'object') || (body.models && typeof body.models === 'object'))) { const st = await getSettings(db, U); if (body.usage) st._usage = body.usage; if (body.models) st._models = body.models; await putSettings(db, U, st); }
+      if (me.kind === 'local' && ((body.usage && typeof body.usage === 'object') || (body.models && typeof body.models === 'object') || (body.coding && typeof body.coding === 'object'))) { const st = await getSettings(db, U); if (body.usage) st._usage = body.usage; if (body.models) st._models = body.models; if (body.coding && JSON.stringify(body.coding).length < 4000) st._coding = body.coding; await putSettings(db, U, st); }
       if (path === 'runner/hello') return J({ user: U, name: me.name, label });
       if (path === 'runner/bye' && m === 'POST') { if (me.kind === 'runner') await db.prepare('UPDATE sessions SET seen=0 WHERE token=?').bind(me.token).run(); return J({ ok: true }); }
 
@@ -1017,22 +1047,40 @@ async function route({ request: req, env, params }) {
         const job = await db.prepare("SELECT * FROM jobs WHERE id=? AND user_id=? AND status='running'").bind(+body.id, U).first();
         if (!job) return err('找不到執行中的任務', 404);
         const good = body.ok !== false;
-        // the AI ran out of quota: the next backup AI takes over the same job
-        if (!good && job.kind === 'chat' && QUOTA.test(String(body.text || ''))) {
+        // Classify the failure before choosing a backup. Quota, HTTP 429, auth, and
+        // transient outages are not the same action, and a code or tool failure does not switch models.
+        if (!good && job.kind === 'chat') {
           const b = (await loadAll(db, U)).bots.find(x => x.id === job.bot_id);
-          if (b && b.fb.length) {
-            const list = [b.engine + (b.model ? '|' + b.model : ''), ...b.fb], at = Math.max(0, list.indexOf(job.eng || list[0]));
-            const st = await getSettings(db, U); st.spent = Object.fromEntries(Object.entries(st.spent || {}).filter(([, t]) => t > now()));
-            st.spent[list[at]] = resetAt(body.text); await putSettings(db, U, st);   // skip it for the next jobs until it resets
-            const nxt = list.slice(at + 1).find(x => !(st.spent[x] > now()));
-            if (nxt) {
-              const lab = x => { const [e, mm] = x.split('|'); return (ENGINE_NAMES[e] || e) + (mm ? `（${mm}）` : ''); };
-              await db.prepare("UPDATE jobs SET status='error', finished=? WHERE id=?").bind(now(), job.id).run();
-              await db.prepare('INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,depth,eng) VALUES (?,?,?,?,?,?,?,?)').bind(U, job.conv, job.bot_id, job.chain, job.prompt, now(), job.depth || 0, nxt).run();
-              await addMsg(db, U, job.conv, 'sys', `「${b.name}」的 ${lab(list[at])} 額度用完，改由備援 AI ${lab(nxt)} 接手`);
+          if (b) {
+            const st = await getSettings(db, U);
+            st.spent = Object.fromEntries(Object.entries(st.spent || {}).filter(([, t]) => t > now()));
+            const chain = [b.engine + (b.model ? '|' + b.model : ''), ...(b.fb || [])];
+            const current = job.eng || chain[0];
+            let index = chain.indexOf(current);
+            if (index < 0) index = 0;
+            const kind = classifyModelFailure(body.text, { stopped: !!body.stopped });
+            const decision = decideRoute({
+              kind, tries: +job.tries || 0, index,
+              resetsAt: /resets? in/i.test(String(body.text || '')) ? resetAt(body.text) : 0,
+              now: now(),
+              chain: chain.map(id => ({ id, spentUntil: st.spent[id] || 0 }))
+            });
+            const lab = x => { const [e, mm] = String(x || '').split('|'); return (ENGINE_NAMES[e] || e) + (mm ? `（${mm}）` : ''); };
+            if (decision.action === 'retry' || decision.action === 'switch') {
+              if (decision.spend) st.spent[chain[index]] = resetAt(body.text);
+              await putSettings(db, U, st);
+              const nextEng = decision.action === 'switch' ? chain[decision.index] : current;
+              const nextTries = decision.action === 'retry' ? (+job.tries || 0) + 1 : 0;
+              await db.prepare("UPDATE jobs SET status='error', finished=?, result=? WHERE id=?").bind(now(), clean(body.text, 500), job.id).run();
+              await db.prepare('INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,depth,eng,tries) VALUES (?,?,?,?,?,?,?,?,?)').bind(U, job.conv, job.bot_id, job.chain, job.prompt, now(), job.depth || 0, nextEng, nextTries).run();
+              const note = decision.action === 'switch'
+                ? `「${b.name}」的 ${lab(chain[index])} ${decision.reason === 'quota' ? '額度用完' : decision.reason === 'rate_limit' ? '被限流' : '暫時故障'}，改由 ${lab(nextEng)} 接手。已完成的對話會保留，不會重做已完成的步驟。`
+                : `「${b.name}」的 ${lab(current)} ${decision.reason === 'rate_limit' ? '被限流，同一個模型再試一次' : '暫時故障，同一個模型再試一次'}（第 ${nextTries} 次）。`;
+              await addMsg(db, U, job.conv, 'sys', note);
               await bump(db, U);
               return ok();
             }
+            if (decision.message) body.text = (decision.reason === 'cancelled' ? '' : '⚠ ') + decision.message;
           }
         }
         if (job.kind === 'export' || job.kind === 'import') {   // handing a bot's website logins to another computer
@@ -1046,6 +1094,10 @@ async function route({ request: req, env, params }) {
           return ok();
         }
         if (job.kind === 'test' || job.kind === 'list' || job.kind === 'install') {
+          await db.prepare('UPDATE jobs SET status=?, finished=?, result=? WHERE id=?').bind(good ? 'done' : 'error', now(), clean(body.text, 3000), job.id).run();
+          return ok();
+        }
+        if (job.kind === 'code') {
           await db.prepare('UPDATE jobs SET status=?, finished=?, result=? WHERE id=?').bind(good ? 'done' : 'error', now(), clean(body.text, 3000), job.id).run();
           return ok();
         }
@@ -1203,6 +1255,37 @@ async function route({ request: req, env, params }) {
         ]);
         return ok();
       }
+      if (path === 'runner/code/event' && m === 'POST') {
+        const id = clean(body.id || body.taskId, 80);
+        const task = await db.prepare('SELECT * FROM code_tasks WHERE id=? AND user_id=?').bind(id, U).first();
+        if (!task) return err('找不到程式任務', 404);
+        const summary = body.summary && typeof body.summary === 'object' ? JSON.stringify(body.summary).slice(0, 80000) : (typeof body.summary === 'string' ? body.summary.slice(0, 80000) : task.summary);
+        const status = clean(body.status, 40) || task.status;
+        const phase = clean(body.phase, 40) || task.phase;
+        await db.prepare(`UPDATE code_tasks SET status=?, phase=?, role=?, workspace_id=COALESCE(?, workspace_id), branch=COALESCE(?, branch), base_ref=COALESCE(?, base_ref), head_ref=COALESCE(?, head_ref), retries=?, summary=?, updated=? WHERE id=? AND user_id=?`)
+          .bind(status, phase, clean(body.role, 40) || task.role, clean(body.workspaceId, 80) || null, clean(body.branch, 120) || null, clean(body.baseRef, 80) || null, clean(body.headRef, 80) || null, Number.isFinite(+body.retries) ? +body.retries : task.retries, summary, now(), id, U).run();
+        const evs = (Array.isArray(body.events) ? body.events : (body.event ? [body.event] : [])).slice(-12);
+        for (const ev of evs) {
+          if (!ev || typeof ev !== 'object') continue;
+          await db.prepare('INSERT INTO code_events (task_id,user_id,ts,role,kind,text,data) VALUES (?,?,?,?,?,?,?)')
+            .bind(id, U, now(), clean(ev.role, 40), clean(ev.kind, 40) || 'log', clean(ev.text, 1500), ev.data ? JSON.stringify(ev.data).slice(0, 8000) : null).run();
+        }
+        if (task.job_id) await db.prepare("UPDATE jobs SET progress=? WHERE id=? AND user_id=? AND status='running'").bind(clean(phase, 120), task.job_id, U).run();
+        const r = J({ ok: true, cancel: !!task.cancel || status === 'cancelled' });
+        r._u = U;
+        return r;
+      }
+      if (path === 'runner/code/resume' && m === 'POST') {
+        const id = clean(body.taskId || body.id, 80);
+        const task = await db.prepare('SELECT * FROM code_tasks WHERE id=? AND user_id=?').bind(id, U).first();
+        if (!task) return J({ continue: false, gone: true });
+        if (task.cancel) return J({ continue: false, cancel: true });
+        const job = task.job_id ? await db.prepare("SELECT * FROM jobs WHERE id=? AND user_id=? AND kind='code' AND status='running'").bind(task.job_id, U).first() : null;
+        if (!job) return J({ continue: false });
+        const repo = await db.prepare('SELECT * FROM code_repos WHERE id=? AND user_id=?').bind(task.repo_id, U).first();
+        if (!repo) return J({ continue: false, gone: true });
+        return J({ continue: true, job: { id: job.id, kind: 'code', task: publicCodeTask(task), repo: { id: repo.id, name: repo.name, path: repo.path } } });
+      }
       return err('未知的執行器路徑', 404);
     }
 
@@ -1227,7 +1310,7 @@ async function route({ request: req, env, params }) {
       const [ur, busy, rev, ...lasts] = await db.batch([
         // recent bot replies, for unread counts and notifications
         db.prepare("SELECT conv,id FROM messages WHERE user_id=? AND by_ NOT IN ('me','sys') ORDER BY id DESC LIMIT 300").bind(U),
-        db.prepare("SELECT conv,bot_id,status,kind,started,progress FROM jobs WHERE user_id=? AND kind<>'test' AND status IN ('pending','running')").bind(U),
+        db.prepare("SELECT conv,bot_id,status,kind,started,progress,eng FROM jobs WHERE user_id=? AND kind<>'test' AND status IN ('pending','running')").bind(U),
         db.prepare('SELECT rev FROM users WHERE id=?').bind(U),
         // newest non-system message of each conversation (list previews); one indexed lookup each
         ...convIds.map(c => db.prepare("SELECT conv,id,by_ AS by,substr(text,1,140) AS text,ts FROM messages WHERE user_id=? AND conv=? AND by_<>'sys' ORDER BY id DESC LIMIT 1").bind(U, c))
@@ -1237,10 +1320,14 @@ async function route({ request: req, env, params }) {
       const st = await getSettings(db, U);
       const { date } = localNow(env), dayStart = Date.parse(date + 'T00:00:00Z') - (+env.TZ_OFFSET_MIN || 0) * 60000;
       const tok = (await db.prepare('SELECT bot_id, SUM(tokens) AS t, COUNT(*) AS n FROM jobs WHERE user_id=? AND created>=? AND kind=\'chat\' GROUP BY bot_id').bind(U, dayStart).all()).results;
-      return J({ tokens: Object.fromEntries(tok.map(r => [r.bot_id, { t: r.t, n: r.n }])),
+      let codeTasks = [];
+      try {
+        codeTasks = (await db.prepare('SELECT id,title,status,phase,engine,model FROM code_tasks WHERE user_id=? ORDER BY created DESC LIMIT 8').bind(U).all()).results;
+      } catch { codeTasks = []; }
+      return J({ tokens: Object.fromEntries(tok.map(r => [r.bot_id, { t: r.t, n: r.n }])), codeTasks,
         me: me.name, local: me.kind === 'local', rev: rev.results[0]?.rev ?? 0,
         engines: h ? h.engines : JSON.parse((await db.prepare('SELECT engines FROM users WHERE id=?').bind(U).first())?.engines || 'null'),
-        runnerOnline: env.runnerOnline ? env.runnerOnline() : h.online,
+        runnerOnline: env.runnerOnline ? env.runnerOnline() : (h ? h.online : true),
         host: h ? h.hostLabel : 'local', computers: h ? h.runners.length : 1, shareBrowser: st.shareBrowser !== false, nick: st.nick || '', sched: st.sched === 'pc' ? 'pc' : 'cloud', quick: st.quick || {}, allow: st.allow || {}, pins: st.pins || [], mute: st.mute || {}, memory: st.memory || {}, skills: st.skills || {}, nsk: Object.fromEntries(Object.entries(st.nskills || {}).map(([k, v]) => [k, [...new Set(Object.keys(v.files || {}).map(p => p.split('/')[0]))]])), warm: WARM.includes(+st.warm) ? +st.warm : 120, models: h ? h.models : st._models || null,
         ...all, last: last.results, ur: ur.results.map(r => [r.conv, r.id]), busy: busy.results
       });
@@ -1273,6 +1360,107 @@ async function route({ request: req, env, params }) {
         await db.prepare('INSERT INTO groups_ (id,user_id,name,task,members,folder,created) VALUES (?,?,?,?,?,?,?)')
           .bind('g-' + uid(), U, g.name, g.task, JSON.stringify(g.members.map(k => map[k])), folder, now() + 1).run();
       return ok();
+    }
+
+    // ---------- coding tasks (host computer executes them; this API only stores state) ----------
+    if (path === 'code/providers' && m === 'GET') {
+      const h = env.isLocal ? null : await hostInfo(db, U);
+      const st = env.isLocal ? await getSettings(db, U) : null;
+      const hostRow = h?.runners.find(r => (r.label || 'runner') === h.hostLabel);
+      const info = env.isLocal ? (st?._coding || null) : (hostRow?.info ? parseJson(hostRow.info)?.coding || null : null);
+      const engines = h ? h.engines : parseJson((await db.prepare('SELECT engines FROM users WHERE id=?').bind(U).first())?.engines);
+      const row = (id, label, available, reason, models) => ({ id, label, available: !!available, reason: reason || (available ? '' : '主機尚未回報'), models: models || [] });
+      return J({
+        limits: { maxRepairs: 3, maxWritersPerWorktree: 1 },
+        fixture: env.OCTA_CODE_ALLOW_FIXTURE === '1',
+        providers: [
+          row('ollama', 'Ollama 本機模型', info?.ollama?.available, info?.ollama?.reason, info?.ollama?.models),
+          row('opencode', 'OpenCode', info?.opencode?.available, info?.opencode?.reason),
+          row('claude', 'Claude Code', engines?.claude, engines ? '' : '主機尚未回報'),
+          row('codex', 'ChatGPT / Codex', engines?.codex, engines ? '' : '主機尚未回報'),
+          row('gemini', 'Antigravity', engines?.gemini, engines ? '' : '主機尚未回報'),
+          row('unity', 'Unity', info?.unity?.available, info?.unity?.reason || '未偵測到 Unity'),
+          row('unreal', 'Unreal', info?.unreal?.available, info?.unreal?.reason || '未偵測到 Unreal')
+        ]
+      });
+    }
+    if (path === 'code/repos' && m === 'GET') {
+      const rows = (await db.prepare('SELECT * FROM code_repos WHERE user_id=? ORDER BY created').bind(U).all()).results;
+      return J({ repos: rows });
+    }
+    if (path === 'code/repos' && m === 'POST') {
+      const name = clean(body.name, 40), pathName = repoPathOk(body.path);
+      if (!name || !pathName) return err('名稱和絕對路徑都要填，路徑不能含 ..');
+      const id = 'cr-' + uid();
+      await db.prepare('INSERT INTO code_repos (id,user_id,name,path,validated,created) VALUES (?,?,?,?,0,?)').bind(id, U, name, pathName, now()).run();
+      return ok({ id });
+    }
+    if (path.startsWith('code/repos/') && m === 'DELETE') {
+      const id = path.slice('code/repos/'.length);
+      const open = await db.prepare("SELECT 1 FROM code_tasks WHERE user_id=? AND repo_id=? AND status NOT IN ('tested','failed','cancelled','blocked')").bind(U, id).first();
+      if (open) return err('這個儲存庫還有進行中的程式任務', 409);
+      await db.prepare('DELETE FROM code_repos WHERE id=? AND user_id=?').bind(id, U).run();
+      return ok();
+    }
+    if (path === 'code/tasks' && m === 'GET') {
+      const rows = (await db.prepare('SELECT * FROM code_tasks WHERE user_id=? ORDER BY created DESC LIMIT 50').bind(U).all()).results;
+      return J({ tasks: rows.map(publicCodeTask) });
+    }
+    if (path === 'code/tasks' && m === 'POST') {
+      const repo = await db.prepare('SELECT * FROM code_repos WHERE id=? AND user_id=?').bind(clean(body.repoId, 80), U).first();
+      if (!repo) return err('找不到授權的儲存庫', 404);
+      const title = clean(body.title, 80), prompt = clean(body.prompt, 8000), criteria = clean(body.criteria, 4000);
+      const engine = codeEngineOk(body.engine);
+      if (!engine) return err('要選擇模型或引擎');
+      if (engine === 'fixture' && env.OCTA_CODE_ALLOW_FIXTURE !== '1') return err('測試替身未啟用');
+      if (!title || !prompt) return err('標題和任務內容都要填');
+      const maxRetries = Math.max(0, Math.min(3, Number.isFinite(+body.maxRetries) ? Math.floor(+body.maxRetries) : 3));
+      const id = 'ct-' + uid();
+      const t = now();
+      const fb = codeFbOk(body.fallbacks);
+      await db.prepare(`INSERT INTO code_tasks (id,user_id,repo_id,title,prompt,criteria,engine,model,fb,status,phase,retries,max_retries,cancel,created,updated)
+        VALUES (?,?,?,?,?,?,?,?,?,'queued','queued',0,?,0,?,?)`).bind(id, U, repo.id, title, prompt, criteria || '測試要通過', engine, clean(body.model, 80) || null, fb, maxRetries, t, t).run();
+      const job = await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url) VALUES (?,?,?,'[]',?,?,'code',?)").bind(U, 'code:' + id, 'code-agent', title, t, id).run();
+      await db.prepare('UPDATE code_tasks SET job_id=? WHERE id=?').bind(job.meta.last_row_id, id).run();
+      await db.prepare('INSERT INTO code_events (task_id,user_id,ts,role,kind,text) VALUES (?,?,?,?,?,?)').bind(id, U, t, 'orchestrator', 'queued', '已排隊，等待主機電腦執行').run();
+      return ok({ id, jobId: job.meta.last_row_id });
+    }
+    const codeTaskMatch = path.match(/^code\/tasks\/([^/]+)$/);
+    if (codeTaskMatch && m === 'GET') {
+      const id = codeTaskMatch[1];
+      const task = await db.prepare('SELECT * FROM code_tasks WHERE id=? AND user_id=?').bind(id, U).first();
+      if (!task) return err('找不到程式任務', 404);
+      const events = (await db.prepare('SELECT id,ts,role,kind,text,data FROM code_events WHERE task_id=? AND user_id=? ORDER BY id DESC LIMIT 80').bind(id, U).all()).results.reverse();
+      return J({ task: publicCodeTask(task), events: events.map(e => ({ ...e, data: parseJson(e.data) })) });
+    }
+    const codeCancel = path.match(/^code\/tasks\/([^/]+)\/cancel$/);
+    if (codeCancel && m === 'POST') {
+      const id = codeCancel[1];
+      const task = await db.prepare('SELECT * FROM code_tasks WHERE id=? AND user_id=?').bind(id, U).first();
+      if (!task) return err('找不到程式任務', 404);
+      await db.prepare('UPDATE code_tasks SET cancel=1, updated=? WHERE id=? AND user_id=?').bind(now(), id, U).run();
+      if (task.status === 'queued' && task.job_id) {
+        await db.prepare("DELETE FROM jobs WHERE id=? AND user_id=? AND status='pending'").bind(task.job_id, U).run();
+        await db.prepare("UPDATE code_tasks SET status='cancelled', phase='cancelled', finished=? WHERE id=? AND user_id=?").bind(now(), id, U).run();
+      }
+      await db.prepare('INSERT INTO code_events (task_id,user_id,ts,role,kind,text) VALUES (?,?,?,?,?,?)').bind(id, U, now(), 'orchestrator', 'cancel', '使用者取消任務').run();
+      return ok({ cancelled: task.status === 'queued', stopping: task.status !== 'queued' });
+    }
+    const codeApprove = path.match(/^code\/tasks\/([^/]+)\/approve$/);
+    if (codeApprove && m === 'POST') {
+      const id = codeApprove[1];
+      const task = await db.prepare('SELECT * FROM code_tasks WHERE id=? AND user_id=?').bind(id, U).first();
+      if (!task) return err('找不到程式任務', 404);
+      const action = body.action === 'deploy' ? 'deploy' : body.action === 'merge' ? 'merge' : '';
+      if (!action) return err('要指定 merge 或 deploy');
+      if (body.allow !== true) return err('需要明確核准');
+      if (action === 'deploy' && body.target !== 'production') return err('正式部署要明示 target=production');
+      const approval = parseJson(task.approval, {}) || {};
+      approval[action] = { allow: true, by: 'user', target: action === 'deploy' ? 'production' : 'branch', at: now() };
+      await db.prepare('UPDATE code_tasks SET approval=?, updated=? WHERE id=? AND user_id=?').bind(JSON.stringify(approval), now(), id, U).run();
+      await db.prepare('INSERT INTO code_events (task_id,user_id,ts,role,kind,text,data) VALUES (?,?,?,?,?,?,?)')
+        .bind(id, U, now(), 'policy', 'approval', action === 'deploy' ? '已記錄正式部署核准，尚未部署' : '已記錄合併核准，尚未合併', JSON.stringify({ action, executed: false })).run();
+      return ok({ executed: false, deployed: false, merged: false, approval });
     }
 
     // folders (分區)
@@ -1717,6 +1905,13 @@ async function nextWork(env, db, U, slots, label = null) {
   return { job, inbox: inbox.map(f => ({ ...f, convName: convName(f.conv) })), pull };
 }
 async function jobPayload(env, db, U, job) {
+  if (job.kind === 'code') {
+    const task = await db.prepare('SELECT * FROM code_tasks WHERE id=? AND user_id=?').bind(job.url, U).first();
+    const repo = task && await db.prepare('SELECT * FROM code_repos WHERE id=? AND user_id=?').bind(task.repo_id, U).first();
+    if (!task || !repo) { await db.prepare("UPDATE jobs SET status='error', finished=? WHERE id=?").bind(now(), job.id).run(); return null; }
+    if (task.cancel) { await db.prepare("UPDATE jobs SET status='error', finished=? WHERE id=?").bind(now(), job.id).run(); await db.prepare("UPDATE code_tasks SET status='cancelled', phase='cancelled', finished=? WHERE id=?").bind(now(), task.id).run(); return null; }
+    return { id: job.id, kind: 'code', task: publicCodeTask(task), repo: { id: repo.id, name: repo.name, path: repo.path } };
+  }
   if (job.kind === 'test') return { id: job.id, kind: 'test', engine: engineOk(job.url), prompt: job.prompt };
   if (job.kind === 'list') return { id: job.id, kind: 'list', what: job.url };
   if (job.kind === 'install') return { id: job.id, kind: 'install', engine: engineOk(job.url) };
@@ -1749,6 +1944,7 @@ async function jobPayload(env, db, U, job) {
     id: job.id, kind: job.kind, url: job.url, prompt: job.prompt, usageToday, warm: WARM.includes(+st.warm) ? +st.warm : 120, allowed: (st.allow || {})[bot.id] || [], memory: (st.memory || {})[bot.id] || [], skills: (st.skills || {})[bot.id] || [],
     nskills: (st.nskills || {})[bot.id] || null,
     routines: (await db.prepare('SELECT name,times,enabled FROM routines WHERE user_id=? AND conv IN (?,?)').bind(U, job.conv, bot.id).all()).results.map(r => ({ name: r.name, times: JSON.parse(r.times), enabled: !!r.enabled })),
+    routeTries: +job.tries || 0,
     canAsk: job.depth < MAX_ASK_DEPTH,
     conv: { id: conv.id, name: conv.name },
     shareBrowser: st.shareBrowser !== false,

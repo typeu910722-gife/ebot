@@ -19,6 +19,7 @@ import { dirname, join, extname, basename, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
+import { probeCodingHosts, listRecoverableStates, runCodingTask, selectProvider } from './coding-runtime.mjs';
 
 export const VERSION = '17.5';
 const PW_MCP = '@playwright/mcp@0.0.83';
@@ -600,8 +601,8 @@ async function chatRun(job) {
   if (port) { try { job.bot.tabs = await cdp(port, async send => (await pagesOf(send)).filter(p => !/^(about:blank|chrome:)/.test(p.url)).slice(0, 6).map(p => ({ title: p.title.slice(0, 80), url: p.url.slice(0, 200) }))); } catch { } }
   // live progress (at most every 4 s); if the user pressed 停止, the server says so and the run is stopped
   const ctl = {};
-  let lastSent = 0, pendingText = '', timerP = null;
-  const flush = () => { timerP = null; lastSent = Date.now(); api('runner/progress', { id: job.id, text: pendingText }).then(r => { if (r.stop) { log(`■ ${job.bot.name}：使用者按了停止`); ctl.kill?.(); } }).catch(() => { }); };
+  let lastSent = 0, pendingText = '', timerP = null, stoppedByUser = false;
+  const flush = () => { timerP = null; lastSent = Date.now(); api('runner/progress', { id: job.id, text: pendingText }).then(r => { if (r.stop) { stoppedByUser = true; log(`■ ${job.bot.name}：使用者按了停止`); ctl.kill?.(); } }).catch(() => { }); };
   const progress = t => { pendingText = t; if (timerP) return; const wait = Math.max(0, 4000 - (Date.now() - lastSent)); timerP = setTimeout(flush, wait); };
   progress('開始工作');
   const beat = setInterval(() => { if (!timerP) flush(); }, 15000);   // also notices 停止 for AIs that don't report progress
@@ -631,7 +632,7 @@ async function chatRun(job) {
     else { const shot = newestImage(dir, start); if (shot) await saveShot(readFileSync(shot.p), extname(shot.p).toLowerCase()); }
   } catch (e) { log('截圖儲存失敗：' + e.message); }
   const nsk = collectSkills(dir, job.nskills);
-  await api('runner/done', { id: job.id, ok: res.ok, text: res.text, page, tokens: res.tokens ?? null, files: res.ok ? newFiles(join(here, '輸出'), start) : [], browser: !!port, ...(nsk ? { nskills: nsk } : {}) });
+  await api('runner/done', { id: job.id, ok: res.ok, text: res.text, page, tokens: res.tokens ?? null, files: res.ok ? newFiles(join(here, '輸出'), start) : [], browser: !!port, stopped: stoppedByUser, ...(nsk ? { nskills: nsk } : {}) });
   log(`${res.ok ? '✓' : '✗'} ${job.bot.name}`);
   if (['claude', 'codex'].includes(job.bot.engine || 'claude')) lastUsage = 0;   // refresh how much is left
   try { cfg.onDone?.(job, res); } catch { }
@@ -1152,9 +1153,67 @@ async function reapBrowsers(all) {
 // ---------- main loop: long-poll, so work starts the moment it's sent ----------
 let active = 0, failures = 0, stopped = true, onFatal = null, polling = false, standby = false;
 const fileWork = new Set();
+function codeSummary(state) {
+  const { events, context, ...rest } = state || {};
+  rest.diff = String(rest.diff || '').slice(0, 20000);
+  rest.tests = (rest.tests || []).map(t => ({ ...t, stdout: String(t.stdout || '').slice(0, 2000), stderr: String(t.stderr || '').slice(0, 2000) }));
+  return rest;
+}
+async function codeJob(job) {
+  const ac = new AbortController();
+  const resumed = job.resumeState || null;
+  let sent = resumed?.events?.length || 0;
+  const workspacesRoot = join(workDir, 'code-workspaces');
+  const fb = Array.isArray(job.task.fb) ? job.task.fb : [];
+  const routeChain = [{ engine: job.task.engine, model: job.task.model || '' }, ...fb.map(s => {
+    const [engine, model] = String(s).split('|');
+    return { engine, model: model || '' };
+  })];
+  const providerFor = slot => selectProvider({ engine: slot.engine, model: slot.model, allowFixture: process.env.OCTA_CODE_ALLOW_FIXTURE === '1' });
+  const slot = routeChain[resumed?.routeIndex || 0] || routeChain[0];
+  const provider = await providerFor(slot);
+  const res = await runCodingTask({
+    id: job.task.id, title: job.task.title, prompt: job.task.prompt, criteria: job.task.criteria,
+    engine: slot.engine, model: slot.model, maxRepairs: job.task.maxRetries,
+    repoPath: job.repo.path, workspacesRoot, provider, routeChain, providerFor, signal: ac.signal, resume: resumed || undefined,
+    approval: job.task.approval || undefined,
+    isCancelled: async () => ac.signal.aborted,
+    persist: async state => {
+      const fresh = (state.events || []).slice(sent);
+      sent = (state.events || []).length;
+      const r = await api('runner/code/event', {
+        taskId: state.id, status: state.status, phase: state.phase, role: state.role,
+        workspaceId: state.workspaceId, branch: state.branch, baseRef: state.baseRef, headRef: state.headRef,
+        retries: state.repairs, summary: codeSummary(state),
+        events: fresh.map(e => ({ role: e.role, kind: e.kind, text: e.text, data: e.data || null }))
+      });
+      if (r.cancel) ac.abort();
+      return r;
+    }
+  });
+  const text = `${res.providerNote || res.providerId || ''} ${res.status}${res.reason ? ' ' + res.reason : ''}${res.error ? ' ' + res.error : ''}`.trim();
+  await api('runner/done', { id: job.id, ok: res.status === 'tested', text: text.slice(0, 2000) });
+  log(`${res.status === 'tested' ? '✓' : '✗'} 程式任務 ${job.task.title || job.task.id}：${res.status}`);
+}
+async function recoverCodeTasks() {
+  const root = join(workDir, 'code-workspaces');
+  for (const state of listRecoverableStates(root)) {
+    try {
+      const r = await api('runner/code/resume', { taskId: state.id });
+      if (r?.continue && r.job) runJob({ ...r.job, resumeState: state });
+    } catch (e) { log('程式任務恢復失敗：' + e.message); }
+  }
+}
+let lastCoding = 0, codingCache = null;
+async function codingProbe() {
+  if (codingCache && Date.now() - lastCoding < 60000) return codingCache;
+  lastCoding = Date.now();
+  try { codingCache = await probeCodingHosts({ timeoutMs: 400 }); } catch { codingCache = null; }
+  return codingCache;
+}
 function runJob(job) {
   active++;
-  (job.kind === 'open' ? openJob(job) : job.kind === 'test' ? testJob(job) : job.kind === 'list' ? listJob(job) : job.kind === 'install' ? installJob(job) : job.kind === 'export' ? exportJob(job) : job.kind === 'import' ? importJob(job) : chatJob(job))
+  (job.kind === 'code' ? codeJob(job) : job.kind === 'open' ? openJob(job) : job.kind === 'test' ? testJob(job) : job.kind === 'list' ? listJob(job) : job.kind === 'install' ? installJob(job) : job.kind === 'export' ? exportJob(job) : job.kind === 'import' ? importJob(job) : chatJob(job))
     .catch(e => { log('任務錯誤：' + e.message); return api('runner/done', { id: job.id, ok: false, text: '⚠ ' + e.message }).catch(() => { }); })
     .finally(() => { active--; kick(); });
 }
@@ -1173,7 +1232,7 @@ async function loop() {
       poll = new AbortController();
       const r = await api('runner/next', {
         wait: true, slots, engines: await engineReport(), usage: await usageReport(), models: await modelReport(),
-        version: VERSION, app: cfg.appVersion || undefined, store: storeDir()
+        version: VERSION, app: cfg.appVersion || undefined, store: storeDir(), coding: await codingProbe()
       }, 'POST', slots ? undefined : poll.signal).catch(e => { if (e.name === 'AbortError') return {}; throw e; });
       failures = 0;
       if ('job' in r && !!r.standby !== standby) { standby = !!r.standby; log(standby ? '⏸ 這台電腦目前是備用電腦，由主機執行機器人。可在「設定 → 電腦」改成主機。' : '▶ 這台電腦是主機，開始接工作。'); cfg.onStandby?.(standby); }
@@ -1205,6 +1264,7 @@ export function startRunner(opts) {
     spawnSync(WIN ? 'cmd' : 'npx', WIN ? ['/c', 'npx', '-y', PW_MCP, '--version'] : ['-y', PW_MCP, '--version'], { stdio: 'ignore', timeout: 180000 });
   }
   loop();
+  recoverCodeTasks().catch(e => log('程式任務恢復失敗：' + e.message));
   const reaper = setInterval(() => reapBrowsers(false).catch(() => { }), 5 * 60000);
   const watcher = setInterval(() => checkWatches().catch(() => { }), 60000);
   watchesAt = 0; lastLook.clear();

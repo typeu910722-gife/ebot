@@ -100,7 +100,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   progress TEXT,                 -- what the bot is doing right now (shown while it works)
   tokens INTEGER,                -- tokens the run used (when the AI reports it)
   pc TEXT,                       -- only this computer may take it (handing logins over)
-  eng TEXT                       -- "engine|model" a backup AI runs this job with
+  eng TEXT,                      -- "engine|model" a backup AI runs this job with
+  tries INTEGER NOT NULL DEFAULT 0 -- retries already used on that same model
 );
 CREATE INDEX IF NOT EXISTS job_user ON jobs(user_id, status, id);
 CREATE TABLE IF NOT EXISTS shots (   -- latest browser screenshot per bot
@@ -136,3 +137,51 @@ CREATE TABLE IF NOT EXISTS logins (  -- failed sign-in / reset attempts, for rat
   fails INTEGER NOT NULL,
   until INTEGER NOT NULL
 );
+-- Coding tasks. The public API only stores state; the host runner does the work in an isolated git worktree.
+CREATE TABLE IF NOT EXISTS code_repos (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  path TEXT NOT NULL,
+  validated INTEGER NOT NULL DEFAULT 0,
+  created INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS code_tasks (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  repo_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  prompt TEXT NOT NULL,
+  criteria TEXT NOT NULL DEFAULT '',
+  engine TEXT NOT NULL,
+  model TEXT,
+  fb TEXT,
+  status TEXT NOT NULL DEFAULT 'queued',
+  phase TEXT NOT NULL DEFAULT 'queued',
+  role TEXT,
+  workspace_id TEXT,
+  branch TEXT,
+  base_ref TEXT,
+  head_ref TEXT,
+  retries INTEGER NOT NULL DEFAULT 0,
+  max_retries INTEGER NOT NULL DEFAULT 3,
+  job_id INTEGER,
+  summary TEXT,
+  approval TEXT,
+  cancel INTEGER NOT NULL DEFAULT 0,
+  created INTEGER NOT NULL,
+  updated INTEGER NOT NULL,
+  finished INTEGER
+);
+CREATE INDEX IF NOT EXISTS code_task_user ON code_tasks(user_id, created);
+CREATE TABLE IF NOT EXISTS code_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  task_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  ts INTEGER NOT NULL,
+  role TEXT,
+  kind TEXT NOT NULL,
+  text TEXT,
+  data TEXT
+);
+CREATE INDEX IF NOT EXISTS code_event_task ON code_events(task_id, id);
