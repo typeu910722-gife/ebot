@@ -1,5 +1,21 @@
 [
  {
+  "v": "3.0.12",
+  "date": "2026-10-24",
+  "notes": [
+   "手機操作改成大家習慣的樣子：視窗從底部滑上來、往下拉就關；選單變成底部的選項列，有自己的取消",
+   "長按機器人或訊息就有選單；訊息可以「傳給別的機器人」，電腦上按右鍵也一樣",
+   "手機的返回鍵、從左邊滑回來，都是回上一層，不會跳出 OCTA；對話裡會顯示今天、昨天的日期分隔",
+   "按鈕和列表加大到好按的尺寸；手機的送出鍵改成圓形 ↑，換行用鍵盤的 return"
+  ],
+  "notes_en": [
+   "Phone sheets slide up from the bottom and pull down to close; menus are bottom action sheets with their own Cancel",
+   "Long-press a bot or a message for its menu, including “send to another bot”; right-click does the same on a computer",
+   "Back and the left-edge swipe go up one level instead of leaving OCTA; chats show today / yesterday date separators",
+   "Bigger tap targets; the phone send key is the round ↑ and return makes a new line"
+  ]
+ },
+ {
   "v": "3.0.11",
   "date": "2026-10-24",
   "notes": [

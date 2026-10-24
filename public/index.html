@@ -476,6 +476,52 @@ details.adv[open]{display:grid;gap:8px}
   .opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .opts button{font-size:13px;padding:7px 12px;border-radius:999px;text-align:left}
   .opts button:hover{border-color:var(--gold);color:var(--gold2)}
+/* ---------- the way a phone expects things to behave (iOS-style) ---------- */
+.day{align-self:center;font-size:11px;color:var(--faint);font-family:var(--tc);letter-spacing:.1em;padding:2px 10px;border-radius:99px;background:var(--panel);margin-top:4px}
+.send .sa2{display:none}
+form.in.empty .send{opacity:.45}
+.item,.bub,.iw{-webkit-touch-callout:none}
+.item{-webkit-user-select:none;user-select:none}
+.menu .mcancel{display:none}
+.mveil{position:fixed;inset:0;z-index:29;background:var(--veil);animation:fadein .16s ease}
+@keyframes sheetup{from{transform:translateY(60px);opacity:.5}}
+@media (max-width:760px){
+  /* sheets rise from the bottom and can be pulled back down */
+  .veil{place-items:end center;padding:0}
+  .veil .sheet{width:100%;max-width:100%;border-radius:22px 22px 0 0;border-bottom:0;max-height:min(92vh,calc(100% - 24px));padding:10px 18px calc(18px + env(safe-area-inset-bottom,0px));animation:sheetup .26s cubic-bezier(.2,.8,.2,1);transition:transform .2s ease}
+  .veil .sheet::before{content:"";display:block;width:38px;height:5px;border-radius:99px;background:var(--faint);opacity:.6;margin:-2px auto -8px;flex:none}
+  .veil .lbox{align-self:center}
+  html.kb .sheet{max-height:min(880px,calc(var(--vvh) - 24px))}
+  /* menus are action sheets with a separate 取消 */
+  .menu.asheet{left:10px;right:10px;top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));min-width:0;border-radius:18px;padding:8px;max-height:72vh;overflow:auto;animation:sheetup .22s cubic-bezier(.2,.8,.2,1)}
+  .menu.asheet button{padding:14px 12px;font-size:16px;border-radius:12px}
+  .menu.asheet .lab{font-size:12px}
+  .menu .mcancel{display:flex;justify-content:center;margin-top:6px;font-weight:500;color:var(--gold2);background:var(--panel2)}
+  /* the header keeps the name readable: back, name, browser, and ⋯ (task settings live under ⋯) */
+  .ph #railToggle,.ph #modelBtn,.ph #edit{display:none}
+  .ph{flex-wrap:nowrap}
+  .ph b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* send is the round arrow everyone knows; return makes a new line */
+  .send{width:46px;padding:0;border-radius:50%;font-size:22px;line-height:1;flex:none}
+  .send .sl{display:none}.send .sa2{display:inline}
+}
+@media (hover:none){
+  .item{padding:12px 8px;min-height:60px}
+  .more{width:36px;height:36px;font-size:18px}
+  .ghost{padding:9px 14px;font-size:13px}
+  .hb{min-height:38px}
+  .gear{padding:6px 12px;font-size:13px}
+  .new button{padding:12px 0;font-size:14px}
+  .back{font-size:30px;min-width:40px}
+  .cp{opacity:.8;font-size:12px;padding:4px 8px}
+  .mv{width:34px;height:32px}
+  .rrow{padding:13px 12px}
+  .acts .no,.acts .del,.btn{padding:12px 18px}
+  .sw{width:50px;height:30px}.sw::after{width:24px;height:24px}.sw.on::after{transform:translateX(20px)}
+  .bub{-webkit-user-select:none;user-select:none}
+  button:active:not(:disabled){opacity:.7}
+  .item:active{background:var(--panel2)}
+}
 </style>
 </head>
 <body>
@@ -578,7 +624,7 @@ details.adv[open]{display:grid;gap:8px}
     <div class="quick" id="quick"></div>
     <div class="atpop" id="atpop" hidden></div>
     <div class="att" id="att"></div>
-    <form class="in" id="f" hidden><button type="button" class="clip" id="clip" aria-label="附加檔案">＋</button><input type="file" id="fileIn" multiple accept="image/*,.pdf,.txt,.csv,.md,.json,.xlsx,.docx" hidden><textarea id="msg" rows="1" placeholder="輸入指示…"></textarea><button type="button" class="clip" id="mic" aria-label="語音輸入" hidden>🎙</button><button class="send">送出</button></form>
+    <form class="in" id="f" hidden><button type="button" class="clip" id="clip" aria-label="附加檔案">＋</button><input type="file" id="fileIn" multiple accept="image/*,.pdf,.txt,.csv,.md,.json,.xlsx,.docx" hidden><textarea id="msg" rows="1" placeholder="輸入指示…"></textarea><button type="button" class="clip" id="mic" aria-label="語音輸入" hidden>🎙</button><button class="send" aria-label="送出"><span class="sl">送出</span><span class="sa2" aria-hidden="true">↑</span></button></form>
     <div class="note" id="note" hidden></div>
   </section>
 </div>
@@ -735,6 +781,9 @@ function markSeen(id){const ids=[...convMsgs(id).filter(m=>!m.tmp).map(m=>m.id),
   const top=Math.max(...ids);if((SEEN[id]||0)>=top)return;SEEN[id]=top;try{localStorage.setItem('octa_seen',JSON.stringify(SEEN))}catch(e){}}
 const setHTML=(el,h)=>{if(el._h!==h){el._h=h;el.innerHTML=h;return true}return false};
 const hm=ts=>ts?new Date(ts).toLocaleTimeString(I18N.lang,{hour:'2-digit',minute:'2-digit'}):'';
+function dayLabel(ts){const d=new Date(ts),n=new Date(),same=(a,b)=>a.toDateString()===b.toDateString();
+  if(same(d,n))return I18N.t('今天');const y=new Date(n);y.setDate(n.getDate()-1);if(same(d,y))return I18N.t('昨天');
+  return d.toLocaleDateString(I18N.lang,{month:'short',day:'numeric',weekday:'short',...(d.getFullYear()!==n.getFullYear()?{year:'numeric'}:{})})}
 const busyIn=id=>S.busy.filter(b=>b.conv===id);
 const fmtTok=n=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1)+'M':n>=1e3?(n/1e3).toFixed(n>=1e4?0:1)+'K':String(n);
 const elapsed=t=>{const s=Math.max(0,Math.round((Date.now()-t)/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
@@ -882,11 +931,14 @@ function render(scroll){
   const switched=box._conv!==cur;box._conv=cur;
   const mc=MSG[cur];
   let mh=!mc?.loaded?'<div class="sys fade">載入中…</div>':mc.more?'<button type="button" class="ghost older" id="older">載入更早的訊息</button>':'';
-  mh+=convMsgs(cur).map(m=>{
+  let prevDay='';
+  const row=m=>{
     if(m.by==='sys')return `<div class="sys">${esc(m.text)}<span class="ts">${hm(m.ts)}</span></div>`;
     if(m.by==='me')return `<div class="m me${m.tmp?' tmp':''}" data-mid="${m.id}"><div class="bx"><div class="bub"${m.tmp?'':' draggable="true" data-dragmsg="1" title="拖到別的機器人就能複製"'} data-u>${fmt(m.text)}${filesHtml(m.files)}</div><div class="meta">${m.tmp?'傳送中…':hm(m.ts)}</div></div></div>`;
     const long=m.text.length>1400||m.text.split('\n').length>30,open=OPENED.has(m.id);
-    return `<div class="m" data-mid="${m.id}"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" draggable="true" data-dragmsg="1" title="拖到別的機器人就能複製" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}${optsHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
+    return `<div class="m" data-mid="${m.id}"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" draggable="true" data-dragmsg="1" title="拖到別的機器人就能複製" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}${optsHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`};
+  // a date line whenever the day changes, like a phone's message app
+  mh+=convMsgs(cur).map(m=>{const k=m.ts?new Date(m.ts).toDateString():'';let sep='';if(k&&k!==prevDay){prevDay=k;sep=`<div class="day">${esc(dayLabel(m.ts))}</div>`}return sep+row(m)}).join('');
   const bz=busyIn(cur);
   if(bz.length){const run=bz.find(b=>b.status==='running');
     mh+=`<div class="work"><span class="fade">${run&&run.kind==='chat'&&run.started?`<span class="el" data-since="${run.started}">${elapsed(run.started)}</span> `:''}${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器正在顯示…':esc(nameOf(run.bot_id))+' '+(run.kind==='code'?'程式任務':run.progress&&/搜尋/.test(run.progress)?'搜尋':run.progress&&/測試/.test(run.progress)?'測試':run.progress&&/修復|修改|寫入/.test(run.progress)?'修改':'處理')+'中…'+(run.progress?`<span class="prog" data-u>${esc(run.progress)}</span>`:'')+(run.eng&&run.eng.split('|')[0]!==(c.engine||'claude')?` · 備援 ${esc((ENG[run.eng.split('|')[0]]||{n:run.eng.split('|')[0]}).n)}`:'')):S.runnerOnline?'排隊中…':'等待主機電腦上線…'}</span><button id="stop">停止</button></div>`}
@@ -906,7 +958,7 @@ $('list').onclick=e=>{
 let draggingId='',draggingMsg=null,dragDepth=0;
 function clearDrop(){$('list').querySelectorAll('.dragging,.over').forEach(n=>{n.classList.remove('dragging','over');n.removeAttribute('data-hint')})}
 document.addEventListener('dragstart',e=>{
-  if(e.target.closest('.more')){e.preventDefault();return}
+  if(e.target.closest('.more')||lpHit){e.preventDefault();return}
   const row=e.target.closest('[data-drag]');
   if(row){draggingId=row.dataset.drag;draggingMsg=null;e.dataTransfer.setData('application/x-octa-conv',row.dataset.drag);e.dataTransfer.setData('text/plain','@'+row.dataset.dragname);e.dataTransfer.effectAllowed='copyMove';row.classList.add('dragging');return}
   const bub=e.target.closest('[data-dragmsg]');
@@ -1008,13 +1060,14 @@ async function sendFilesTo(convId,list){
   if(MSG[convId]?.loaded)await loadMsgs(convId,'new');
   if(cur===convId)render(true)}
 function openConv(id){saveDraft();cur=id;try{localStorage.setItem('ebot_cur',cur)}catch(e){}
+  if(!$('app').classList.contains('chat'))navPush('chat');
   pending=[];renderAtt();loadDraft();render(true);$('app').classList.add('chat');
   loadMsgs(id,MSG[id]?.loaded?'new':'first').then(()=>{if(cur===id)render(true)}).catch(()=>{});
   if(matchMedia('(min-width:761px)').matches)$('msg').focus()}
 const draftKey=()=>'octa_draft_'+cur;
 function saveDraft(){if(!cur)return;try{const v=$('msg').value;v?localStorage.setItem(draftKey(),v):localStorage.removeItem(draftKey())}catch(e){}}
 function loadDraft(){let v='';try{v=localStorage.getItem(draftKey())||''}catch(e){}$('msg').value=v;grow()}
-function grow(){const t=$('msg');if(!t.offsetParent){t.style.height='';return}t.style.height='auto';t.style.height=Math.min(Math.max(t.scrollHeight,46),140)+'px'}   // hidden (phone list view): measure later
+function grow(){const t=$('msg');$('f').classList.toggle('empty',!t.value.trim()&&!pending.length);if(!t.offsetParent){t.style.height='';return}t.style.height='auto';t.style.height=Math.min(Math.max(t.scrollHeight,46),140)+'px'}   // hidden (phone list view): measure later
 $('msg').addEventListener('input',()=>{grow();clearTimeout(grow.t);grow.t=setTimeout(saveDraft,400)});
 $('q').addEventListener('input',()=>render(false));
 $('q').addEventListener('keydown',e=>{if(e.key==='Enter'){const f=$('list').querySelector('.item');if(f){openConv(f.dataset.id);$('q').value='';render(false)}}if(e.key==='Escape'){$('q').value='';render(false);$('q').blur()}});
@@ -1029,7 +1082,26 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cur)render(false)});
 function toast(t){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.className='toast';document.body.appendChild(el)}
   el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),1800)}
-$('back').onclick=()=>{saveDraft();$('app').classList.remove('chat')};
+/* phone: Back (button, edge swipe, browser gesture) closes what is on top instead of leaving OCTA */
+const NAV=[],navQueue=[];let navSkip=0;
+const phoneUI=()=>matchMedia('(max-width:760px)').matches;
+// history.back() lands later than the code that follows it; pushes made meanwhile wait for the popstate so the stack stays in step
+function navPush(k){if(!phoneUI())return;if(navSkip>0){navQueue.push(k);return}NAV.push(k);try{history.pushState({octa:NAV.length},'')}catch(e){}}
+function navPop(k){const q=navQueue.lastIndexOf(k);if(q>=0){navQueue.splice(q,1);return}
+  if(NAV.length&&NAV[NAV.length-1]===k){NAV.pop();navSkip++;try{history.back()}catch(e){navSkip--}}}
+window.addEventListener('popstate',()=>{if(navSkip>0){navSkip--;if(!navSkip)while(navQueue.length)navPush(navQueue.shift());return}const k=NAV.pop();if(!k)return;
+  if(k==='menu')closeMenu(true);else if(k==='sheet'){if(!$('veil').hidden)closeSheet()}else if(k==='chat'){saveDraft();$('app').classList.remove('chat')}});
+new MutationObserver(()=>{if(!$('veil').hidden){if(NAV[NAV.length-1]!=='sheet')navPush('sheet')}else navPop('sheet')}).observe($('veil'),{attributes:true,attributeFilter:['hidden']});
+$('back').onclick=()=>{saveDraft();$('app').classList.remove('chat');navPop('chat')};
+// swipe in from the left edge to go back to the list
+(function(){let sx=0,sy=0,on=false;
+document.addEventListener('touchstart',e=>{const t=e.touches[0];on=phoneUI()&&t.clientX<28&&$('app').classList.contains('chat')&&$('veil').hidden&&!document.querySelector('.menu');sx=t.clientX;sy=t.clientY},{passive:true});
+document.addEventListener('touchend',e=>{if(!on)return;on=false;const t=e.changedTouches[0];if(t.clientX-sx>70&&Math.abs(t.clientY-sy)<60)$('back').click()},{passive:true})})();
+// pull a sheet down to close it
+(function(){let y0=0,sh=null,dy=0;
+$('veil').addEventListener('touchstart',e=>{sh=null;if(!phoneUI())return;const s=e.target.closest('.sheet');if(!s||s.scrollTop>0||e.target.closest('textarea,select'))return;sh=s;y0=e.touches[0].clientY;dy=0},{passive:true});
+$('veil').addEventListener('touchmove',e=>{if(!sh)return;dy=e.touches[0].clientY-y0;if(dy<=0||sh.scrollTop>0){sh.style.transform='';return}e.preventDefault();sh.style.transition='none';sh.style.transform=`translateY(${dy}px)`},{passive:false});
+$('veil').addEventListener('touchend',()=>{if(!sh)return;const s=sh;sh=null;s.style.transition='';if(dy>110)closeSheet();else s.style.transform=''})})();
 $('railToggle').onclick=()=>{
   if(innerWidth<=760){$('app').classList.remove('chat');return}
   $('app').classList.toggle('rail-collapsed');
@@ -1092,9 +1164,11 @@ $('msg').addEventListener('keydown',e=>{
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();atSel=(atSel+(e.key==='ArrowDown'?1:-1)+a.list.length)%a.list.length;atRender();return}
     if((e.key==='Enter'||e.key==='Tab')&&!e.isComposing){e.preventDefault();a.slash?runSlash(a.list[atSel]):atPick(a.list[atSel].name);return}
     if(e.key==='Escape'){$('atpop').hidden=true;return}}}
-  if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('f').requestSubmit()}});
+  // a phone keyboard's return makes a new line; the ↑ button sends (Enter still sends on a computer)
+  if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&!COARSE){e.preventDefault();$('f').requestSubmit()}});
+const COARSE=matchMedia('(hover:none) and (pointer:coarse)').matches;
 let pending=[];
-function renderAtt(){$('att').innerHTML=pending.map((f,i)=>`<span class="chip"><span>${f.up?'⏳ ':''}${esc(f.name)}</span><button type="button" data-rm="${i}" aria-label="移除">✕</button></span>`).join('')}
+function renderAtt(){$('att').innerHTML=pending.map((f,i)=>`<span class="chip"><span>${f.up?'⏳ ':''}${esc(f.name)}</span><button type="button" data-rm="${i}" aria-label="移除">✕</button></span>`).join('');$('f').classList.toggle('empty',!$('msg').value.trim()&&!pending.length)}
 $('att').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){pending.splice(+b.dataset.rm,1);renderAtt()}};
 $('clip').onclick=()=>$('fileIn').click();
 /* voice input (browsers that support speech recognition, e.g. Chrome on phones and computers) */
@@ -1291,14 +1365,45 @@ function shotSheet(ids){
   $('veil').querySelectorAll('.shot').forEach(im=>im.onclick=()=>{const id=im.id.slice(4);closeSheet();openBrowser(id)});
 }
 /* ---------- menus ---------- */
-function closeMenu(){document.querySelectorAll('.menu').forEach(m=>m.remove())}
-document.addEventListener('click',e=>{if(!e.target.closest('.menu'))closeMenu()});
+function closeMenu(fromHistory){const had=document.querySelector('.menu.asheet');document.querySelectorAll('.menu,.mveil').forEach(m=>m.remove());if(had&&!fromHistory)navPop('menu')}
+document.addEventListener('click',e=>{if(lpHit)return;if(!e.target.closest('.menu'))closeMenu()});   // the lift that ends a long press is not a tap outside
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
-function popMenu(anchor,html,handlers){closeMenu();const m=document.createElement('div');m.className='menu';m.innerHTML=html;document.body.appendChild(m);
-  const r=anchor.getBoundingClientRect(),w=m.offsetWidth,hh=m.offsetHeight;
-  m.style.left=Math.max(8,Math.min(r.right-w,innerWidth-w-8))+'px';m.style.top=(r.bottom+hh+8>innerHeight?Math.max(8,r.top-hh-4):r.bottom+4)+'px';
-  m.onclick=e=>{const b=e.target.closest('button[data-a]');if(!b)return;e.stopPropagation();closeMenu();handlers[b.dataset.a]?.(b.dataset.v)};
-  m.querySelector('button')?.focus()}
+// on a phone the menu is an action sheet at the bottom with its own 取消; on a computer it pops beside what you clicked
+function popMenu(anchor,html,handlers){closeMenu();const m=document.createElement('div');m.className='menu';m.innerHTML=html;
+  const phone=phoneUI();
+  if(phone){const v=document.createElement('div');v.className='mveil';document.body.appendChild(v);m.classList.add('asheet');m.insertAdjacentHTML('beforeend','<button type="button" class="mcancel">取消</button>')}
+  document.body.appendChild(m);
+  if(phone)navPush('menu');
+  else{const r=anchor.getBoundingClientRect(),w=m.offsetWidth,hh=m.offsetHeight;
+    m.style.left=Math.max(8,Math.min(r.right-w,innerWidth-w-8))+'px';m.style.top=(r.bottom+hh+8>innerHeight?Math.max(8,r.top-hh-4):r.bottom+4)+'px'}
+  m.onclick=e=>{if(e.target.closest('.mcancel')){e.stopPropagation();closeMenu();return}const b=e.target.closest('button[data-a]');if(!b)return;e.stopPropagation();closeMenu();handlers[b.dataset.a]?.(b.dataset.v)};
+  if(!phone)m.querySelector('button')?.focus()}
+const pointAnchor=(x,y)=>({getBoundingClientRect:()=>({left:x,right:x+230,top:y,bottom:y,width:230,height:0})});   // a right-click menu opens at the pointer
+/* hold a row or a message to get its menu (phone); right-click does the same on a computer */
+let lpHit=false;
+function holdOn(root,find,open){
+  root.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'||e.button!==0)return;const el=find(e.target);if(!el)return;const x=e.clientX,y=e.clientY;
+    let t=setTimeout(()=>{t=null;lpHit=true;try{navigator.vibrate?.(8)}catch(x){}open(el,null)},450);
+    const stop=()=>{clearTimeout(t);root.removeEventListener('pointermove',mv);root.removeEventListener('pointerup',stop);root.removeEventListener('pointercancel',stop);setTimeout(()=>lpHit=false,350)};
+    const mv=ev=>{if(Math.hypot(ev.clientX-x,ev.clientY-y)>8)stop()};
+    root.addEventListener('pointermove',mv);root.addEventListener('pointerup',stop);root.addEventListener('pointercancel',stop)});
+  root.addEventListener('contextmenu',e=>{const el=find(e.target);if(!el)return;e.preventDefault();if(lpHit||document.querySelector('.menu'))return;open(el,e)});
+  root.addEventListener('click',e=>{if(lpHit){e.stopPropagation();e.preventDefault()}},true)}
+holdOn($('list'),t=>t.closest('.iw[data-drag]'),(row,e)=>itemMenu(e?pointAnchor(e.clientX,e.clientY):row.querySelector('.more')||row,row.dataset.drag));
+holdOn($('msgs'),t=>t.closest('[data-dragmsg]'),(bub,e)=>{const m=convMsgs(cur).find(x=>String(x.id)===String(bub.closest('[data-mid]')?.dataset.mid));if(m)msgMenu(e?pointAnchor(e.clientX,e.clientY):bub,m)});
+function msgMenu(anchor,m){if(!m||m.tmp)return;
+  popMenu(anchor,`<button data-a="cp"><span class="ck">⧉</span>複製文字</button><button data-a="to"><span class="ck">➦</span>傳給別的機器人…</button>${m.by==='me'?'<button data-a="again"><span class="ck">↻</span>再傳一次</button>':''}`,
+   {cp:()=>navigator.clipboard?.writeText(m.text||'').then(()=>toast(I18N.t('已複製'))).catch(()=>{}),
+    to:()=>pickTarget(m),
+    again:()=>sendMsg(m.text==='（附件）'?'':m.text,(m.files||[]).map(f=>f.id),m.files||[])})}
+// the phone has no drag: pick who gets a copy, then the same 確定要複製？ as a drag
+function pickTarget(m){const list=[...S.groups,...S.bots].filter(c=>c.id!==cur);
+  if(!list.length){toast('還沒有別的機器人');return}
+  const msg={id:m.id,conv:cur,text:m.text||'',files:(m.files||[]).map(f=>({id:f.id,name:f.name,mime:f.mime}))};
+  $('veil').innerHTML=`<div class="sheet"><h2>傳給誰？</h2><p>會先問你確定要複製，那邊收到後就開始處理。</p><div class="rt">${list.map(c=>`<button type="button" class="rrow" data-to="${esc(c.id)}"><span class="av${isG(c.id)?' grp':''}" data-u>${isG(c.id)?c.members.length:avOf(c.id)}</span><span class="t" data-u><b>${esc(c.name)}</b><small>${esc(isG(c.id)?I18N.t('群組'):(c.task||'').replace(/\s+/g,' ').slice(0,40))}</small></span><span class="sa">›</span></button>`).join('')}</div>
+    <div class="acts"><button type="button" class="no" id="sx">取消</button></div></div>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;
+  $('veil').querySelectorAll('[data-to]').forEach(b=>b.onclick=()=>askCopy(b.dataset.to,msg))}
 function itemMenu(anchor,id){const c=conv(id);if(!c)return;
   popMenu(anchor,`<div class="lab">移至</div>${S.folders.map(f=>`<button data-a="mv" data-v="${f.id}"><span class="ck">${c.folder===f.id?'✓':''}</span>${esc(f.name)}</button>`).join('')}
     <button data-a="mv" data-v=""><span class="ck">${!c.folder?'✓':''}</span>未分區</button><hr>
