@@ -525,7 +525,7 @@ form.in.empty .send{opacity:.45}
 /* ---------- appearance: the look fades over, and text can be sized for the whole interface ---------- */
 html.theming,html.theming *,html.theming *::before,html.theming *::after{transition:background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease,fill .45s ease!important}
 html{--fz:1}
-html[data-fs="s"]{--fz:.93}html[data-fs="l"]{--fz:1.12}html[data-fs="xl"]{--fz:1.25}
+html[data-fs="s"]{--fz:.93}html[data-fs="l"]{--fz:1.12}html[data-fs="xl"]{--fz:2}
 html[data-fs] body{font-size:calc(15px * var(--fz))}
 html[data-fs] .bub{font-size:calc(15px * var(--fz))}
 html[data-fs] .item b,html[data-fs] .st b,html[data-fs] .theme-pick b,html[data-fs] .rrow,html[data-fs] .menu button,html[data-fs] .toggle,html[data-fs] .snav button{font-size:calc(14px * var(--fz))}
@@ -540,13 +540,17 @@ html[data-fs] .sec{font-size:calc(12px * var(--fz))}
 html[data-fs] .bub.md table{font-size:calc(13px * var(--fz))}
 html[data-fs] .bub.md .h1,html[data-fs] .bub.md .h2{font-size:calc(16px * var(--fz))}
 html[data-fs] .acts .no,html[data-fs] .acts .del,html[data-fs] .btn,html[data-fs] .ghost{font-size:calc(14px * var(--fz))}
+@media (min-width:761px){
+  html[data-fs="xl"] .app{grid-template-columns:minmax(400px,460px) minmax(0,1fr)}
+  html[data-fs="xl"] .sgrid{grid-template-columns:300px minmax(0,1fr)}
+}
 /* text-size picker: one row of pills, the chosen one in gold */
 .seg{display:flex;gap:6px;flex-wrap:wrap}
 .seg button{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 14px;min-width:64px;display:grid;justify-items:center;gap:2px;transition:border-color .15s,background .15s}
 .seg button b{font-weight:500;line-height:1}
 .seg button small{color:var(--mute);font-size:11px}
 .seg button.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold);background:var(--panel2)}
-.seg .fs-s b{font-size:13px}.seg .fs-m b{font-size:15px}.seg .fs-l b{font-size:17px}.seg .fs-xl b{font-size:19px}
+.seg .fs-s b{font-size:14px}.seg .fs-m b{font-size:15px}.seg .fs-l b{font-size:17px}.seg .fs-xl b{font-size:30px}
 .look{display:grid;gap:18px}
 .look h3{margin:0}
 .look .toggle{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card)}

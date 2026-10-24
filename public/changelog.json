@@ -1,5 +1,15 @@
 [
  {
+  "v": "3.0.16",
+  "date": "2026-10-24",
+  "notes": [
+   "「特大」字體改成標準的兩倍"
+  ],
+  "notes_en": [
+   "Extra-large text is now twice the standard size"
+  ]
+ },
+ {
   "v": "3.0.15",
   "date": "2026-10-24",
   "notes": [

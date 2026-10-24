@@ -22,7 +22,7 @@ test('text size applies to the whole interface and is remembered on the device',
   assert.match(page, /localStorage\.setItem\('octa_fs',k\)/);
   // applied before first paint, like the theme
   assert.match(page, /var f=localStorage\.getItem\('octa_fs'\);if\(f&&f!=='m'\)document\.documentElement\.setAttribute\('data-fs',f\)/);
-  assert.match(page, /html\[data-fs="s"\]\{--fz:\.93\}html\[data-fs="l"\]\{--fz:1\.12\}html\[data-fs="xl"\]\{--fz:1\.25\}/);
+  assert.match(page, /html\[data-fs="s"\]\{--fz:\.93\}html\[data-fs="l"\]\{--fz:1\.12\}html\[data-fs="xl"\]\{--fz:2\}/);
   assert.match(page, /html\[data-fs\] body\{font-size:calc\(15px \* var\(--fz\)\)\}/);
   assert.match(page, /html\[data-fs\] \.bub\{font-size:calc\(15px \* var\(--fz\)\)\}/);
   assert.match(page, /data-set-fs="\$\{k\}"/);
@@ -67,8 +67,8 @@ test('attachments show as thumbnails or file cards before and after sending', ()
 
 test('the desktop version matches the changelog, and the appearance release is still recorded', () => {
   assert.equal(pkg.version, log[0].v);
-  assert.equal(log[0].v, '3.0.15');
-  assert.ok(log[0].notes.some(n => n.includes('名字標籤')));
+  assert.equal(log[0].v, '3.0.16');
+  assert.ok(log[0].notes.some(n => n.includes('兩倍')));
   const look = log.find(x => x.v === '3.0.13');
   assert.ok(look.notes.some(n => n.includes('字體大小')));
   assert.ok(look.notes.some(n => n.includes('縮圖')));
