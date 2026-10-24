@@ -51,6 +51,10 @@ test('an attached photo is read in full, including numbers beside the keyboard',
   assert.match(text, /不要只抄最上面/);
   assert.match(text, /不能說「下面的都被擋住」/);
   assert.match(text, /不要說使用者沒有按/);
+  assert.match(text, /整段照抄/);
+  assert.match(text, /不要改寫、不要漏半句/);
+  assert.match(text, /不要把「自己點登入」說成「讓使用者登入」/);
+  assert.match(text, /也不要把寫了的條件說成沒有/);
 });
 
 test('a saved screenshot is the picture the bot must read', () => {

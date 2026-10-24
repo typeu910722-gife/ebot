@@ -1,5 +1,15 @@
 [
  {
+  "v": "3.0.8",
+  "date": "2026-10-24",
+  "notes": [
+   "圖上的指示要整段照抄：條件不能漏，也不能把「自己點」改成「叫你做」"
+  ],
+  "notes_en": [
+   "Instructions in a photo are copied in full: conditions stay, and “click it yourself” is not rewritten as “you log in”"
+  ]
+ },
+ {
   "v": "3.0.7",
   "date": "2026-10-24",
   "notes": [

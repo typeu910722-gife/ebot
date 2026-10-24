@@ -21,7 +21,7 @@ import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { probeCodingHosts, listRecoverableStates, runCodingTask, selectProvider } from './coding-runtime.mjs';
 
-export const VERSION = '17.10';
+export const VERSION = '17.11';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -290,6 +290,7 @@ function seeNow(job) {
   const pics = picturePaths(job);
   const lines = ['看畫面要用眼睛。browser_snapshot 只有文字大綱，遊戲、畫布、分數、電池、機架常常是空的。回答畫面上的數字或「你看到什麼」之前，先把圖整張讀完。圖裡沒有的數字寫「這次畫面沒有這個數字」。讀不到圖就老實說，不要編。'];
   lines.push('時間、金額、房號、按鈕上的字，畫面上看得到的全部照抄，不要只抄最上面幾筆。鍵盤或邊緣切掉的，只指出被切掉的那一列；還看得到的數字要寫出來，不能說「下面的都被擋住」。按鈕還在畫面上，只代表這一頁開著，不要說使用者沒有按。');
+  lines.push('轉述畫面時，要做什麼、步驟、條件整段照抄，這條比講得口語優先。不要改寫、不要漏半句。誰做、要不要略過，都照畫面的字；不要把「自己點登入」說成「讓使用者登入」，也不要把寫了的條件說成沒有。');
   if (pics.length) lines.push(`這一輪要讀的圖，用 Read 讀它：${pics.join('、')}`);
   else lines.push('這輪還沒有現成的圖。會開瀏覽器的話，先 browser_take_screenshot（jpeg）再回答畫面內容。使用者傳了圖片就讀那個附件，不要用猜的。');
   return lines;
