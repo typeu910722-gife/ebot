@@ -5,7 +5,7 @@
 <script>
 (function(){try{var q=new URLSearchParams(location.search).get('theme');var s=localStorage.getItem('octa_theme');var t=(q==='light'||q==='dark')?q:(s||'dark');if(t==='light')document.documentElement.setAttribute('data-theme','light');if(window.octaDesktop)document.documentElement.classList.add('desk');}catch(e){}})();
 </script>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#12110e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -99,6 +99,11 @@ a.btn{text-decoration:none}
 /* ---------- app ---------- */
 .app{height:100%;display:grid;grid-template-columns:minmax(280px,320px) minmax(0,1fr);max-width:1320px;margin:0 auto}
 html.desk .app{max-width:none}
+html.kb{height:100%;overflow:hidden;padding-top:0;padding-bottom:0}
+html.kb body{height:var(--vvh);margin-top:var(--vvt,0px);overflow:hidden;padding-top:0;padding-bottom:0}
+html.kb .app{height:100%}
+html.kb .sheet{max-height:min(880px,calc(var(--vvh) - 40px));padding-bottom:78px;scroll-padding-bottom:78px}
+html.kb .sheet:has(.rform) .rform .acts,html.kb .sheet:not(:has(.rform))>.acts{position:fixed;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));bottom:var(--kb);z-index:3;margin:0;padding:8px 12px 10px;box-shadow:0 -10px 18px var(--shadow)}
 .app.rail-collapsed{grid-template-columns:minmax(0,1fr)}
 .app.rail-collapsed .rail{display:none}
 @media (max-width:760px){.app.rail-collapsed{grid-template-columns:minmax(0,1fr)}.app.rail-collapsed .rail{display:flex}}
@@ -197,7 +202,7 @@ form.in .send,form.in .clip{height:46px}
 .offb,.mention,.quick,.att{flex:none}
 .blank{flex:1;display:grid;place-items:center;color:var(--faint);font-family:var(--tc);padding:24px;text-align:center;line-height:1.8}
 /* ---------- sheet ---------- */
-.veil{position:fixed;inset:0;background:var(--veil);display:grid;place-items:center;z-index:20;padding:16px}
+.veil{position:fixed;left:0;right:0;top:var(--vvt,0px);height:var(--vvh,100%);background:var(--veil);display:grid;place-items:center;z-index:20;padding:16px}
 .sheet{width:min(560px,100%);background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px 22px 18px;display:grid;gap:16px;max-height:min(880px,92vh);overflow:auto;box-shadow:0 24px 64px var(--shadow)}
 .sheet.wide{width:min(860px,100%)}
 .cstat{display:flex;gap:6px;flex-wrap:wrap}
@@ -212,7 +217,7 @@ form.in .send,form.in .clip{height:46px}
 .picks{display:grid;gap:6px}
 .pick{display:flex;gap:10px;align-items:center;border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:14px;letter-spacing:0;color:var(--ink)}
 .pick input{accent-color:var(--gold)}
-.acts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.acts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;position:sticky;bottom:0;background:var(--panel);padding-top:8px;z-index:2}
 .acts .no{background:none;border:1px solid var(--line2);border-radius:10px;padding:9px 16px;color:var(--mute)}
 .acts .del{margin-right:auto;background:none;border:1px solid rgba(224,138,109,.4);border-radius:10px;padding:9px 14px;color:var(--prio)}
 .ais{display:grid;gap:8px}
@@ -579,6 +584,16 @@ details.adv[open]{display:grid;gap:8px}
 <div class="veil" id="veil" hidden></div>
 
 <script>
+/* keep the page in the area above the phone keyboard */
+(function(){const vv=window.visualViewport;if(!vv)return;const pin=()=>{const gap=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop));const on=gap>60;
+  document.documentElement.classList.toggle('kb',on);
+  if(on){document.documentElement.style.setProperty('--kb',gap+'px');
+    document.documentElement.style.setProperty('--vvt',Math.round(vv.offsetTop)+'px');
+    document.documentElement.style.setProperty('--vvh',Math.round(vv.height)+'px');
+    window.scrollTo(0,0);}
+  else{document.documentElement.style.removeProperty('--kb');document.documentElement.style.removeProperty('--vvt');document.documentElement.style.removeProperty('--vvh');}};
+vv.addEventListener('resize',pin);vv.addEventListener('scroll',pin);pin();
+document.addEventListener('focusin',e=>{if(e.target.matches?.('input,textarea,select'))setTimeout(()=>e.target.scrollIntoView({block:'nearest'}))});})();
 const $=id=>document.getElementById(id);
 const boot={set(p,t){const f=$('bootFill');if(!f)return;f.style.width=p+'%';$('bootPct').textContent=Math.round(p)+'%';if(t)$('bootMsg').textContent=t},
   show(t){const b=$('boot');b.hidden=false;b.classList.remove('done');this.set(15,t)},

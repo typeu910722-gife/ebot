@@ -6,7 +6,7 @@ function prompt(extra = {}) {
   return buildPrompt({
     bot: { id: 'b1', name: '測', engine: 'claude', task: extra.task || '' },
     prompt: extra.prompt || '你可以玩遊戲嗎',
-    history: [],
+    history: extra.history || [],
     nick: 'Yzz',
     lang: 'zh-TW',
     group: extra.group,
@@ -39,6 +39,18 @@ test('a standing task stays a specialty and does not ban new topics', () => {
   assert.match(text, /長期本業，不是能力上限/);
   assert.match(text, /每 30 分鐘看一次 LINE/);
   assert.match(text, /不要推說這不是你的工作/);
+});
+
+test('an attached photo is read in full, including numbers beside the keyboard', () => {
+  const text = prompt({
+    prompt: '這張圖裡的排程對不對',
+    history: [{ who: 'Yzz', text: '（附件）', paths: ['/tmp/octa-studio-aim/附件/排程.jpg'] }]
+  });
+  assert.match(text, /排程\.jpg/);
+  assert.match(text, /用 Read 讀它/);
+  assert.match(text, /不要只抄最上面/);
+  assert.match(text, /不能說「下面的都被擋住」/);
+  assert.match(text, /不要說使用者沒有按/);
 });
 
 test('a saved screenshot is the picture the bot must read', () => {

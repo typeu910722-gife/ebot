@@ -1,5 +1,17 @@
 [
  {
+  "v": "3.0.7",
+  "date": "2026-10-24",
+  "notes": [
+   "傳來的圖片要整張讀完：看得到的時間全部照抄，鍵盤只遮住的那一列才說被擋住，不要說使用者沒按還在畫面上的按鈕",
+   "手機鍵盤彈出時，編輯頁和輸入框留在鍵盤上面，儲存鈕會黏在看得到的地方"
+  ],
+  "notes_en": [
+   "Attached photos are read in full: every visible time is copied, and only the row the keyboard actually covers is called hidden",
+   "On a phone, the editor and the input stay above the keyboard, and Save sticks to the visible edge"
+  ]
+ },
+ {
   "v": "3.0.6",
   "date": "2026-10-24",
   "notes": [
