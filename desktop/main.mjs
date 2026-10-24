@@ -1,7 +1,7 @@
 // OCTA desktop (Electron).
 // Signed in: the window shows the OCTA website (same account as the web version, everything syncs)
 // and this computer runs that account's bots. Offline mode: everything stays on this computer.
-import { app, BrowserWindow, WebContentsView, Tray, Menu, Notification, shell, nativeImage, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, WebContentsView, Tray, Menu, Notification, shell, nativeImage, dialog, ipcMain, screen } from 'electron';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
@@ -10,6 +10,7 @@ import { existsSync, appendFileSync, mkdirSync, readFileSync, writeFileSync, rmS
 import os from 'node:os';
 import { startServer } from './server.mjs';
 import { startCdpBridge } from './cdp-bridge.mjs';
+import { dockLayout, isBlankUrl } from './embed-layout.mjs';
 
 // ---------- updates (GitHub Releases) ----------
 const { autoUpdater } = createRequire(import.meta.url)('electron-updater');
@@ -60,12 +61,49 @@ process.on('unhandledRejection', e => logError('unhandled', e));
 const progress = (p, t) => win?.webContents.executeJavaScript(`window.setP&&setP(${p},${JSON.stringify(t || '')})`).catch(() => { });
 const failSplash = t => win?.webContents.executeJavaScript(`window.fail&&fail(${JSON.stringify(t)})`).catch(() => { });
 
+function placeWindow() {
+  const area = screen.getPrimaryDisplay().workArea;
+  const saved = cfg.win;
+  let b = null;
+  if (saved?.width && saved?.height) {
+    const onScreen = screen.getAllDisplays().some(d => {
+      const a = d.workArea;
+      return saved.x + Math.min(saved.width, 200) > a.x && saved.x < a.x + a.width - 40 && saved.y > a.y - 8 && saved.y < a.y + a.height - 40;
+    });
+    if (onScreen) b = saved;
+  }
+  if (!b) {
+    const width = Math.max(960, Math.min(area.width, Math.round(area.width * 0.96)));
+    const height = Math.max(640, Math.min(area.height, Math.round(area.height * 0.94)));
+    b = { x: area.x + Math.max(0, Math.round((area.width - width) / 2)), y: area.y + Math.max(0, Math.round((area.height - height) / 2)), width, height };
+  }
+  win.setBounds({
+    x: Math.round(b.x), y: Math.round(b.y),
+    width: Math.max(380, Math.min(Math.round(b.width), area.width)),
+    height: Math.max(520, Math.min(Math.round(b.height), area.height))
+  });
+  if (b.max) win.maximize();
+}
+let winSave;
+function saveWin() {
+  if (!win || win.isDestroyed()) return;
+  clearTimeout(winSave);
+  winSave = setTimeout(() => {
+    if (!win || win.isDestroyed()) return;
+    const b = win.getNormalBounds();
+    cfg = { ...cfg, win: { x: b.x, y: b.y, width: b.width, height: b.height, max: win.isMaximized() } };
+    writeCfg(cfg);
+  }, 400);
+}
 function createWindow() {
+  const area = screen.getPrimaryDisplay().workArea;
   win = new BrowserWindow({
-    width: 1180, height: 800, minWidth: 380, minHeight: 520, backgroundColor: '#12110e', title: 'OCTA｜奧克塔', icon: icon(), show: false,
+    width: Math.min(1280, area.width), height: Math.min(800, area.height), minWidth: 380, minHeight: 520,
+    backgroundColor: '#12110e', title: 'OCTA｜奧克塔', icon: icon(), show: false,
     autoHideMenuBar: true,
     webPreferences: { contextIsolation: true, sandbox: true, preload: join(here, 'preload.cjs'), backgroundThrottling: false }
   });
+  placeWindow();
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('blob:')) return { action: 'allow' };
     shell.openExternal(url); return { action: 'deny' };
@@ -87,7 +125,10 @@ function createWindow() {
     }
   });
   win.on('closed', () => (win = null));
-  win.on('resize', () => layoutEmbed());
+  win.on('resize', () => { layoutEmbed(); saveWin(); });
+  win.on('move', saveWin);
+  win.on('maximize', () => { layoutEmbed(); saveWin(); });
+  win.on('unmaximize', () => { layoutEmbed(); saveWin(); });
   win.once('ready-to-show', () => { if (!hiddenStart) { win.show(); win.focus(); } });
 }
 function showWindow() {
@@ -107,21 +148,34 @@ async function loadMain() {
 // ---------- in-app Chromium (the bot's browser lives in the OCTA window, not a separate Chrome) ----------
 const embeds = new Map();
 let embedSeq = 0;
+function fitView(view, bounds, visible) {
+  if (!view) return;
+  try { view.setBounds(bounds); } catch { }
+  try { view.setVisible(visible); } catch { }
+}
 function layoutEmbed() {
   if (!win || win.isDestroyed()) return;
   const [w, h] = win.getContentSize();
   const main = win.contentView.children.find(v => v.webContents === win.webContents);
   const side = [...embeds.values()].find(e => e.shown);
-  if (!side) { if (main) main.setBounds({ x: 0, y: 0, width: w, height: h }); return; }
-  const sideW = w >= 980 ? Math.max(420, Math.min(760, Math.round(w * 0.48))) : Math.max(280, Math.round(w * 0.46));
-  const left = Math.max(280, w - sideW);
-  if (main) main.setBounds({ x: 0, y: 0, width: left, height: h });
-  side.view.setBounds({ x: left, y: 0, width: Math.max(200, w - left), height: h });
+  if (!side) { fitView(main, { x: 0, y: 0, width: w, height: h }, true); return; }
+  const lay = dockLayout(w, h);
+  fitView(main, lay.main, true);
+  for (const v of side.tabs) fitView(v, lay.side, v === side.active);
 }
 function hookPage(wc, id, bucket) {
   try { if (!wc.debugger.isAttached()) wc.debugger.attach('1.3'); } catch (e) { if (!/already/i.test(String(e))) logError('debugger', e); }
   wc.debugger.on('message', (_e, method, params) => bucket.onEvent?.(id, method, params));
   bucket.pages.set(id, { wc });
+  return id;
+}
+function pageId(bucket, wc) {
+  return [...bucket.pages].find(([, p]) => p.wc === wc)?.[0];
+}
+function focusTab(bucket, view) {
+  bucket.active = view;
+  if (bucket.shown && win && !win.isDestroyed() && !win.contentView.children.includes(view)) win.contentView.addChildView(view);
+  layoutEmbed();
 }
 async function embedShow(port, show) {
   const bucket = embeds.get(port);
@@ -130,38 +184,45 @@ async function embedShow(port, show) {
   if (show) {
     for (const [p, e] of embeds) if (p !== port && e.shown) {
       e.shown = false;
-      try { win.contentView.removeChildView(e.view); } catch { }
+      for (const v of e.tabs) { try { win.contentView.removeChildView(v); } catch { } }
     }
   }
-  const has = win.contentView.children.includes(bucket.view);
-  if (show && !has) win.contentView.addChildView(bucket.view);
-  if (!show && has) win.contentView.removeChildView(bucket.view);
-  if (show) { const [w, h] = win.getContentSize(); if (w < 980) win.setContentSize(1240, h); }
+  const present = bucket.tabs.filter(v => win.contentView.children.includes(v));
+  if (show) for (const v of bucket.tabs) if (!present.includes(v)) win.contentView.addChildView(v);
+  if (show && bucket.active) { try { win.contentView.removeChildView(bucket.active); } catch { } win.contentView.addChildView(bucket.active); }
+  if (!show) for (const v of bucket.tabs) { try { win.contentView.removeChildView(v); } catch { } }
   layoutEmbed();
 }
 async function embedStop(port) {
   const bucket = embeds.get(port);
   if (!bucket) return;
   embeds.delete(port);
-  try { if (win && !win.isDestroyed()) win.contentView.removeChildView(bucket.view); } catch { }
+  for (const v of bucket.tabs) {
+    try { if (win && !win.isDestroyed()) win.contentView.removeChildView(v); } catch { }
+    try { if (!v.webContents.isDestroyed()) v.webContents.close(); } catch { }
+  }
   for (const w of bucket.hidden) { try { if (!w.isDestroyed()) w.destroy(); } catch { } }
-  try { if (!bucket.view.webContents.isDestroyed()) bucket.view.webContents.close(); } catch { }
   try { await bucket.bridge?.close(); } catch { }
   layoutEmbed();
 }
 async function embedStart(bot, port) {
-  if (embeds.has(port)) { await embedShow(port, true); return; }
+  if (embeds.has(port)) return;
   if (!win || win.isDestroyed()) throw new Error('視窗還沒開');
   const partition = 'persist:octa-bot-' + String(bot.id || 'bot').replace(/[^\w-]/g, '').slice(0, 40);
-  const view = new WebContentsView({ webPreferences: { partition, contextIsolation: true, sandbox: true, backgroundThrottling: false } });
-  const bucket = { view, pages: new Map(), shown: false, onEvent: null, hidden: [], bridge: null };
+  const prefs = { partition, contextIsolation: true, sandbox: true, backgroundThrottling: false };
+  const view = new WebContentsView({ webPreferences: prefs });
+  const bucket = { port, prefs, tabs: [view], active: view, pages: new Map(), shown: false, onEvent: null, hidden: [], bridge: null, splash: '' };
   hookPage(view.webContents, 'p' + (++embedSeq), bucket);
-  view.webContents.setWindowOpenHandler(({ url }) => { view.webContents.loadURL(url).catch(() => { }); return { action: 'deny' }; });
+  view.webContents.setWindowOpenHandler(({ url }) => { focusTab(bucket, view); view.webContents.loadURL(url).catch(() => { }); embedShow(port, true); return { action: 'deny' }; });
   const name = String(bot.name || '機器人').replace(/[<&]/g, '');
-  view.webContents.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<title>${name} 的瀏覽器</title><body style="margin:0;display:grid;place-items:center;height:100vh;background:#1c1814;color:#f3ead3;font:600 28px sans-serif">🐙 ${name}<div style="font:400 15px sans-serif;margin-top:12px">這個畫面在 OCTA 裡面，登入會留在這台電腦</div></body>`)}`).catch(() => { });
+  bucket.splash = `data:text/html;charset=utf-8,${encodeURIComponent(`<title>${name} 的瀏覽器</title><body style="margin:0;display:grid;place-items:center;height:100vh;background:#1c1814;color:#f3ead3;font-family:sans-serif;text-align:center"><div style="font-size:40px">🐙</div><div style="font-size:18px;margin-top:8px">${name}</div><div style="font:400 14px sans-serif;opacity:.8;margin-top:10px">網頁會開在這裡，登入會留在這台電腦</div></body>`)}`;
+  view.webContents.loadURL(bucket.splash).catch(() => { });
   const adapter = {
     list: () => [...bucket.pages].filter(([, p]) => !p.wc.isDestroyed()).map(([id, p]) => ({ id, title: p.wc.getTitle(), url: p.wc.getURL() || 'about:blank' })),
-    bounds: () => ({ windowId: 1, bounds: bucket.shown ? { left: 0, top: 0, width: 1100, height: 800, windowState: 'normal' } : { left: -8000, top: 0, width: 1100, height: 800, windowState: 'minimized' } }),
+    bounds: () => {
+      const b = bucket.active?.getBounds?.() || {};
+      return { windowId: 1, bounds: { left: 0, top: 0, width: b.width > 50 ? b.width : 900, height: b.height > 50 ? b.height : 700, windowState: bucket.shown ? 'normal' : 'minimized' } };
+    },
     setBounds: bounds => embedShow(port, bounds?.windowState !== 'minimized' && !(bounds?.left < -5000)),
     onEvent: cb => { bucket.onEvent = cb; },
     async command(targetId, method, params) {
@@ -178,27 +239,62 @@ async function embedStart(bot, port) {
       return await page.wc.debugger.sendCommand(method, params || {});
     },
     async createTarget(params) {
+      const url = params?.url || 'about:blank';
+      if (params?.background) {
+        const id = 'p' + (++embedSeq);
+        const hidden = new BrowserWindow({ show: false, width: 1280, height: 800, skipTaskbar: true, parent: win, webPreferences: prefs });
+        bucket.hidden.push(hidden);
+        hookPage(hidden.webContents, id, bucket);
+        hidden.webContents.loadURL(url).catch(() => { });
+        return { id, title: '', url };
+      }
+      const active = bucket.active;
+      if (active && !active.webContents.isDestroyed() && isBlankUrl(active.webContents.getURL())) {
+        const id = pageId(bucket, active.webContents);
+        if (!isBlankUrl(url)) active.webContents.loadURL(url).catch(() => { });
+        focusTab(bucket, active);
+        await embedShow(port, true);
+        return { id, title: active.webContents.getTitle(), url };
+      }
+      const tab = new WebContentsView({ webPreferences: prefs });
       const id = 'p' + (++embedSeq);
-      const hidden = new BrowserWindow({ show: false, skipTaskbar: true, parent: win, webPreferences: { partition, contextIsolation: true, sandbox: true, backgroundThrottling: false } });
-      bucket.hidden.push(hidden);
-      hookPage(hidden.webContents, id, bucket);
-      hidden.webContents.loadURL(params.url || 'about:blank').catch(() => { });
-      return { id, title: '', url: params.url || 'about:blank' };
+      bucket.tabs.push(tab);
+      hookPage(tab.webContents, id, bucket);
+      tab.webContents.setWindowOpenHandler(({ url: next }) => { focusTab(bucket, tab); tab.webContents.loadURL(next).catch(() => { }); embedShow(port, true); return { action: 'deny' }; });
+      tab.webContents.loadURL(url).catch(() => { });
+      if (win && !win.isDestroyed()) win.contentView.addChildView(tab);
+      focusTab(bucket, tab);
+      await embedShow(port, true);
+      return { id, title: '', url };
     },
     async closeTarget(id) {
       const page = bucket.pages.get(id);
-      if (!page || page.wc === view.webContents) return;
+      if (!page) return;
+      const idx = bucket.tabs.findIndex(v => v.webContents === page.wc);
+      if (idx >= 0) {
+        if (bucket.tabs.length === 1) { if (bucket.splash) page.wc.loadURL(bucket.splash).catch(() => { }); return; }
+        const [tab] = bucket.tabs.splice(idx, 1);
+        bucket.pages.delete(id);
+        if (bucket.active === tab) bucket.active = bucket.tabs[bucket.tabs.length - 1];
+        try { win?.contentView.removeChildView(tab); } catch { }
+        try { tab.webContents.close(); } catch { }
+        layoutEmbed();
+        return;
+      }
       bucket.pages.delete(id);
       const hw = bucket.hidden.find(w => !w.isDestroyed() && w.webContents === page.wc);
       try { hw?.destroy(); } catch { }
     },
-    activateTarget: async id => { if (bucket.pages.get(id)?.wc === view.webContents) await embedShow(port, true); },
+    activateTarget: async id => {
+      const page = bucket.pages.get(id);
+      const tab = page && bucket.tabs.find(v => v.webContents === page.wc);
+      if (tab) focusTab(bucket, tab);
+      await embedShow(port, true);
+    },
     close: () => embedStop(port)
   };
   bucket.bridge = await startCdpBridge(adapter, port);
   embeds.set(port, bucket);
-  win.contentView.addChildView(view);
-  await embedShow(port, true);
 }
 
 // ---------- runner ----------

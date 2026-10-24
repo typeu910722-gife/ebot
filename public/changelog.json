@@ -1,5 +1,17 @@
 [
  {
+  "v": "3.0.6",
+  "date": "2026-10-24",
+  "notes": [
+   "視窗跟著螢幕排滿，對話不再縮在中間。很長的工作說明可以捲，輸入框留在畫面上",
+   "內建瀏覽器改開真正的網頁，不再停在開場畫面。視窗比較窄時，瀏覽器改到下面，列表不會被擠掉"
+  ],
+  "notes_en": [
+   "The window fills the screen, and a long task description scrolls so the input stays on screen",
+   "The built-in browser shows the real page. On a narrower window it moves under the chat so the list stays"
+  ]
+ },
+ {
   "v": "3.0.5",
   "date": "2026-10-24",
   "notes": [

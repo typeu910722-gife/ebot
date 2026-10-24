@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script>
-(function(){try{var q=new URLSearchParams(location.search).get('theme');var s=localStorage.getItem('octa_theme');var t=(q==='light'||q==='dark')?q:(s||'dark');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();
+(function(){try{var q=new URLSearchParams(location.search).get('theme');var s=localStorage.getItem('octa_theme');var t=(q==='light'||q==='dark')?q:(s||'dark');if(t==='light')document.documentElement.setAttribute('data-theme','light');if(window.octaDesktop)document.documentElement.classList.add('desk');}catch(e){}})();
 </script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#12110e">
@@ -98,6 +98,7 @@ a.btn{text-decoration:none}
 .errmsg{color:var(--prio);font-size:13px;min-height:1em}
 /* ---------- app ---------- */
 .app{height:100%;display:grid;grid-template-columns:minmax(280px,320px) minmax(0,1fr);max-width:1320px;margin:0 auto}
+html.desk .app{max-width:none}
 .app.rail-collapsed{grid-template-columns:minmax(0,1fr)}
 .app.rail-collapsed .rail{display:none}
 @media (max-width:760px){.app.rail-collapsed{grid-template-columns:minmax(0,1fr)}.app.rail-collapsed .rail{display:flex}}
@@ -161,14 +162,14 @@ select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padd
 .iw.dragging{opacity:.4}
 .bub[draggable=true]{cursor:grab}
 .pane{display:flex;flex-direction:column;min-height:0;min-width:0}
-.ph{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line2);padding-block:14px;padding-left:20px;padding-right:max(20px,env(safe-area-inset-right,0px))}
+.ph{display:flex;align-items:center;gap:8px 12px;flex:none;flex-wrap:wrap;border-bottom:1px solid var(--line2);padding-block:14px;padding-left:20px;padding-right:max(20px,env(safe-area-inset-right,0px))}
 .back{display:none;border:0;background:none;font-size:24px;color:var(--gold);padding:0 6px 0 0}
 .ph .t{flex:1;min-width:0}
 .ph b{font-family:var(--tc);font-size:17px}
 .ph small{display:block;color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ph .ghost+.ghost{margin-left:-4px}
 .ghost{border:1px solid var(--line);background:none;border-radius:99px;padding:6px 12px;font-size:12px;color:var(--gold2);white-space:nowrap}
-.task{margin:8px 16px 0;padding:8px 12px;border:0;border-radius:var(--r);background:var(--panel);font-size:13px;color:var(--mute);line-height:1.6;white-space:pre-wrap}
+.task{margin:8px 16px 0;padding:8px 12px;border:0;border-radius:var(--r);background:var(--panel);font-size:13px;color:var(--mute);line-height:1.6;white-space:pre-wrap;flex:none;min-height:0;max-height:8.5em;overflow:auto}
 .task em{font-style:normal;color:var(--gold);font-family:var(--tc);margin-right:6px}
 .msgs{flex:1;overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:14px;padding:16px 20px}
 .m{display:flex;gap:10px;align-items:flex-start;max-width:680px}
@@ -187,12 +188,13 @@ select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padd
 .mention{display:flex;gap:6px;flex-wrap:wrap;padding:0 20px 6px}
 .mention button{border:1px solid var(--line2);background:var(--panel);border-radius:99px;padding:4px 10px;font-size:12px;color:var(--mute)}
 .mention button:hover{color:var(--gold2);border-color:var(--line)}
-form.in{display:flex;gap:10px;border-top:1px solid var(--line2);padding:12px max(20px,env(safe-area-inset-right,0px)) 14px 20px}
+form.in{display:flex;flex:none;gap:10px;border-top:1px solid var(--line2);padding:12px max(20px,env(safe-area-inset-right,0px)) 14px 20px}
 form.in textarea{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;color:var(--ink);font:inherit;resize:none;height:46px;min-height:46px;max-height:140px;box-sizing:border-box;line-height:1.5;overflow-y:auto}
 form.in{align-items:flex-end}
 form.in .send,form.in .clip{height:46px}
 .send{border:0;background:var(--gold);color:var(--on-gold);border-radius:var(--r);padding:0 18px;font-weight:500}
-.note{text-align:center;font-size:11px;color:var(--faint);padding-bottom:6px}
+.note{text-align:center;font-size:11px;color:var(--faint);padding-bottom:6px;flex:none}
+.offb,.mention,.quick,.att{flex:none}
 .blank{flex:1;display:grid;place-items:center;color:var(--faint);font-family:var(--tc);padding:24px;text-align:center;line-height:1.8}
 /* ---------- sheet ---------- */
 .veil{position:fixed;inset:0;background:var(--veil);display:grid;place-items:center;z-index:20;padding:16px}
@@ -499,7 +501,7 @@ details.adv[open]{display:grid;gap:8px}
     <h2>它會做什麼</h2>
     <div class="hgrid">
       <div><b>看得到畫面</b><span>遊戲、後台、分數，它看圖，不靠猜。圖裡沒有的數字，它會直說沒看到。</span></div>
-      <div><b>網頁就在旁邊</b><span>桌面版右側就是它的瀏覽器。你看得到它怎麼點，登入也在同一個畫面。</span></div>
+      <div><b>網頁就在旁邊</b><span>桌面版裡就是它的瀏覽器。寬的時候在右邊，你看得到它怎麼點，登入也在同一個畫面。</span></div>
       <div><b>重要的事先問你</b><span>付錢、刪除、傳給別人，它會停下來等你點頭。</span></div>
       <div><b>拖一下就歸類</b><span>把機器人拖進分區。檔案丟進對話就附上，文字拖進輸入框就貼上。</span></div>
     </div>
@@ -604,8 +606,8 @@ document.addEventListener('click',e=>{
   if(set){applyTheme(set.dataset.setTheme);document.querySelectorAll('[data-set-theme]').forEach(x=>x.classList.toggle('on',x.dataset.setTheme===currentTheme()));return}
   const b=e.target.closest('[data-theme-btn]');if(b)applyTheme(currentTheme()==='light'?'dark':'light');
 });
-function showBrowserLabel(){return window.octaDesktop?'在 OCTA 右側顯示':'在電腦版顯示它的瀏覽器'}
-function browserHint(){return window.octaDesktop?'OCTA 右側的內建瀏覽器':'電腦版 OCTA 右側的內建瀏覽器'}
+function showBrowserLabel(){return window.octaDesktop?'在這個視窗顯示':'在電腦版顯示它的瀏覽器'}
+function browserHint(){return window.octaDesktop?'這個視窗裡的瀏覽器':'電腦版 OCTA 裡的瀏覽器'}
 /* YZ progress: thin bar for slow requests, full overlay (blocks input) for heavy ones */
 const ybar={n:0,t:null,on(block){this.n++;clearTimeout(this.t);this.t=setTimeout(()=>{document.body.classList.add('yloading');if(block)document.body.classList.add('yblock')},block?0:250)},
   off(){if(--this.n<=0){this.n=0;clearTimeout(this.t);document.body.classList.remove('yloading','yblock')}}};
@@ -1190,7 +1192,7 @@ function urlSheet(id){const b=bot(id);
   $('uf').onsubmit=ev=>{ev.preventDefault();const u=$('uu').value.trim();closeSheet();openBrowser(id,u)}}
 function shotSheet(ids){
   $('veil').innerHTML=`<div class="sheet"><h2>機器人的瀏覽器</h2>
-  <p>${window.octaDesktop?'這個視窗右側就是它的瀏覽器。你看得到游標和點擊，登入也在同一個畫面完成。收到背景後它繼續在裡面工作。頁面上的數字它只能照這次看得到的抄，看不清會直說。':'每個機器人在電腦版 OCTA 裡有自己的瀏覽器，3.0.4 起嵌在視窗右側（較舊的電腦版會另外開 Chrome）。按下面的按鈕就會把它顯示出來，你可以看它在做什麼、幫它登入。'}</p>
+  <p>${window.octaDesktop?'網頁就開在這個視窗裡。寬的時候在右邊，窄的時候在下面。你看得到游標和點擊，登入也在同一個畫面。收到背景後它繼續在裡面工作。':'每個機器人在電腦版 OCTA 裡有自己的瀏覽器，嵌在視窗裡（較舊的電腦版會另外開 Chrome）。按下面的按鈕就會把它顯示出來，你可以看它在做什麼、幫它登入。'}</p>
   ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
     ${b.shot_ts?`<img class="shot" alt="${esc(b.name)}" id="img_${id}"><div class="meta">截圖：${ago(b.shot_ts)}${b.page?' · <span data-u>'+esc(b.page)+'</span>':''}</div>`:`<div class="noshot">還沒有畫面。機器人用過瀏覽器後，這裡會顯示它最後停在哪一頁。</div>`}
     ${b.browser==='mine'?`<div class="meta">這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。</div>`:`<div class="row2"><button class="btn" data-open="${id}">${showBrowserLabel()}</button><button class="ghost" data-hide="${id}">收到背景</button><button class="ghost" data-url="${id}">讓它打開網址…</button></div>`}</div>`}).join('')}

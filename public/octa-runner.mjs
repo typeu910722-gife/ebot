@@ -21,7 +21,7 @@ import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { probeCodingHosts, listRecoverableStates, runCodingTask, selectProvider } from './coding-runtime.mjs';
 
-export const VERSION = '17.8';
+export const VERSION = '17.9';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -161,7 +161,7 @@ function studioAim() {
     '查看、搜尋、打開、練習直接做。安裝軟體、付款、刪除、更改帳號、對別人發出訊息，先寫 ✅待確認 取得授權再做；還沒授權時說明你卡在哪一個授權，不要改口說自己沒有這個能力。',
     '頁面上的數字不准編。電池、金額、礦機、機架、數量、名次，只能抄這一次畫面裡看得到的字或圖；看不清就寫「這次畫面沒有這個數字」，不要沿用上一則回覆，也不要自己估。使用者說數字不對時，重新打開那一頁、看過圖再讀，不要把舊數字再說一次。畫面是遊戲或圖、文字很少時，描述你實際看到的東西，不要自製一張數據表。',
     '看畫面要用眼睛：文字讀不到的分數、電池、機架、金額，以「畫面.jpg」這張圖為準。圖裡沒有的數字寫「這次畫面沒有這個數字」，不要沿用舊回覆。',
-    cfg.embed ? '你的瀏覽器在 OCTA 視窗右側，使用者看得到你的游標和點擊。不要說瀏覽器開在別的程式。' : ''
+    cfg.embed ? '你的瀏覽器嵌在 OCTA 視窗裡，使用者看得到你的游標和點擊。不要說瀏覽器開在別的程式。' : ''
   ].filter(Boolean);
 }
 function turnGuide() {
@@ -989,6 +989,11 @@ async function cdp(port, fn) {   // a short CDP session on the browser
   try { return await fn(send); } finally { try { ws.close(); } catch { } }
 }
 const pagesOf = async send => (await send('Target.getTargets')).targetInfos.filter(t => t.type === 'page' && !t.url.startsWith('devtools://'));
+export function pickLivePage(pages) {
+  const list = (pages || []).filter(p => p && !String(p.url || '').startsWith('devtools://'));
+  const real = list.filter(p => { const u = String(p.url || ''); return u && u !== 'about:blank' && !u.startsWith('data:'); });
+  return real.at(-1) || list.at(-1) || null;
+}
 const touchBrowser = id => { const b = browsers.get(id); if (b) b.last = Date.now(); };
 // a name tag on every page of a bot's browser: a colored badge in the corner, and its name before the tab title
 const tags = new Map();   // port → open CDP connection that tags new pages
@@ -996,7 +1001,7 @@ const colorOf = name => { let h = 0; for (const ch of name) h = (h * 31 + ch.cod
 const tagScript = (name, color) => `(() => { if (window.top !== window) return; const N = ${JSON.stringify(name)}, C = ${JSON.stringify(color)}, P = '【' + N + '】';
   const fix = () => { if (document.title && !document.title.startsWith(P)) document.title = P + document.title; else if (!document.title) document.title = P + location.hostname; };
   const put = () => { if (!document.documentElement || document.getElementById('__octa_tag')) return; const d = document.createElement('div'); d.id = '__octa_tag'; d.textContent = '🐙 ' + N;
-    d.setAttribute('style', 'position:fixed;left:10px;bottom:10px;z-index:2147483647;background:' + C + ';color:#fff;font:600 13px/1 system-ui,sans-serif;padding:7px 12px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.35);pointer-events:none;opacity:.92');
+    d.setAttribute('style', 'position:fixed;right:10px;top:10px;z-index:2147483647;background:' + C + ';color:#fff;font:600 13px/1 system-ui,sans-serif;padding:7px 12px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.35);pointer-events:none;opacity:.92');
     document.documentElement.appendChild(d); fix(); new MutationObserver(fix).observe(document.querySelector('title') || document.head || document.documentElement, { childList: true, subtree: true, characterData: true });
     // a live cursor so you can watch what the bot does: glides to each mouse move, ripples on clicks, flashes what it clicked
     const cur = document.createElement('div'); cur.id = '__octa_cur';
@@ -1112,9 +1117,8 @@ async function captureEyes(port, dir) {
 }
 async function browserSnapshot(port, since) {   // screenshot + address of the tab the bot used last
   return cdp(port, async send => {
-    const pages = await pagesOf(send);
-    if (!pages.length) return null;
-    const p = pages.find(x => x.attached) || pages[0];
+    const p = pickLivePage(await pagesOf(send));
+    if (!p) return null;
     const { sessionId } = await send('Target.attachToTarget', { targetId: p.targetId, flatten: true });
     let jpeg = null;
     try { jpeg = Buffer.from((await send('Page.captureScreenshot', { format: 'jpeg', quality: 70 }, sessionId)).data, 'base64'); } catch { }
@@ -1123,15 +1127,18 @@ async function browserSnapshot(port, since) {   // screenshot + address of the t
   });
 }
 async function showBrowser(port, url, hide) {
-  if ([...browsers.values()].some(b => b.port === port && b.embed)) await cfg.embed?.show?.(port, !hide);
+  const embed = [...browsers.values()].some(b => b.port === port && b.embed);
+  if (embed) await cfg.embed?.show?.(port, !hide);
   return cdp(port, async send => {
-    let pages = await pagesOf(send), targetId = pages[0]?.targetId;
+    let targetId = pickLivePage(await pagesOf(send))?.targetId;
     if (url || !targetId) targetId = (await send('Target.createTarget', { url: url || 'about:blank' })).targetId;
+    if (hide || !targetId) return;   // handing back: the window stays where it is on the desktop
     const { windowId } = await send('Browser.getWindowForTarget', { targetId });
-    if (hide) return;   // handing back: the window stays where it is on the desktop
     await send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } }).catch(() => { });
-    const { bounds } = await send('Browser.getWindowForTarget', { targetId });
-    if (bounds.left < -5000) await send('Browser.setWindowBounds', { windowId, bounds: { left: 60, top: 40, width: 1200, height: 820 } });   // windows from older versions sat off-screen
+    if (!embed) {
+      const { bounds } = await send('Browser.getWindowForTarget', { targetId });
+      if (bounds.left < -5000) await send('Browser.setWindowBounds', { windowId, bounds: { left: 60, top: 40, width: 1200, height: 820 } });   // windows from older versions sat off-screen
+    }
     await send('Target.activateTarget', { targetId });
   });
 }
@@ -1146,7 +1153,7 @@ async function openJob(job) {
     await showBrowser(port, hide ? '' : job.url, hide);
     touchBrowser(job.bot.id);
     if (hide && shareBrowser) await syncOut(port);   // signed in by hand: every bot gets it
-    const where = browsers.get(job.bot.id)?.embed ? 'OCTA 視窗右側' : '電腦上';
+    const where = browsers.get(job.bot.id)?.embed ? 'OCTA 視窗裡' : '電腦上';
     return done(true, hide ? '我的瀏覽器已收到背景，我會繼續在裡面工作。'
       : busyBots.has(job.bot.id) ? `我的瀏覽器已經在${where}，我正在裡面工作，先別操作；要幫我登入請等我停下來。`
       : `我的瀏覽器已經在${where}。需要登入就直接在裡面登入，好了回來按「登入好了，繼續」。`);

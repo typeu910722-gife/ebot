@@ -1,7 +1,7 @@
 {
   "name": "octa-desktop",
   "productName": "OCTA",
-  "version": "3.0.5",
+    "version": "3.0.6",
   "description": "用自己的 Claude Code 指揮多個 AI 機器人",
   "author": "歪計劃 YZ PROJECT STUDIO",
   "license": "MIT",
@@ -32,6 +32,7 @@
       "main.mjs",
       "server.mjs",
       "cdp-bridge.mjs",
+      "embed-layout.mjs",
       "preload.cjs",
       "splash.html",
       "web/**",
