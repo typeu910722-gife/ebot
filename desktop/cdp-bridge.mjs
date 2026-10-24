@@ -82,8 +82,111 @@ export function startCdpBridge(adapter, port = 0) {
       for (const [sid, tid] of [...sessions]) if (tid === id) sessions.delete(sid);
     }
   }
+  // Electron names the main frame with its own id. Playwright looks that frame up under the target
+  // id, and anything else throws "Frame has been detached" before the address is even opened.
+  const frames = new Map();
+  const PRE_TREE = new Set(['Runtime.executionContextCreated', 'Runtime.executionContextDestroyed', 'Runtime.executionContextsCleared', 'Page.lifecycleEvent']);
+  const track = targetId => {
+    let s = frames.get(targetId);
+    if (!s) frames.set(targetId, s = { main: null, children: new Set(), seenTree: false, pre: [], held: [] });
+    return s;
+  };
+  const learnMain = (targetId, realId) => {
+    if (!realId || realId === targetId) return false;
+    const s = track(targetId);
+    if (s.main === realId) return false;
+    s.children.delete(realId);
+    s.main = realId;
+    return true;
+  };
+  const mapOut = (targetId, id) => (id && track(targetId).main === id ? targetId : id);
+  const mapIn = (targetId, id) => (id === targetId && track(targetId).main ? track(targetId).main : id);
+  const ID_KEYS = new Set(['frameId', 'parentFrameId', 'parentId']);
+  function mapIds(node, fn, parentKey) {
+    if (Array.isArray(node)) return node.map(item => mapIds(item, fn, parentKey));
+    if (!node || typeof node !== 'object') return node;
+    const out = {};
+    for (const [k, v] of Object.entries(node)) {
+      if (typeof v === 'string' && (ID_KEYS.has(k) || (k === 'id' && parentKey === 'frame'))) out[k] = fn(v);
+      else if (v && typeof v === 'object') out[k] = mapIds(v, fn, k);
+      else out[k] = v;
+    }
+    return out;
+  }
+  function absorbTree(targetId, node, isRoot) {
+    const frame = node?.frame;
+    if (!frame) return;
+    const s = track(targetId);
+    if (isRoot) learnMain(targetId, frame.id);
+    else if (frame.id && frame.id !== s.main) s.children.add(frame.id);
+    if (!isRoot && !frame.parentId) frame.parentId = s.main || targetId;
+    frame.id = mapOut(targetId, frame.id);
+    if (frame.parentId) frame.parentId = mapOut(targetId, frame.parentId);
+    for (const child of node.childFrames || []) absorbTree(targetId, child, false);
+  }
+  function noteFrame(targetId, method, params) {
+    const s = track(targetId);
+    if (method === 'Page.frameNavigated' && params?.frame) {
+      if (!params.frame.parentId) return learnMain(targetId, params.frame.id);
+      if (params.frame.id) s.children.add(params.frame.id);
+      return true;
+    }
+    if (method === 'Page.frameAttached') {
+      if (!params?.parentFrameId) return learnMain(targetId, params?.frameId);
+      if (params?.frameId) s.children.add(params.frameId);
+      return true;
+    }
+    if (method === 'Page.frameDetached' && params?.frameId && params.frameId !== s.main) s.children.delete(params.frameId);
+    return false;
+  }
+  function deliver(targetId, method, params) {
+    const sessionId = sessionFor(targetId);
+    if (!sessionId) {
+      if (PRE_TREE.has(method)) track(targetId).pre.push({ method, params });
+      return;
+    }
+    const learned = noteFrame(targetId, method, params);
+    let body = params || {};
+    try { body = mapIds(structuredClone(body), id => mapOut(targetId, id)); } catch { body = mapIds(body, id => mapOut(targetId, id)); }
+    sendAll({ method, params: body, sessionId });
+    if (learned) releaseHeld(targetId);
+  }
+  function holdContext(targetId, method, params) {
+    if (method !== 'Runtime.executionContextCreated') return false;
+    const id = params?.context?.auxData?.frameId;
+    if (!id) return false;
+    const s = track(targetId);
+    if (id === s.main || id === targetId || s.children.has(id)) return false;
+    s.held.push(params);
+    return true;
+  }
+  function releaseHeld(targetId) {
+    const s = track(targetId);
+    const pending = s.held.splice(0);
+    for (const params of pending) {
+      const id = params?.context?.auxData?.frameId;
+      if (id === s.main || s.children.has(id)) deliver(targetId, 'Runtime.executionContextCreated', params);
+      else s.held.push(params);
+    }
+  }
+  function flushPre(targetId) {
+    const s = track(targetId);
+    const queued = s.pre.splice(0);
+    for (const ev of queued) {
+      if (holdContext(targetId, ev.method, ev.params)) continue;
+      deliver(targetId, ev.method, ev.params);
+    }
+  }
   adapter.onEvent?.((targetId, method, params) => {
-    for (const [sessionId, id] of sessions) if (id === targetId) sendAll({ method, params: params || {}, sessionId });
+    const raw = params || {};
+    const s = track(targetId);
+    if (!s.seenTree && PRE_TREE.has(method)) {
+      s.pre.push({ method, params: raw });
+      if (s.pre.length > 100) s.pre.shift();
+      return;
+    }
+    if (s.seenTree && holdContext(targetId, method, raw)) return;
+    deliver(targetId, method, raw);
   });
   // Playwright drops the whole connection (the tools then all report "Transport closed") unless every
   // page target carries a browserContextId, even when that context is the default one.
@@ -136,6 +239,7 @@ export function startCdpBridge(adapter, port = 0) {
       await adapter.closeTarget?.(params.targetId);
       for (const c of clients) told.get(c)?.delete(params.targetId);
       for (const [sid, id] of [...sessions]) if (id === params.targetId) sessions.delete(sid);
+      frames.delete(params.targetId);
       sendAll({ method: 'Target.targetDestroyed', params: { targetId: params.targetId } });
       return { success: true };
     }
@@ -153,7 +257,20 @@ export function startCdpBridge(adapter, port = 0) {
         if (msg.method === 'Target.setAutoAttach' || msg.method === 'Target.setDiscoverTargets') { reply({ result: {} }); return; }
         const targetId = sessions.get(msg.sessionId);
         if (!targetId) throw new Error('分頁連線已結束');
-        reply({ result: await adapter.command(targetId, msg.method, msg.params || {}) || {} });
+        const sent = mapIds(msg.params || {}, id => mapIn(targetId, id));
+        let out = await adapter.command(targetId, msg.method, sent) || {};
+        try { out = structuredClone(out); } catch { /* already a plain result */ }
+        if (msg.method === 'Page.getFrameTree' && out.frameTree) absorbTree(targetId, out.frameTree, true);
+        else if (msg.method === 'Page.navigate' && typeof out.frameId === 'string') {
+          if (!sent.frameId || sent.frameId === track(targetId).main) learnMain(targetId, out.frameId);
+          out.frameId = mapOut(targetId, out.frameId);
+        } else out = mapIds(out, id => mapOut(targetId, id));
+        if (msg.method === 'Page.getFrameTree') track(targetId).seenTree = true;
+        reply({ result: out });
+        // the context can arrive before the frame tree. hold it until Playwright has read the tree
+        // and attached its listeners, or the read of the page waits until it times out
+        if (msg.method === 'Page.getFrameTree') setTimeout(() => flushPre(targetId), 0);
+        releaseHeld(targetId);
       } else reply({ result: await browserCommand(msg.method, msg.params || {}, socket) || {} });
     } catch (e) { reply({ error: { code: -32000, message: String(e.message || e) } }); }
   }

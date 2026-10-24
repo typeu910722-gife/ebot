@@ -129,3 +129,90 @@ test('Playwright can attach to the in-app page and navigate it', async () => {
     await bridge.close();
   }
 });
+
+// Electron's page debugger reports a blink frame id. Playwright only navigates a frame whose id
+// equals the target id, and otherwise throws "Frame has been detached" before the URL is opened.
+test('Playwright can open a page when the frame id differs from the target id', async () => {
+  const pages = [{ id: 'page-1', title: 'splash', url: 'data:text/html,hi' }];
+  let blink = 'F1A0.1';
+  let ctx = 1;
+  let emit = () => {};
+  const navigates = [];
+  const worlds = [];
+  const tree = () => ({ frameTree: { frame: { id: blink, loaderId: 'l-' + blink, url: pages[0].url, mimeType: 'text/html' }, childFrames: [{ frame: { id: 'child-9', parentId: blink, loaderId: 'lc', url: 'about:blank', mimeType: 'text/html' } }] } });
+  const bridge = await startCdpBridge({
+    onEvent(cb) { emit = cb; },
+    list: () => pages.map(p => ({ ...p })),
+    bounds: () => ({ windowId: 1, bounds: { left: 0, top: 0, width: 1280, height: 800, windowState: 'normal' } }),
+    async command(targetId, method, params) {
+      if (method === 'Page.getFrameTree') {
+        await new Promise(r => setTimeout(r, 30));
+        return tree();
+      }
+      if (method === 'Runtime.enable') {
+        emit(targetId, 'Runtime.executionContextCreated', { context: { id: ctx, origin: pages[0].url, name: '', auxData: { isDefault: true, type: 'default', frameId: blink } } });
+        return {};
+      }
+      if (method === 'Page.createIsolatedWorld') {
+        worlds.push(params.frameId);
+        const id = ++ctx;
+        emit(targetId, 'Runtime.executionContextCreated', { context: { id, origin: pages[0].url, name: params.worldName || '', auxData: { isDefault: false, type: 'isolated', frameId: params.frameId } } });
+        return { executionContextId: id };
+      }
+      if (method === 'Page.navigate') {
+        navigates.push(params.frameId);
+        const next = blink === 'F1A0.1' ? 'F1A0.2' : 'F1A0.3';
+        pages[0].url = params.url;
+        blink = next;
+        const loaderId = 'L' + next;
+        emit(targetId, 'Page.frameNavigated', { frame: { id: next, loaderId, url: params.url, mimeType: 'text/html' } });
+        emit(targetId, 'Runtime.executionContextDestroyed', { executionContextId: 1 });
+        emit(targetId, 'Runtime.executionContextCreated', { context: { id: ++ctx, origin: params.url, name: '', auxData: { isDefault: true, type: 'default', frameId: next } } });
+        emit(targetId, 'Runtime.executionContextCreated', { context: { id: ++ctx, origin: params.url, name: 'utility', auxData: { isDefault: false, type: 'isolated', frameId: next } } });
+        for (const name of ['commit', 'DOMContentLoaded', 'load']) emit(targetId, 'Page.lifecycleEvent', { frameId: next, loaderId, name });
+        return { frameId: next, loaderId };
+      }
+      if (method === 'Runtime.evaluate') {
+        if (String(params.expression || '').includes('UtilityScript')) return { result: { type: 'object', objectId: 'util-' + (params.contextId || 0), description: 'UtilityScript' } };
+        return { result: { type: 'string', value: pages[0].url } };
+      }
+      if (method === 'Runtime.callFunctionOn') return { result: { type: 'string', value: pages[0].url } };
+      if (method === 'Page.addScriptToEvaluateOnNewDocument') return { identifier: 's1' };
+      if (method.startsWith('Target.')) throw new Error('page debugger rejected ' + method);
+      return {};
+    },
+    async createTarget(params) {
+      const page = { id: 'page-' + (pages.length + 1), title: '', url: params.url || 'about:blank' };
+      pages.push(page);
+      return page;
+    }
+  });
+  const unhandled = [];
+  const onUnhandled = e => unhandled.push(String(e && e.message));
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    const tag = await client(bridge.port);
+    await tag.send('Target.setDiscoverTargets', { discover: true });
+    await tag.send('Target.attachToTarget', { targetId: 'page-1', flatten: true });
+    const browser = await chromium.connectOverCDP(`http://127.0.0.1:${bridge.port}`, { timeout: 8000, noDefaults: true });
+    const page = browser.contexts()[0].pages()[0];
+    page.setDefaultTimeout(4000);
+    assert.equal(page.url(), 'data:text/html,hi');
+    assert.equal(await page.evaluate('location.href'), 'data:text/html,hi');
+    await page.goto('https://manager.line.biz/', { waitUntil: 'load' });
+    assert.equal(page.url(), 'https://manager.line.biz/');
+    assert.equal(await page.evaluate('location.href'), 'https://manager.line.biz/');
+    await page.goto('https://manager.line.biz/account/', { waitUntil: 'load' });
+    assert.equal(page.url(), 'https://manager.line.biz/account/');
+    assert.equal(navigates[0], 'F1A0.1');
+    assert.equal(navigates[1], 'F1A0.2');
+    assert.ok(worlds.includes('F1A0.1'));
+    assert.equal(worlds.includes('page-1'), false);
+    assert.deepEqual(unhandled, []);
+    await browser.close();
+    tag.ws.close();
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+    await bridge.close();
+  }
+});

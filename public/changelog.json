@@ -1,5 +1,15 @@
 [
  {
+  "v": "3.0.17",
+  "date": "2026-10-24",
+  "notes": [
+   "官方 LINE 管理頁打得開了：導覽不再回報畫面框架已拆掉，讀得到目前頁面"
+  ],
+  "notes_en": [
+   "The official LINE admin page opens. Navigation no longer reports a detached frame, so the current page can be read"
+  ]
+ },
+ {
   "v": "3.0.16",
   "date": "2026-10-24",
   "notes": [
