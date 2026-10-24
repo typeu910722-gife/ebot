@@ -1,5 +1,15 @@
 [
  {
+  "v": "3.0.9",
+  "date": "2026-10-24",
+  "notes": [
+   "做事改成先看完、把原文和判斷分開、自己做下一步、做一步再看一次、對完才回。沒有逐項對過不能說一致"
+  ],
+  "notes_en": [
+   "Work now looks first, separates the words on screen from a judgment, acts, looks again, and only then answers. It cannot say “matches” without checking each item"
+  ]
+ },
+ {
   "v": "3.0.8",
   "date": "2026-10-24",
   "notes": [

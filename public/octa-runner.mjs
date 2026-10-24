@@ -21,7 +21,7 @@ import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { probeCodingHosts, listRecoverableStates, runCodingTask, selectProvider } from './coding-runtime.mjs';
 
-export const VERSION = '17.11';
+export const VERSION = '17.12';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -164,8 +164,18 @@ function studioAim() {
     cfg.embed ? '你的瀏覽器嵌在 OCTA 視窗裡，使用者看得到你的游標和點擊。不要說瀏覽器開在別的程式。' : ''
   ].filter(Boolean);
 }
+function workLoop() {
+  return [
+    '做事順序（每一則都照這五步，不要跳、不要先寫結論）：',
+    '1. 先看完再下結論。有圖就整張讀完，有網頁就先看目前畫面。還沒看完，不要寫結果。',
+    '2. 回覆裡把三樣分開寫：畫面上的原文、我的判斷、還沒看到的。判斷可以寫，但要讓人看得出是判斷；沒看到的留白，不要用猜的補上。',
+    '3. 自己做下一步。能點、能開、能查的這一步就做。畫面寫了誰去做，就照那個做，不要改成叫使用者做。',
+    '4. 做一步就再看一次。點完、輸入完、換頁後重新看畫面；跟剛才想的不一樣，就改下一步，不要沿用想像。',
+    '5. 對完再回。使用者要的每一項都對回這一次看到的畫面或檔案。沒有逐項對過，不能說「一致」或「跟目前的一樣」。對不上就寫對不上的那一項。'
+  ];
+}
 function turnGuide() {
-  return '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。先讀「畫面.jpg」或自行截圖，畫面上的數字只能照這次看到的抄。(3) 問你會不會、能不能，或要你做一件還沒做過的事（包含玩遊戲、學新軟體）→ 不要推辭。先用一句話說你會學，然後立刻做第一個學習動作（搜尋做法、打開相關頁面，或在自己的資料夾試一個最小例子）；需要他指定對象時，一邊查通用做法，一邊只問要哪一個。(4) 其他要你做事的 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。';
+  return '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先看完再下結論。用 browser_snapshot 看你瀏覽器目前的分頁，並先讀「畫面.jpg」或自行截圖，畫面上的數字只能照這次看到的抄。(3) 問你會不會、能不能，或要你做一件還沒做過的事（包含玩遊戲、學新軟體）→ 不要推辭。先用一句話說你會學，然後立刻做第一個學習動作（搜尋做法、打開相關頁面，或在自己的資料夾試一個最小例子）；需要他指定對象時，一邊查通用做法，一邊只問要哪一個。(4) 其他要你做事的 → 照五步做完再回，不要只回計畫。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們，也不要自稱是別的產品。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。';
 }
 // today's date said plainly, and the bot's own work notes (what it already found), so it doesn't start from zero each time
 function dayInfo(job) {
@@ -264,7 +274,7 @@ export function buildPrompt(job, here) {
     lines.push(`【${h.who}】${t}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   });
   lines.push('', ...dayInfo(job), '', ...workNotes(job));
-  lines.push('', ...tabsNow(job), '', ...seeNow(job), '', turnGuide(), '', whoAmI(job), '現在請處理這則指示：', job.prompt);
+  lines.push('', ...tabsNow(job), '', ...seeNow(job), '', ...workLoop(), '', turnGuide(), '', whoAmI(job), '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
 
@@ -893,7 +903,7 @@ async function warmClaude(job, b, here, live) {
     // only what happened since the last turn, then the new instruction
     const fresh = job.history.filter(h => (h.id || 0) > s.lastId && !(h.who === '使用者' && h.text === job.prompt));
     text = [fresh.length ? '（上次之後的新對話）\n' + fresh.map(h => `【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : '')).join('\n') : '',
-      dayInfo(job).join('\n'), workNotes(job).join('\n'), tabsNow(job).join('\n'), seeNow(job).join('\n'), studioAim().join('\n'), turnGuide(), whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
+      dayInfo(job).join('\n'), workNotes(job).join('\n'), tabsNow(job).join('\n'), seeNow(job).join('\n'), workLoop().join('\n'), studioAim().join('\n'), turnGuide(), whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
     log(`⚡ ${job.bot.name}：AI 待機中，直接接續`);
   } else {
     if (s) closeSession(job.bot.id);

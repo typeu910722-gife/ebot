@@ -57,6 +57,20 @@ test('an attached photo is read in full, including numbers beside the keyboard',
   assert.match(text, /也不要把寫了的條件說成沒有/);
 });
 
+test('a turn looks, separates what it saw, acts, then checks before it agrees', () => {
+  const text = prompt({ prompt: '這張圖裡的排程跟現在的一樣嗎' });
+  assert.match(text, /先看完再下結論/);
+  assert.match(text, /畫面上的原文/);
+  assert.match(text, /我的判斷/);
+  assert.match(text, /還沒看到的/);
+  assert.match(text, /自己做下一步/);
+  assert.match(text, /做一步就再看一次/);
+  assert.match(text, /對完再回/);
+  assert.match(text, /沒有逐項對過，不能說「一致」/);
+  assert.match(text, /照五步做完再回/);
+  assert.equal(text.includes('你是 Grok Bot'), false);
+});
+
 test('a saved screenshot is the picture the bot must read', () => {
   const text = prompt({ eyes: '/tmp/octa-studio-aim/畫面.jpg', prompt: '現在有幾台礦機' });
   assert.match(text, /\/tmp\/octa-studio-aim\/畫面\.jpg/);
