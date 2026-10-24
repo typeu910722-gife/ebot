@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import { startCdpBridge } from '../desktop/cdp-bridge.mjs';
+
+const { chromium } = createRequire(new URL('../desktop/package.json', import.meta.url))('playwright-core');
 
 function adapter() {
   const pages = [{ id: 'page-1', title: 'OCTA', url: 'about:blank' }];
@@ -50,6 +53,7 @@ test('the in-app browser endpoint lists one page and forwards a read', async () 
     const targets = await send('Target.getTargets');
     assert.equal(targets.targetInfos.length, 1);
     assert.equal(targets.targetInfos[0].url, 'about:blank');
+    assert.equal(targets.targetInfos[0].browserContextId, 'octa');
     await send('Target.setDiscoverTargets', { discover: true });
     assert.equal(events.some(e => e.method === 'Target.targetCreated'), true);
     await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
@@ -66,4 +70,56 @@ test('the in-app browser endpoint lists one page and forwards a read', async () 
     assert.equal((await send('Target.getTargets')).targetInfos.some(t => t.targetId === 'page-2'), false);
     ws.close();
   } finally { await bridge.close(); }
+});
+
+// Playwright MCP connects this way. Without a browserContextId it asserts and drops the socket,
+// and the in-app window stays on the "網頁會開在這裡" splash because nothing can navigate it.
+test('Playwright can attach to the in-app page and navigate it', async () => {
+  const pages = [{ id: 'page-1', title: 'splash', url: 'data:text/html,hi' }];
+  let emit = () => {};
+  const tree = (url, loader) => ({ frameTree: { frame: { id: 'page-1', loaderId: loader, url, mimeType: 'text/html' } } });
+  const bridge = await startCdpBridge({
+    onEvent(cb) { emit = cb; },
+    list: () => pages.map(p => ({ ...p })),
+    bounds: () => ({ windowId: 1, bounds: { left: 0, top: 0, width: 1280, height: 800, windowState: 'normal' } }),
+    async command(targetId, method, params) {
+      if (method === 'Page.getFrameTree') return tree(pages[0].url, 'l1');
+      if (method === 'Runtime.enable') {
+        setTimeout(() => emit(targetId, 'Runtime.executionContextCreated', { context: { id: 1, origin: '', name: '', auxData: { isDefault: true, type: 'default', frameId: targetId } } }), 20);
+        return {};
+      }
+      if (method === 'Page.navigate') {
+        pages[0].url = params.url;
+        emit(targetId, 'Page.frameNavigated', { frame: { id: targetId, loaderId: 'l2', url: params.url, mimeType: 'text/html' } });
+        emit(targetId, 'Runtime.executionContextCreated', { context: { id: 2, origin: params.url, name: '', auxData: { isDefault: true, type: 'default', frameId: targetId } } });
+        for (const name of ['commit', 'DOMContentLoaded', 'load']) emit(targetId, 'Page.lifecycleEvent', { frameId: targetId, loaderId: 'l2', name });
+        return { frameId: targetId, loaderId: 'l2' };
+      }
+      if (method === 'Page.createIsolatedWorld') return { executionContextId: 7 };
+      if (method === 'Page.addScriptToEvaluateOnNewDocument') return { identifier: 's1' };
+      if (method.startsWith('Target.')) throw new Error('page debugger rejected ' + method);
+      return {};
+    },
+    async createTarget(params) {
+      const page = { id: 'page-' + (pages.length + 1), title: '', url: params.url || 'about:blank' };
+      pages.push(page);
+      return page;
+    }
+  });
+  const unhandled = [];
+  const onUnhandled = e => unhandled.push(String(e && e.message));
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    const browser = await chromium.connectOverCDP(`http://127.0.0.1:${bridge.port}`, { timeout: 8000, noDefaults: true });
+    const page = browser.contexts()[0].pages()[0];
+    assert.equal(page.url(), 'data:text/html,hi');
+    page.setDefaultTimeout(4000);
+    await page.goto('https://account.line.biz/', { waitUntil: 'commit' });
+    assert.equal(page.url(), 'https://account.line.biz/');
+    assert.deepEqual(unhandled, []);
+    await browser.close();
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+    await bridge.close();
+  }
 });

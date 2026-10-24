@@ -65,12 +65,21 @@ export function startCdpBridge(adapter, port = 0) {
   adapter.onEvent?.((targetId, method, params) => {
     for (const [sessionId, id] of sessions) if (id === targetId) sendAll({ method, params: params || {}, sessionId });
   });
-  const info = t => ({ targetId: t.id, type: 'page', title: t.title || '', url: t.url || 'about:blank', attached: false, canAccessOpener: false });
+  // Playwright drops the whole connection (the tools then all report "Transport closed") unless every
+  // page target carries a browserContextId, even when that context is the default one.
+  const CONTEXT = 'octa';
+  const info = t => ({ targetId: t.id, type: 'page', title: t.title || '', url: t.url || 'about:blank', attached: false, canAccessOpener: false, browserContextId: CONTEXT });
   async function browserCommand(method, params) {
     if (method === 'Browser.getVersion') return { protocolVersion: '1.3', product: 'Chrome/128.0.6613.186', revision: 'octa', userAgent: 'OCTA', jsVersion: '12.0' };
     if (method === 'Browser.getWindowForTarget') return adapter.bounds?.(params?.targetId) || { windowId: 1, bounds: { left: 0, top: 0, width: 1100, height: 800, windowState: 'normal' } };
     if (method === 'Browser.setWindowBounds') { await adapter.setBounds?.(params?.bounds || {}); return {}; }
     if (method === 'Browser.close') { await adapter.close?.(); return {}; }
+    if (method === 'Browser.setDownloadBehavior' || method === 'Browser.grantPermissions' || method === 'Browser.resetPermissions') return {};
+    if (method === 'Storage.getCookies' || method === 'Storage.setCookies') {
+      const page = adapter.list()[0];
+      if (!page) return method === 'Storage.getCookies' ? { cookies: [] } : {};
+      return await adapter.command(page.id, method, params || {}) || {};
+    }
     if (method === 'Target.getTargets' || method === 'Target.getTargetInfo') {
       const list = adapter.list();
       if (method === 'Target.getTargetInfo') return { targetInfo: info(list.find(t => t.id === params.targetId) || list[0]) };
@@ -95,8 +104,12 @@ export function startCdpBridge(adapter, port = 0) {
     if (method === 'Target.activateTarget') { await adapter.activateTarget?.(params.targetId); return {}; }
     if (method === 'Target.createTarget') {
       const created = await adapter.createTarget(params || {});
-      sendAll({ method: 'Target.targetCreated', params: { targetInfo: info(created) } });
-      if (autoAttach) attach(created);
+      // reusing the open tab (the splash page) must not attach it a second time: Playwright closes the
+      // connection on a duplicate target, and every browser tool then fails
+      if (![...sessions.values()].includes(created.id)) {
+        sendAll({ method: 'Target.targetCreated', params: { targetInfo: info(created) } });
+        if (autoAttach) attach(created);
+      }
       return { targetId: created.id };
     }
     if (method === 'Target.closeTarget') { await adapter.closeTarget?.(params.targetId); sendAll({ method: 'Target.targetDestroyed', params: { targetId: params.targetId } }); return { success: true }; }
@@ -110,6 +123,8 @@ export function startCdpBridge(adapter, port = 0) {
     try {
       if (msg.sessionId) {
         if (msg.method === 'Runtime.runIfWaitingForDebugger') { reply({ result: {} }); return; }
+        // these are browser-target commands; a page debugger rejects them and Playwright then abandons the page
+        if (msg.method === 'Target.setAutoAttach' || msg.method === 'Target.setDiscoverTargets') { reply({ result: {} }); return; }
         const targetId = sessions.get(msg.sessionId);
         if (!targetId) throw new Error('分頁連線已結束');
         reply({ result: await adapter.command(targetId, msg.method, msg.params || {}) || {} });

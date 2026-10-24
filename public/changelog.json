@@ -1,5 +1,15 @@
 [
  {
+  "v": "3.0.14",
+  "date": "2026-10-24",
+  "notes": [
+   "打開內建瀏覽器不再停在「網頁會開在這裡」：機器人的瀏覽器工具可以接上這個視窗，並把要看的網頁打開"
+  ],
+  "notes_en": [
+   "Opening the built-in browser no longer stays on the placeholder page. The bot's browser tools can attach to that window and open the page"
+  ]
+ },
+ {
   "v": "3.0.13",
   "date": "2026-10-24",
   "notes": [

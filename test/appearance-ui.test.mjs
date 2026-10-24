@@ -65,10 +65,11 @@ test('attachments show as thumbnails or file cards before and after sending', ()
   assert.match(api, /files\.sort\(\(x, y\) => fileIds\.indexOf\(x\.id\) - fileIds\.indexOf\(y\.id\)\)/);
 });
 
-test('3.0.13 is the version the desktop builds and the changelog announces', () => {
-  assert.equal(pkg.version, '3.0.13');
-  assert.equal(log[0].v, '3.0.13');
-  assert.ok(log[0].notes.length >= 3 && log[0].notes_en.length >= 3);
-  assert.ok(log[0].notes.some(n => n.includes('字體大小')));
-  assert.ok(log[0].notes.some(n => n.includes('縮圖')));
+test('the desktop version matches the changelog, and the appearance release is still recorded', () => {
+  assert.equal(pkg.version, log[0].v);
+  assert.equal(log[0].v, '3.0.14');
+  assert.ok(log[0].notes.some(n => n.includes('網頁會開在這裡')));
+  const look = log.find(x => x.v === '3.0.13');
+  assert.ok(look.notes.some(n => n.includes('字體大小')));
+  assert.ok(look.notes.some(n => n.includes('縮圖')));
 });
