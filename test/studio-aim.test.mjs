@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { buildPrompt } from '../public/octa-runner.mjs';
+
+function prompt(extra = {}) {
+  return buildPrompt({
+    bot: { id: 'b1', name: '測', engine: 'claude', task: extra.task || '' },
+    prompt: extra.prompt || '你可以玩遊戲嗎',
+    history: [],
+    nick: 'Yzz',
+    lang: 'zh-TW',
+    group: extra.group
+  }, '/tmp/octa-studio-aim');
+}
+
+test('a capability question is something to learn, not a work-only refusal', () => {
+  const text = prompt();
+  assert.match(text, /超級 AI 工作室/);
+  assert.match(text, /全能助手/);
+  assert.match(text, /禁止用「我只處理工作」「遊戲我還不能」/);
+  assert.match(text, /不會就學/);
+  assert.match(text, /問你會不會、能不能/);
+  assert.match(text, /包含玩遊戲/);
+  assert.match(text, /你可以玩遊戲嗎/);
+  assert.match(text, /安裝軟體、付款、刪除、更改帳號、對別人發出訊息，先寫 ✅待確認/);
+  assert.equal(text.includes('我目前的功能主要用來處理工作'), false);
+});
+
+test('a standing task stays a specialty and does not ban new topics', () => {
+  const text = prompt({ task: '每 30 分鐘看一次 LINE', group: { name: '工作室', members: ['測'], task: '', mode: 'serial' } });
+  assert.match(text, /長期本業，不是能力上限/);
+  assert.match(text, /每 30 分鐘看一次 LINE/);
+  assert.match(text, /不要推說這不是你的工作/);
+});

@@ -21,7 +21,7 @@ import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { probeCodingHosts, listRecoverableStates, runCodingTask, selectProvider } from './coding-runtime.mjs';
 
-export const VERSION = '17.5';
+export const VERSION = '17.6';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -152,6 +152,18 @@ const q = a => (WIN && /[\s"&|<>^]/.test(a) ? '"' + a.replace(/"/g, '\\"') + '"'
 const whoAmI = job => { const E = ENGINES[job.bot.engine || 'claude'] || ENGINES.claude;
   return callUser(job) + `提醒：你是「${job.bot.name}」，用的 AI 是 ${E.label}${job.bot.model ? `（${job.bot.model}）` : ''}。` + (job.group ? '對話裡其他機器人的發言是它們自己的，不是你的；不要用它們的名字、模型或任務介紹自己。' : ''); };
 const callUser = job => job.nick ? `使用者叫「${job.nick}」：跟他說話時稱呼他「${job.nick}」，不要叫他老闆、主人或使用者；規則或資料裡寫的「老闆」就是指他。` : '跟使用者說話時直接用「你」，不要叫他老闆或主人；規則或資料裡寫的「老闆」就是指使用者。';
+// The standing task is a specialty, not a ceiling. Said at the top and again before each turn.
+function studioAim() {
+  return [
+    '你的目標：成為比使用者更厲害的全能助手。OCTA 是一座超級 AI 工作室，每個機器人都要盡可能學。指定任務是你長期負責的本業，不是能力的邊界。',
+    '遊戲、創作、研究、生活、寫程式、操作軟體，使用者問得出口的都要接。禁止用「我只處理工作」「遊戲我還不能」「這不在我的功能裡」收尾，也不要把話題拉回「有沒有工作要我做」。',
+    '不會就學，而且要在授權下真的試：先查做法（搜尋、讀說明、打開網站或程式看畫面），再在你自己的瀏覽器或資料夾裡做最小的一次嘗試，把學會的步驟用 🧩技能 或 🗺️網站筆記 留下。沒試過不能說不會。',
+    '查看、搜尋、打開、練習直接做。安裝軟體、付款、刪除、更改帳號、對別人發出訊息，先寫 ✅待確認 取得授權再做；還沒授權時說明你卡在哪一個授權，不要改口說自己沒有這個能力。'
+  ];
+}
+function turnGuide() {
+  return '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 問你會不會、能不能，或要你做一件還沒做過的事（包含玩遊戲、學新軟體）→ 不要推辭。先用一句話說你會學，然後立刻做第一個學習動作（搜尋做法、打開相關頁面，或在自己的資料夾試一個最小例子）；需要他指定對象時，一邊查通用做法，一邊只問要哪一個。(4) 其他要你做事的 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。';
+}
 // today's date said plainly, and the bot's own work notes (what it already found), so it doesn't start from zero each time
 function dayInfo(job) {
   const d = new Date(), f = x => `${x.getMonth() + 1}/${x.getDate()}`, wk = '日一二三四五六';
@@ -173,16 +185,17 @@ function workNotes(job) {
   return [`你的工作筆記（檔案 ${notesFile(job)}，由你自己維護）：查到值得留下的資料就更新這個檔案，例如今天的名單與房況、網站上東西在哪、做到哪一步，每段寫上查到的時間；舊日期、用不到的就刪掉。檔案寫不進去（例如顯示唯讀）時，改在回覆最後寫「📒工作筆記：」換行接完整的新筆記，最後一行寫「📒結束」，OCTA 會幫你存，不用跟使用者提這件事。下次先看筆記，只補查可能變動的部分，不用每次從頭查。使用者再問一樣的事、而筆記裡已經有今天整理好的結果時，先告訴他「上次幾點查的、結果是什麼」，再用 ❓ 問他要不要重新查（A. 現在重新查 B. 用剛才那份就好）。`,
     t ? '目前筆記內容：\n' + t : '（目前筆記是空的）'];
 }
-function buildPrompt(job, here) {
+export function buildPrompt(job, here) {
   const lines = [
     `你是 OCTA（奧克塔）裡的機器人「${job.bot.name}」，在使用者自己的電腦上執行。`,
     callUser(job),
-    job.bot.task ? `你的指定任務：${job.bot.task}` : '你還沒有指定任務：從使用者的訊息了解你要長期負責什麼。'
+    job.bot.task ? `你的指定任務（長期本業，不是能力上限）：${job.bot.task}` : '你還沒有指定任務：從對話學會你要長期負責什麼。在那之前，使用者問的每件事都接，不會就學。',
+    ...studioAim()
   ];
   if (job.group) lines.push(
     `你在群組「${job.group.name}」，成員依序為：${job.group.members.join('、')}。`,
     job.group.task ? `群組協作規則：${job.group.task}` : '群組沒有特別規則：依各成員的指定任務分工。',
-    '只做你自己負責的部分，可以引用其他成員在對話裡交出的資料。',
+    '只做你自己負責的部分，可以引用其他成員在對話裡交出的資料。使用者直接問你的新主題（就算不是你的本業，例如遊戲）也要學著接，不要推說這不是你的工作。',
     '在群組說話像同事聊天：用第一人稱只講你自己的部分，不要重述其他成員的職責；帶出你實際做過或看到的具體事（日期、房號、遇到的狀況），可以直接回應前面成員說的話，或 @ 某位成員接話、問問題。簡短自然。',
     '真的需要使用者回答才能繼續時，在回覆最後單獨一行寫「❓問你：具體問題」：寫清楚是哪一館哪一房／哪位客人、你看到什麼、要他選什麼（例如「貳宿 303 有 ʟɪɴ_ 和 蔡宗恩 兩組暱稱，密碼要傳給：A. ʟɪɴ_ B. 蔡宗恩？」）。不是問題的心得、說明、報告不要寫 ❓，也不要用問號結尾。使用者回覆會直接回到你這裡。',
     ...(job.group.mode === 'parallel' && !String(job.prompt || '').includes('@' + job.bot.name) ? ['成員是同時收到這則訊息、各自並行處理的。先判斷這則訊息該不該由你處理：只有訊息明顯是交代給別的成員的工作時，整則回覆才只寫「（略過）」；對大家說的（你們、大家、各位、沒指定人的問題、聊天）一定要回答。'] : []),
@@ -248,7 +261,7 @@ function buildPrompt(job, here) {
     lines.push(`【${h.who}】${t}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   });
   lines.push('', ...dayInfo(job), '', ...workNotes(job));
-  lines.push('', ...tabsNow(job), '', '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。', '', whoAmI(job), '現在請處理這則指示：', job.prompt);
+  lines.push('', ...tabsNow(job), '', turnGuide(), '', whoAmI(job), '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
 
@@ -850,7 +863,7 @@ function startSession(job, b) {
 }
 async function warmClaude(job, b, here, live) {
   // anything that changes the bot's standing instructions starts a fresh session
-  const fp = JSON.stringify([job.memory, (job.skills || []).map(k => k.name + k.steps), job.bot.task, job.bot.model, job.bot.browser, job.bot.livePort, job.notes, job.folderNotes, job.group, (job.colleagues || []).map(c => c.name + c.task), job.allowed, job.lang, storeDir(), job.conv?.id, job.nick]);
+  const fp = JSON.stringify([VERSION, job.memory, (job.skills || []).map(k => k.name + k.steps), job.bot.task, job.bot.model, job.bot.browser, job.bot.livePort, job.notes, job.folderNotes, job.group, (job.colleagues || []).map(c => c.name + c.task), job.allowed, job.lang, storeDir(), job.conv?.id, job.nick]);
   let s = sessions.get(job.bot.id), text;
   const ids = job.history.map(h => h.id || 0), newest = Math.max(0, ...ids);
   if (s && s.fp === fp && s.convId === job.conv?.id) {
@@ -858,7 +871,7 @@ async function warmClaude(job, b, here, live) {
     // only what happened since the last turn, then the new instruction
     const fresh = job.history.filter(h => (h.id || 0) > s.lastId && !(h.who === '使用者' && h.text === job.prompt));
     text = [fresh.length ? '（上次之後的新對話）\n' + fresh.map(h => `【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : '')).join('\n') : '',
-      dayInfo(job).join('\n'), workNotes(job).join('\n'), tabsNow(job).join('\n'), '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 要你做事 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。', whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
+      dayInfo(job).join('\n'), workNotes(job).join('\n'), tabsNow(job).join('\n'), studioAim().join('\n'), turnGuide(), whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
     log(`⚡ ${job.bot.name}：AI 待機中，直接接續`);
   } else {
     if (s) closeSession(job.bot.id);

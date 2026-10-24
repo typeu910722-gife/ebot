@@ -1,5 +1,15 @@
 [
  {
+  "v": "3.0.2",
+  "date": "2026-10-24",
+  "notes": [
+   "機器人不再把自己限在工作事務：不會的事要在授權下查做法並動手試，目標是變成比你更厲害的全能助手。安裝軟體、付款、刪除、改帳號、對別人發訊息仍然要先核准"
+  ],
+  "notes_en": [
+   "Bots no longer limit themselves to office tasks: if they don't know something, they look it up and try it within what you have authorized, aiming to become a more capable assistant than you. Installing software, paying, deleting, changing accounts, and messaging other people still need approval"
+  ]
+ },
+ {
   "v": "3.0.1",
   "date": "2026-10-24",
   "notes": [
