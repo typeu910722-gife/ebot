@@ -94,6 +94,40 @@ async function addJob(db, userId, conv, chain, prompt, depth = 0) {
   await db.prepare('INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,depth) VALUES (?,?,?,?,?,?,?)')
     .bind(userId, conv, steps[0].b, JSON.stringify(steps.slice(1)), steps[0].p, now(), depth).run();
 }
+// a user message starts the bot (or the group's members). `text` is what was typed; an empty one still hands the files over.
+async function enqueueTurn(db, userId, conv, text, bot, group, bots) {
+  const prompt = text || '請處理我傳的附件。';
+  let chain, ordered = false;
+  if (bot) chain = [bot.id];
+  else {
+    const at = id => text.indexOf('@' + (bots.find(x => x.id === id)?.name || '\u0000'));
+    const named = group.members.filter(id => at(id) >= 0).sort((a, b) => at(a) - at(b));
+    chain = named.length ? named : group.members;
+    if (!named.length && !/你們|大家|各位|每位|每個|所有人|全部/.test(text)) {
+      const prev = (await db.prepare("SELECT by_,text FROM messages WHERE user_id=? AND conv=? AND by_<>'sys' ORDER BY id DESC LIMIT 2").bind(userId, conv).all()).results[1];
+      if (prev && group.members.includes(prev.by_) && asksUser(prev.text)) chain = [prev.by_];
+    }
+    ordered = chain.length > 1 && ((named.length > 1 && /收到.{0,20}後|之後|然後|接著|再由|再交|完成後|做完|拿到.{0,10}(後|再)|依序|輪流/.test(text)) || /互相|彼此|聊聊|討論|交流|心得|對話|聊天|你們聊/.test(text));
+  }
+  if (group && !turnsOf(group) && !ordered) for (const id of chain) await addJob(db, userId, conv, [id], prompt);
+  else await addJob(db, userId, conv, chain, prompt);
+}
+// a second record of the same bytes, so the copy survives if the source conversation is deleted
+async function cloneFile(db, userId, fileId, conv) {
+  const f = await db.prepare('SELECT id,name,mime,data,loc,path,size,pc FROM files WHERE id=? AND user_id=?').bind(fileId, userId).first();
+  if (!f) return null;
+  const id = 'file-' + uid();
+  if (f.loc === 'pc' && f.path) {
+    await db.prepare("INSERT INTO files (id,user_id,name,mime,data,ts,conv,loc,path,size,pc) VALUES (?,?,?,?,'',?,?,'pc',?,?,?)").bind(id, userId, f.name, f.mime, now(), conv, f.path, f.size, f.pc).run();
+  } else if (f.data) {
+    await db.prepare('INSERT INTO files (id,user_id,name,mime,data,ts,conv,loc,size) VALUES (?,?,?,?,?,?,?,?,?)').bind(id, userId, f.name, f.mime, f.data, now(), conv, f.loc || 'db', f.size).run();
+  } else {
+    const data = await readChunks(db, f.id);
+    if (data) await storeChunks(db, id, data);
+    await db.prepare("INSERT INTO files (id,user_id,name,mime,data,ts,conv,loc,size) VALUES (?,?,?,?,'',?,?,'cloud',?)").bind(id, userId, f.name, f.mime, now(), conv, f.size || (data ? Math.round(data.length * 0.75) : null)).run();
+  }
+  return { id, name: f.name, mime: f.mime };
+}
 const STANDBY = '待命巡查';   // a bot on 24-hour standby: checks its duties every N minutes, says nothing when there's nothing to do
 const BG = /^〔背景:([^:〕]+):(ask|give)〕/;   // a bot's message to another bot, run in the other bot's own chat
 const turnsOf = g => /輪流|依序|按順序|接力/.test(g.task || '');
@@ -1641,24 +1675,31 @@ async function route({ request: req, env, params }) {
       const files = fileIds.length ? (await db.prepare(`SELECT id,name,mime FROM files WHERE user_id=? AND id IN (${fileIds.map(() => '?').join(',')})`).bind(U, ...fileIds).all()).results : [];
       if (files.length) await db.prepare(`UPDATE files SET conv=? WHERE user_id=? AND conv IS NULL AND id IN (${files.map(() => '?').join(',')})`).bind(conv, U, ...files.map(f => f.id)).run();
       await addMsg(db, U, conv, 'me', text || '（附件）', files);
-      let chain;
-      if (bot) chain = [bot.id];
-      else {
-        const at = id => text.indexOf('@' + (bots.find(x => x.id === id)?.name || '\u0000'));
-        const named = group.members.filter(id => at(id) >= 0).sort((a, b) => at(a) - at(b));
-        chain = named.length ? named : group.members;
-        // no @: an answer to the question a member just asked goes back to that member only
-        if (!named.length && !/你們|大家|各位|每位|每個|所有人|全部/.test(text)) {
-          const [, prev] = (await db.prepare("SELECT by_,text FROM messages WHERE user_id=? AND conv=? AND by_<>'sys' ORDER BY id DESC LIMIT 2").bind(U, conv).all()).results;
-          if (prev && group.members.includes(prev.by_) && asksUser(prev.text)) chain = [prev.by_];
-        }
-        // one waits for another's result, or they are asked to talk with each other: take turns so each sees what came before
-        var ordered = chain.length > 1 && ((named.length > 1 && /收到.{0,20}後|之後|然後|接著|再由|再交|完成後|做完|拿到.{0,10}(後|再)|依序|輪流/.test(text)) || /互相|彼此|聊聊|討論|交流|心得|對話|聊天|你們聊/.test(text));
-      }
-      // groups: members work at the same time and each decides whether the message is theirs; rules saying 輪流/依序 keep turns
-      if (group && !turnsOf(group) && !ordered) for (const id of chain) await addJob(db, U, conv, [id], text || '請處理我傳的附件。');
-      else await addJob(db, U, conv, chain, text || '請處理我傳的附件。');
+      await enqueueTurn(db, U, conv, text, bot, group, bots);
       return ok();
+    }
+    if (path === 'messages/copy' && m === 'POST') {   // drag a message onto another bot: same text and its own copies of the files
+      const to = clean(body.to, 64), from = clean(body.from, 64), id = Math.floor(+body.id);
+      if (!to || !from || !id) return err('要指定訊息和要貼到哪裡');
+      if (to === from) return err('已經在這個對話');
+      const { bots, groups } = await loadAll(db, U);
+      const bot = bots.find(b => b.id === to), group = groups.find(g => g.id === to);
+      if (!bot && !group) return err('找不到對話', 404);
+      const src = await db.prepare('SELECT id,text,files FROM messages WHERE id=? AND user_id=? AND conv=?').bind(id, U, from).first();
+      if (!src) return err('找不到訊息', 404);
+      const text = String(src.text || '');
+      let parsed = [];
+      try { parsed = src.files ? JSON.parse(src.files) : []; } catch { parsed = []; }
+      const files = [];
+      for (const f of (Array.isArray(parsed) ? parsed : []).slice(0, 6)) {
+        const copy = await cloneFile(db, U, clean(f?.id, 64), to);
+        if (copy) files.push(copy);
+      }
+      if (!text && !files.length) return err('訊息是空的');
+      await addMsg(db, U, to, 'me', text || '（附件）', files);
+      await enqueueTurn(db, U, to, text.slice(0, 8000), bot, group, bots);
+      if (body.replace) await db.prepare('DELETE FROM messages WHERE id=? AND user_id=? AND conv=?').bind(id, U, from).run();
+      return ok({ replaced: !!body.replace });
     }
     if (path === 'clear' && m === 'POST') {   // empty one conversation's history
       const conv = clean(body.conv, 64);
@@ -1782,12 +1823,15 @@ async function route({ request: req, env, params }) {
       const bot = bots.find(b => b.id === body.bot);
       const conv = clean(body.conv, 64);
       if (!bot || !(conv === bot.id || groups.some(g => g.id === conv))) return err('找不到機器人', 404);
-      let link = clean(body.url, 500);
+      let link = clean(body.url, 500), page = '';
       if (body.hide) link = 'octa:hide';   // put the window back in the background
-      else if (link && !/^https?:\/\//.test(link)) link = 'https://' + link;
+      else if (body.expand) {   // the person asked to see it: open the dock. a bot's own browsing stays a thumbnail
+        page = link ? (/^https?:\/\//.test(link) ? link : 'https://' + link) : '';
+        link = page ? 'octa:open ' + page : 'octa:open';
+      } else if (link && !/^https?:\/\//.test(link)) link = 'https://' + link;
       // don't stack duplicates if the button is pressed again before the computer picks it up
       if (await db.prepare("SELECT 1 FROM jobs WHERE user_id=? AND bot_id=? AND kind='open' AND status='pending'").bind(U, bot.id).first()) return J({ ok: true, queued: true });
-      await addMsg(db, U, conv, 'sys', body.hide ? `把「${bot.name}」的瀏覽器收到背景` : `在電腦上顯示「${bot.name}」的瀏覽器${link ? '：' + link : ''}`);
+      await addMsg(db, U, conv, 'sys', body.hide ? `把「${bot.name}」的瀏覽器收到背景` : body.expand ? `打開「${bot.name}」的瀏覽器${page ? '：' + page : ''}` : `在電腦上顯示「${bot.name}」的瀏覽器${link ? '：' + link : ''}`);
       await db.prepare("INSERT INTO jobs (user_id,conv,bot_id,chain,prompt,created,kind,url) VALUES (?,?,?,'[]','',?,'open',?)").bind(U, conv, bot.id, now(), link || null).run();
       return ok();
     }

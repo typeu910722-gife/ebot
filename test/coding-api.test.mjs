@@ -301,6 +301,63 @@ test('a stopped chat and a code failure do not queue another model', async () =>
   assert.equal(/改由/.test(text), false);
 });
 
+test('dragging a message copies it, and replace removes the original', async () => {
+  const db = openD1();
+  const su = await call(db, 'POST', 'signup', { body: { name: 'copya', pw: 'correcthorsebattery' } });
+  const token = su.data.token;
+  const a = await call(db, 'POST', 'bots', { token, body: { name: '甲', task: '收訊息' } });
+  const b = await call(db, 'POST', 'bots', { token, body: { name: '乙', task: '收訊息' } });
+  const up = await call(db, 'POST', 'files', { token, body: { conv: a.data.id, name: '圖.jpg', mime: 'image/jpeg', data: 'aGVsbG8=' } });
+  assert.equal(up.status, 200, JSON.stringify(up.data));
+  const sent = await call(db, 'POST', 'messages', { token, body: { conv: a.data.id, text: '照這張圖', files: [up.data.id] } });
+  assert.equal(sent.status, 200);
+  const src = await call(db, 'GET', 'messages', { token, query: { conv: a.data.id } });
+  const msg = src.data.msgs.find(m => m.text === '照這張圖');
+  assert.ok(msg);
+  assert.equal(msg.files[0].id, up.data.id);
+  const same = await call(db, 'POST', 'messages/copy', { token, body: { to: a.data.id, from: a.data.id, id: msg.id, replace: false } });
+  assert.equal(same.status, 400);
+  const copied = await call(db, 'POST', 'messages/copy', { token, body: { to: b.data.id, from: a.data.id, id: msg.id, replace: false } });
+  assert.equal(copied.status, 200, JSON.stringify(copied.data));
+  assert.equal(copied.data.replaced, false);
+  const kept = await call(db, 'GET', 'messages', { token, query: { conv: a.data.id } });
+  assert.ok(kept.data.msgs.some(m => m.id === msg.id));
+  const dest = await call(db, 'GET', 'messages', { token, query: { conv: b.data.id } });
+  const copy = dest.data.msgs.find(m => m.text === '照這張圖');
+  assert.ok(copy);
+  assert.notEqual(copy.files[0].id, up.data.id);
+  const file = await call(db, 'GET', 'file/' + copy.files[0].id, { token });
+  assert.equal(file.status, 200);
+  assert.equal(file.data.data, 'aGVsbG8=');
+  const jobs = db.raw.prepare("SELECT conv, prompt FROM jobs WHERE kind IS NULL OR kind='chat' OR kind=''").all();
+  assert.ok(jobs.some(j => j.conv === b.data.id && j.prompt === '照這張圖'));
+  const other = await call(db, 'POST', 'signup', { body: { name: 'copyb', pw: 'correcthorsebattery' } });
+  const stolen = await call(db, 'POST', 'messages/copy', { token: other.data.token, body: { to: b.data.id, from: a.data.id, id: msg.id, replace: true } });
+  assert.equal(stolen.status, 404);
+  const replaced = await call(db, 'POST', 'messages/copy', { token, body: { to: b.data.id, from: a.data.id, id: msg.id, replace: true } });
+  assert.equal(replaced.status, 200);
+  assert.equal(replaced.data.replaced, true);
+  const gone = await call(db, 'GET', 'messages', { token, query: { conv: a.data.id } });
+  assert.equal(gone.data.msgs.some(m => m.id === msg.id), false);
+  const still = await call(db, 'GET', 'file/' + up.data.id, { token });
+  assert.equal(still.status, 200);
+  const g = await call(db, 'POST', 'groups', { token, body: { name: '組', task: '', members: [a.data.id] } });
+  assert.equal(g.status, 200, JSON.stringify(g.data));
+  const joined = await call(db, 'PUT', 'groups/' + g.data.id, { token, body: { name: '組', task: '', members: [a.data.id, b.data.id], folder: null } });
+  assert.equal(joined.status, 200, JSON.stringify(joined.data));
+  const state = await call(db, 'GET', 'state', { token });
+  assert.deepEqual(state.data.groups.find(x => x.id === g.data.id).members, [a.data.id, b.data.id]);
+  const page = readFileSync(join(import.meta.dirname, '..', 'public', 'index.html'), 'utf8');
+  assert.match(page, /複製並蓋掉原本的訊息/);
+  assert.match(page, /messages\/copy/);
+  assert.match(page, /加入群組/);
+  assert.match(page, /確定要複製？/);
+  const runner = readFileSync(join(import.meta.dirname, '..', 'public', 'octa-runner.mjs'), 'utf8');
+  assert.match(runner, /octa:open/);
+  const api = readFileSync(join(import.meta.dirname, '..', 'functions', 'api', '[[path]].js'), 'utf8');
+  assert.match(api, /body\.expand/);
+});
+
 function openD1From(raw) {
   const norm = a => a.map(v => (v === undefined ? null : typeof v === 'boolean' ? +v : v));
   class Stmt {

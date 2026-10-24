@@ -1087,7 +1087,7 @@ async function openBrowser(bot, opts = {}) {
       for (let i = 0; i < 30 && !(await cdpInfo(port)); i++) await pause(100);
       if (await cdpInfo(port)) {
         browsers.set(bot.id, { port, last: Date.now(), embed: true });
-        if (opts.show !== false) await cfg.embed.show?.(port, true);
+        if (opts.show !== false) await cfg.embed.show?.(port, opts.expand ? 'open' : true);
         log(`🌐 ${bot.name} 的瀏覽器在 OCTA 裡`);
         await tagBrowser(port, bot.name).catch(() => { });
         return port;
@@ -1147,9 +1147,9 @@ async function browserSnapshot(port, since) {   // screenshot + address of the t
     return { url: p.url, jpeg };
   });
 }
-async function showBrowser(port, url, hide) {
+async function showBrowser(port, url, hide, expand) {
   const embed = [...browsers.values()].some(b => b.port === port && b.embed);
-  if (embed) await cfg.embed?.show?.(port, !hide);
+  if (embed) await cfg.embed?.show?.(port, hide ? false : (expand ? 'open' : true));
   return cdp(port, async send => {
     let targetId = pickLivePage(await pagesOf(send))?.targetId;
     if (url || !targetId) targetId = (await send('Target.createTarget', { url: url || 'about:blank' })).targetId;
@@ -1167,14 +1167,16 @@ async function openJob(job) {
   if (typeof job.shareBrowser === 'boolean') shareBrowser = job.shareBrowser;
   const done = (ok, text) => { log(`🌐 ${job.bot.name}：${text}`); return api('runner/done', { id: job.id, ok, text }).catch(() => { }); };
   const hide = job.url === 'octa:hide';
+  const expand = String(job.url || '').startsWith('octa:open');
+  const page = expand ? String(job.url).slice('octa:open'.length).trim() : (hide ? '' : (job.url || ''));
   try {
     const ports = [...new Set([browsers.get(job.bot.id)?.port, cfg.embed && job.bot.browser !== 'mine' ? embedPortOf(job.bot.id) : 0, portOf(job.bot.id)].filter(Boolean))];
     if (hide && (await Promise.all(ports.map(p => cdpInfo(p)))).every(v => !v)) return done(true, '我的瀏覽器已經收起來了。');
-    const port = await ensureBrowser(job.bot, { show: !hide });
-    await showBrowser(port, hide ? '' : job.url, hide);
+    const port = await ensureBrowser(job.bot, { show: !hide, expand });
+    await showBrowser(port, page, hide, expand);
     touchBrowser(job.bot.id);
     if (hide && shareBrowser) await syncOut(port);   // signed in by hand: every bot gets it
-    const where = browsers.get(job.bot.id)?.embed ? 'OCTA 視窗裡' : '電腦上';
+    const where = browsers.get(job.bot.id)?.embed ? (expand ? 'OCTA 視窗裡，按「收回」會縮回角落' : 'OCTA 視窗的角落縮圖，點一下可以打開') : '電腦上';
     return done(true, hide ? '我的瀏覽器已收到背景，我會繼續在裡面工作。'
       : busyBots.has(job.bot.id) ? `我的瀏覽器已經在${where}，我正在裡面工作，先別操作；要幫我登入請等我停下來。`
       : `我的瀏覽器已經在${where}。需要登入就直接在裡面登入，好了回來按「登入好了，繼續」。`);

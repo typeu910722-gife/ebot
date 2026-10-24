@@ -1,5 +1,19 @@
 [
  {
+  "v": "3.0.10",
+  "date": "2026-10-24",
+  "notes": [
+   "訊息、圖片、檔案拖到另一個機器人會先問要不要複製，可以選擇蓋掉原本那則",
+   "機器人拖進群組就直接加入",
+   "內建瀏覽器平常縮在角落，點一下打開，按收回就縮回去，聊天不再被擠到一邊"
+  ],
+  "notes_en": [
+   "Dragging a message, picture, or file onto another bot asks before copying, and can replace the original message",
+   "Dragging a bot onto a group adds it immediately",
+   "The built-in browser stays a corner thumbnail until you open it, and collapse puts it back so the chat keeps the window"
+  ]
+ },
+ {
   "v": "3.0.9",
   "date": "2026-10-24",
   "notes": [

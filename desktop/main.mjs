@@ -10,7 +10,7 @@ import { existsSync, appendFileSync, mkdirSync, readFileSync, writeFileSync, rmS
 import os from 'node:os';
 import { startServer } from './server.mjs';
 import { startCdpBridge } from './cdp-bridge.mjs';
-import { dockLayout, isBlankUrl } from './embed-layout.mjs';
+import { PAGE, dockLayout, embedFrames, isBlankUrl } from './embed-layout.mjs';
 
 // ---------- updates (GitHub Releases) ----------
 const { autoUpdater } = createRequire(import.meta.url)('electron-updater');
@@ -149,9 +149,63 @@ async function loadMain() {
 const embeds = new Map();
 let embedSeq = 0;
 function fitView(view, bounds, visible) {
-  if (!view) return;
+  if (!view || !bounds) return;
   try { view.setBounds(bounds); } catch { }
   try { view.setVisible(visible); } catch { }
+}
+function hostOf(bucket) {
+  if (bucket.host && !bucket.host.isDestroyed()) return bucket.host;
+  // the page stays 1280×800 here, so a thumbnail does not shrink what the bot sees
+  bucket.host = new BrowserWindow({
+    show: false, x: -3200, y: -3200, width: PAGE.width, height: PAGE.height,
+    skipTaskbar: true, focusable: false, frame: false, thickFrame: false,
+    minimizable: false, movable: false, resizable: false,
+    webPreferences: { backgroundThrottling: false }
+  });
+  try { bucket.host.setMenuBarVisibility(false); } catch { }
+  return bucket.host;
+}
+function parkView(bucket, view, visible) {
+  const host = hostOf(bucket);
+  try { if (win && !win.isDestroyed()) win.contentView.removeChildView(view); } catch { }
+  try { if (!host.contentView.children.includes(view)) host.contentView.addChildView(view); } catch { }
+  fitView(view, { x: 0, y: 0, width: PAGE.width, height: PAGE.height }, visible);
+}
+function sendFrame(bucket, extra) {
+  const wc = bucket.chrome?.webContents;
+  if (!wc || wc.isDestroyed()) return;
+  wc.send('octa:browser-frame', { name: bucket.name, mode: bucket.shown || 'thumb', ...extra });
+}
+function stopThumbs(bucket) { clearTimeout(bucket.thumbTimer); bucket.thumbTimer = null; }
+function startThumbs(bucket) {
+  stopThumbs(bucket);
+  const tick = async () => {
+    if (bucket.shown !== 'thumb' || !bucket.active || bucket.active.webContents.isDestroyed()) return;
+    try {
+      const shot = await bucket.active.webContents.debugger.sendCommand('Page.captureScreenshot', { format: 'jpeg', quality: 45 });
+      sendFrame(bucket, { mode: 'thumb', jpeg: shot.data });
+    } catch { sendFrame(bucket, { mode: 'thumb' }); }
+    if (bucket.shown === 'thumb') bucket.thumbTimer = setTimeout(tick, 900);
+  };
+  bucket.thumbTimer = setTimeout(tick, 400);
+}
+function detachChrome(bucket) {
+  stopThumbs(bucket);
+  try { if (win && !win.isDestroyed() && bucket.chrome) win.contentView.removeChildView(bucket.chrome); } catch { }
+}
+function placeBucket(bucket, frames) {
+  for (const v of bucket.tabs) {
+    if (frames.mode === 'open' && v === bucket.active && frames.page) {
+      try { bucket.host?.contentView.removeChildView(v); } catch { }
+      if (win && !win.contentView.children.includes(v)) win.contentView.addChildView(v);
+      fitView(v, frames.page, true);
+    } else parkView(bucket, v, v === bucket.active && frames.mode !== 'hidden');
+  }
+  if (frames.chrome && bucket.chrome && win) {
+    if (!win.contentView.children.includes(bucket.chrome)) win.contentView.addChildView(bucket.chrome);
+    fitView(bucket.chrome, frames.chrome, true);
+    try { win.contentView.removeChildView(bucket.chrome); win.contentView.addChildView(bucket.chrome); } catch { }
+  }
 }
 function layoutEmbed() {
   if (!win || win.isDestroyed()) return;
@@ -159,9 +213,9 @@ function layoutEmbed() {
   const main = win.contentView.children.find(v => v.webContents === win.webContents);
   const side = [...embeds.values()].find(e => e.shown);
   if (!side) { fitView(main, { x: 0, y: 0, width: w, height: h }, true); return; }
-  const lay = dockLayout(w, h);
-  fitView(main, lay.main, true);
-  for (const v of side.tabs) fitView(v, lay.side, v === side.active);
+  const frames = embedFrames(w, h, side.shown);
+  fitView(main, frames.main, true);
+  placeBucket(side, frames);
 }
 function hookPage(wc, id, bucket) {
   try { if (!wc.debugger.isAttached()) wc.debugger.attach('1.3'); } catch (e) { if (!/already/i.test(String(e))) logError('debugger', e); }
@@ -174,33 +228,40 @@ function pageId(bucket, wc) {
 }
 function focusTab(bucket, view) {
   bucket.active = view;
-  if (bucket.shown && win && !win.isDestroyed() && !win.contentView.children.includes(view)) win.contentView.addChildView(view);
   layoutEmbed();
 }
+// true keeps an open dock open and otherwise shows the thumbnail. 'open' and 'thumb' are explicit.
 async function embedShow(port, show) {
   const bucket = embeds.get(port);
   if (!bucket || !win || win.isDestroyed()) return;
-  bucket.shown = !!show;
-  if (show) {
+  const mode = show === 'open' || show === 'thumb' ? show : (show ? (bucket.shown === 'open' ? 'open' : 'thumb') : false);
+  if (mode) {
     for (const [p, e] of embeds) if (p !== port && e.shown) {
       e.shown = false;
-      for (const v of e.tabs) { try { win.contentView.removeChildView(v); } catch { } }
+      detachChrome(e);
+      for (const v of e.tabs) parkView(e, v, false);
     }
   }
-  const present = bucket.tabs.filter(v => win.contentView.children.includes(v));
-  if (show) for (const v of bucket.tabs) if (!present.includes(v)) win.contentView.addChildView(v);
-  if (show && bucket.active) { try { win.contentView.removeChildView(bucket.active); } catch { } win.contentView.addChildView(bucket.active); }
-  if (!show) for (const v of bucket.tabs) { try { win.contentView.removeChildView(v); } catch { } }
+  bucket.shown = mode || false;
+  if (!mode) {
+    detachChrome(bucket);
+    for (const v of bucket.tabs) parkView(bucket, v, false);
+  } else if (mode === 'thumb') startThumbs(bucket);
+  else { stopThumbs(bucket); sendFrame(bucket, { mode: 'open' }); }
   layoutEmbed();
 }
 async function embedStop(port) {
   const bucket = embeds.get(port);
   if (!bucket) return;
   embeds.delete(port);
+  detachChrome(bucket);
+  try { if (bucket.chrome && !bucket.chrome.webContents.isDestroyed()) bucket.chrome.webContents.close(); } catch { }
   for (const v of bucket.tabs) {
     try { if (win && !win.isDestroyed()) win.contentView.removeChildView(v); } catch { }
+    try { bucket.host?.contentView.removeChildView(v); } catch { }
     try { if (!v.webContents.isDestroyed()) v.webContents.close(); } catch { }
   }
+  try { if (bucket.host && !bucket.host.isDestroyed()) bucket.host.destroy(); } catch { }
   for (const w of bucket.hidden) { try { if (!w.isDestroyed()) w.destroy(); } catch { } }
   try { await bucket.bridge?.close(); } catch { }
   layoutEmbed();
@@ -211,17 +272,25 @@ async function embedStart(bot, port) {
   const partition = 'persist:octa-bot-' + String(bot.id || 'bot').replace(/[^\w-]/g, '').slice(0, 40);
   const prefs = { partition, contextIsolation: true, sandbox: true, backgroundThrottling: false };
   const view = new WebContentsView({ webPreferences: prefs });
-  const bucket = { port, prefs, tabs: [view], active: view, pages: new Map(), shown: false, onEvent: null, hidden: [], bridge: null, splash: '' };
+  const name = String(bot.name || '機器人').replace(/[<&]/g, '');
+  const chrome = new WebContentsView({ webPreferences: { preload: join(here, 'browser-preload.cjs'), contextIsolation: true, sandbox: true, backgroundThrottling: false } });
+  const bucket = { port, prefs, tabs: [view], active: view, pages: new Map(), shown: false, onEvent: null, hidden: [], bridge: null, splash: '', chrome, name, host: null, thumbTimer: null };
   hookPage(view.webContents, 'p' + (++embedSeq), bucket);
   view.webContents.setWindowOpenHandler(({ url }) => { focusTab(bucket, view); view.webContents.loadURL(url).catch(() => { }); embedShow(port, true); return { action: 'deny' }; });
-  const name = String(bot.name || '機器人').replace(/[<&]/g, '');
   bucket.splash = `data:text/html;charset=utf-8,${encodeURIComponent(`<title>${name} 的瀏覽器</title><body style="margin:0;display:grid;place-items:center;height:100vh;background:#1c1814;color:#f3ead3;font-family:sans-serif;text-align:center"><div style="font-size:40px">🐙</div><div style="font-size:18px;margin-top:8px">${name}</div><div style="font:400 14px sans-serif;opacity:.8;margin-top:10px">網頁會開在這裡，登入會留在這台電腦</div></body>`)}`;
   view.webContents.loadURL(bucket.splash).catch(() => { });
+  chrome.webContents.loadFile(join(here, 'browser-chrome.html')).catch(() => { });
+  chrome.webContents.on('did-finish-load', () => sendFrame(bucket, {}));
+  parkView(bucket, view, true);
   const adapter = {
     list: () => [...bucket.pages].filter(([, p]) => !p.wc.isDestroyed()).map(([id, p]) => ({ id, title: p.wc.getTitle(), url: p.wc.getURL() || 'about:blank' })),
     bounds: () => {
-      const b = bucket.active?.getBounds?.() || {};
-      return { windowId: 1, bounds: { left: 0, top: 0, width: b.width > 50 ? b.width : 900, height: b.height > 50 ? b.height : 700, windowState: bucket.shown ? 'normal' : 'minimized' } };
+      if (bucket.shown === 'open') {
+        const b = bucket.active?.getBounds?.() || {};
+        return { windowId: 1, bounds: { left: 0, top: 0, width: b.width > 50 ? b.width : PAGE.width, height: b.height > 50 ? b.height : PAGE.height, windowState: 'normal' } };
+      }
+      // parked at the working size, so a thumbnail does not make the bot's page collapse
+      return { windowId: 1, bounds: { left: 0, top: 0, width: PAGE.width, height: PAGE.height, windowState: bucket.shown === 'thumb' ? 'normal' : 'minimized' } };
     },
     setBounds: bounds => embedShow(port, bounds?.windowState !== 'minimized' && !(bounds?.left < -5000)),
     onEvent: cb => { bucket.onEvent = cb; },
@@ -262,7 +331,6 @@ async function embedStart(bot, port) {
       hookPage(tab.webContents, id, bucket);
       tab.webContents.setWindowOpenHandler(({ url: next }) => { focusTab(bucket, tab); tab.webContents.loadURL(next).catch(() => { }); embedShow(port, true); return { action: 'deny' }; });
       tab.webContents.loadURL(url).catch(() => { });
-      if (win && !win.isDestroyed()) win.contentView.addChildView(tab);
       focusTab(bucket, tab);
       await embedShow(port, true);
       return { id, title: '', url };
@@ -277,6 +345,7 @@ async function embedStart(bot, port) {
         bucket.pages.delete(id);
         if (bucket.active === tab) bucket.active = bucket.tabs[bucket.tabs.length - 1];
         try { win?.contentView.removeChildView(tab); } catch { }
+        try { bucket.host?.contentView.removeChildView(tab); } catch { }
         try { tab.webContents.close(); } catch { }
         layoutEmbed();
         return;
@@ -327,6 +396,12 @@ async function startRunnerFor(url, token) {
 
 // only OCTA's own pages may use the bridge
 const trusted = e => { const u = e.senderFrame?.url || ''; return u.startsWith(CLOUD + '/') || u === CLOUD || (server && u.startsWith(server.url)) || u.startsWith('file:'); };
+ipcMain.on('octa:browser-toggle', e => {
+  if (!trusted(e)) return;
+  for (const [port, bucket] of embeds) {
+    if (bucket.chrome?.webContents === e.sender) { embedShow(port, bucket.shown === 'open' ? 'thumb' : 'open'); return; }
+  }
+});
 const handle = (ch, fn) => ipcMain.handle(ch, (e, ...a) => { if (!trusted(e)) throw new Error('not allowed'); return fn(e, ...a); });
 handle('octa:version', () => app.getVersion());
 handle('octa:show', () => { showWindow(); return true; });

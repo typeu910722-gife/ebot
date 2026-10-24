@@ -165,6 +165,8 @@ select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padd
 .fold.over{background:var(--panel);outline:1px dashed var(--gold)}
 .iw[draggable=true]{cursor:grab}
 .iw.dragging{opacity:.4}
+.iw.over{background:var(--panel);outline:1px dashed var(--gold);border-radius:12px}
+.iw.over[data-hint]::after{content:attr(data-hint);position:absolute;right:36px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--gold2);background:var(--bg);padding:2px 8px;border-radius:8px;pointer-events:none;z-index:2}
 .bub[draggable=true]{cursor:grab}
 .pane{display:flex;flex-direction:column;min-height:0;min-width:0}
 .ph{display:flex;align-items:center;gap:8px 12px;flex:none;flex-wrap:wrap;border-bottom:1px solid var(--line2);padding-block:14px;padding-left:20px;padding-right:max(20px,env(safe-area-inset-right,0px))}
@@ -506,9 +508,9 @@ details.adv[open]{display:grid;gap:8px}
     <h2>它會做什麼</h2>
     <div class="hgrid">
       <div><b>看得到畫面</b><span>遊戲、後台、分數，它看圖，不靠猜。圖裡沒有的數字，它會直說沒看到。</span></div>
-      <div><b>網頁就在旁邊</b><span>桌面版裡就是它的瀏覽器。寬的時候在右邊，你看得到它怎麼點，登入也在同一個畫面。</span></div>
+      <div><b>網頁縮在角落</b><span>桌面版平常只顯示一小張，點一下打開，按收回就縮回去。聊天不會被擠到一邊。</span></div>
       <div><b>重要的事先問你</b><span>付錢、刪除、傳給別人，它會停下來等你點頭。</span></div>
-      <div><b>拖一下就歸類</b><span>把機器人拖進分區。檔案丟進對話就附上，文字拖進輸入框就貼上。</span></div>
+      <div><b>拖一下就過去</b><span>訊息、圖片、檔案拖到另一個機器人會先問你，也可以蓋掉原本那則。機器人拖進群組就直接加入。</span></div>
     </div>
   </section>
   <section class="hsec">
@@ -520,7 +522,7 @@ details.adv[open]{display:grid;gap:8px}
     <h2>常見問題</h2>
     <details><summary>要錢嗎？</summary><p>OCTA 本身不用錢。AI 用你已經有的方案，或免費的 Gemini、Ollama。</p></details>
     <details><summary>手機也能用嗎？</summary><p>可以看、可以下指令。真正做事的是那台開著的電腦。電腦關了，事情會先排著，開機再做。</p></details>
-    <details><summary>密碼要貼給它嗎？</summary><p>不要。登入時在右側那個畫面自己登入，或讓它用你的 Chrome 自動填。它看不到密碼本身。</p></details>
+    <details><summary>密碼要貼給它嗎？</summary><p>不要。登入時在打開的瀏覽器裡自己登入，或讓它用你的 Chrome 自動填。它看不到密碼本身。</p></details>
     <details><summary>有 Mac 版嗎？</summary><p>目前是 Windows。Mac 可以先開網頁版看。</p></details>
   </section>
   <footer class="hft"><span>OCTA｜奧克塔 · 歪計劃 YZ PROJECT</span><a id="hRepo" href="#" target="_blank" rel="noopener" hidden>原始碼</a></footer>
@@ -621,7 +623,7 @@ document.addEventListener('click',e=>{
   if(set){applyTheme(set.dataset.setTheme);document.querySelectorAll('[data-set-theme]').forEach(x=>x.classList.toggle('on',x.dataset.setTheme===currentTheme()));return}
   const b=e.target.closest('[data-theme-btn]');if(b)applyTheme(currentTheme()==='light'?'dark':'light');
 });
-function showBrowserLabel(){return window.octaDesktop?'在這個視窗顯示':'在電腦版顯示它的瀏覽器'}
+function showBrowserLabel(){return window.octaDesktop?'打開瀏覽器':'在電腦版打開瀏覽器'}
 function browserHint(){return window.octaDesktop?'這個視窗裡的瀏覽器':'電腦版 OCTA 裡的瀏覽器'}
 /* YZ progress: thin bar for slow requests, full overlay (blocks input) for heavy ones */
 const ybar={n:0,t:null,on(block){this.n++;clearTimeout(this.t);this.t=setTimeout(()=>{document.body.classList.add('yloading');if(block)document.body.classList.add('yblock')},block?0:250)},
@@ -882,9 +884,9 @@ function render(scroll){
   let mh=!mc?.loaded?'<div class="sys fade">載入中…</div>':mc.more?'<button type="button" class="ghost older" id="older">載入更早的訊息</button>':'';
   mh+=convMsgs(cur).map(m=>{
     if(m.by==='sys')return `<div class="sys">${esc(m.text)}<span class="ts">${hm(m.ts)}</span></div>`;
-    if(m.by==='me')return `<div class="m me${m.tmp?' tmp':''}"><div class="bx"><div class="bub" draggable="true" data-dragtext="1" data-u>${fmt(m.text)}${filesHtml(m.files)}</div><div class="meta">${m.tmp?'傳送中…':hm(m.ts)}</div></div></div>`;
+    if(m.by==='me')return `<div class="m me${m.tmp?' tmp':''}" data-mid="${m.id}"><div class="bx"><div class="bub"${m.tmp?'':' draggable="true" data-dragmsg="1" title="拖到別的機器人就能複製"'} data-u>${fmt(m.text)}${filesHtml(m.files)}</div><div class="meta">${m.tmp?'傳送中…':hm(m.ts)}</div></div></div>`;
     const long=m.text.length>1400||m.text.split('\n').length>30,open=OPENED.has(m.id);
-    return `<div class="m" data-mid="${m.id}"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" draggable="true" data-dragtext="1" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}${optsHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
+    return `<div class="m" data-mid="${m.id}"><span class="av sm" data-u>${avOf(m.by)}</span><div class="bx">${g?`<div class="who" data-u>${esc(nameOf(m.by))}</div>`:''}<div class="bub md${long&&!open?' long':''}" draggable="true" data-dragmsg="1" title="拖到別的機器人就能複製" data-u>${md(m.text)}${filesHtml(m.files)}</div>${long?`<button type="button" class="more3" data-expand="${m.id}">${open?'收合':'顯示全部'}</button>`:''}${apprHtml(m)}${loginHtml(m)}${retryHtml(m)}${optsHtml(m)}<div class="meta">${hm(m.ts)}<button type="button" class="cp" data-copy-msg="${m.id}" aria-label="複製">複製</button></div></div></div>`}).join('');
   const bz=busyIn(cur);
   if(bz.length){const run=bz.find(b=>b.status==='running');
     mh+=`<div class="work"><span class="fade">${run&&run.kind==='chat'&&run.started?`<span class="el" data-since="${run.started}">${elapsed(run.started)}</span> `:''}${run?(run.kind==='open'?esc(nameOf(run.bot_id))+' 的瀏覽器正在顯示…':esc(nameOf(run.bot_id))+' '+(run.kind==='code'?'程式任務':run.progress&&/搜尋/.test(run.progress)?'搜尋':run.progress&&/測試/.test(run.progress)?'測試':run.progress&&/修復|修改|寫入/.test(run.progress)?'修改':'處理')+'中…'+(run.progress?`<span class="prog" data-u>${esc(run.progress)}</span>`:'')+(run.eng&&run.eng.split('|')[0]!==(c.engine||'claude')?` · 備援 ${esc((ENG[run.eng.split('|')[0]]||{n:run.eng.split('|')[0]}).n)}`:'')):S.runnerOnline?'排隊中…':'等待主機電腦上線…'}</span><button id="stop">停止</button></div>`}
@@ -901,32 +903,57 @@ $('list').onclick=e=>{
   const fo=e.target.closest('[data-folder]');if(fo){e.stopPropagation();folderMenu(fo,fo.dataset.folder);return}
   const ct=e.target.closest('[data-code]');if(ct){openCode(ct.dataset.code);return}
   const it=e.target.closest('.item');if(!it)return;openConv(it.dataset.id)};
-let draggingId='',dragDepth=0;
+let draggingId='',draggingMsg=null,dragDepth=0;
+function clearDrop(){$('list').querySelectorAll('.dragging,.over').forEach(n=>{n.classList.remove('dragging','over');n.removeAttribute('data-hint')})}
 document.addEventListener('dragstart',e=>{
   if(e.target.closest('.more')){e.preventDefault();return}
   const row=e.target.closest('[data-drag]');
-  if(row){draggingId=row.dataset.drag;e.dataTransfer.setData('application/x-octa-conv',row.dataset.drag);e.dataTransfer.setData('text/plain','@'+row.dataset.dragname);e.dataTransfer.effectAllowed='copyMove';row.classList.add('dragging');return}
-  const bub=e.target.closest('[data-dragtext]');
+  if(row){draggingId=row.dataset.drag;draggingMsg=null;e.dataTransfer.setData('application/x-octa-conv',row.dataset.drag);e.dataTransfer.setData('text/plain','@'+row.dataset.dragname);e.dataTransfer.effectAllowed='copyMove';row.classList.add('dragging');return}
+  const bub=e.target.closest('[data-dragmsg]');
   if(!bub)return;
-  e.dataTransfer.setData('text/plain',bub.innerText.trim());
+  const mid=bub.closest('[data-mid]')?.dataset.mid;
+  const m=convMsgs(cur).find(x=>String(x.id)===String(mid));
+  if(!m||m.tmp){e.preventDefault();return}
+  draggingMsg={id:m.id,conv:cur,text:m.text||'',files:(m.files||[]).map(f=>({id:f.id,name:f.name,mime:f.mime}))};
+  draggingId='';
+  e.dataTransfer.setData('application/x-octa-msg',String(m.id));
+  e.dataTransfer.setData('text/plain',(m.text||'').trim());
   e.dataTransfer.effectAllowed='copy';
 });
-document.addEventListener('dragend',()=>{draggingId='';dragDepth=0;$('pane').classList.remove('drop','droptext');$('list').querySelectorAll('.dragging,.over').forEach(n=>n.classList.remove('dragging','over'))});
+document.addEventListener('dragend',()=>{draggingId='';draggingMsg=null;dragDepth=0;$('pane').classList.remove('drop','droptext');clearDrop()});
+function markRow(el,hint){if(!el)return;el.classList.add('over');el.dataset.hint=hint}
 $('list').addEventListener('dragover',e=>{
+  const botEl=e.target.closest('[data-dropbot]');
   const zone=e.target.closest('[data-drop], [data-dropbot]');
-  if(!zone)return;
   const types=[...e.dataTransfer.types];
+  if(draggingMsg){
+    if(!botEl||botEl.dataset.dropbot===draggingMsg.conv)return;
+    e.preventDefault();e.dataTransfer.dropEffect='copy';
+    $('list').querySelectorAll('.iw.over').forEach(n=>{if(n!==botEl){n.classList.remove('over');n.removeAttribute('data-hint')}});
+    markRow(botEl,'複製到這裡');return}
+  if(draggingId&&botEl&&isG(botEl.dataset.dropbot)&&bot(draggingId)){
+    e.preventDefault();e.dataTransfer.dropEffect='copy';
+    markRow(botEl,'加入群組');return}
+  if(!zone)return;
   if(!draggingId&&!types.includes('application/x-octa-conv')&&!types.includes('Files'))return;
   e.preventDefault();
   e.dataTransfer.dropEffect=types.includes('Files')?'copy':'move';
-  (e.target.closest('.fold')||zone).classList.add('over');
+  if(types.includes('Files')&&botEl)markRow(botEl,'傳給這裡');
+  else (e.target.closest('.fold')||zone).classList.add('over');
 });
-$('list').addEventListener('dragleave',e=>{const zone=e.target.closest('.fold');if(zone&&!zone.contains(e.relatedTarget))zone.classList.remove('over')});
+$('list').addEventListener('dragleave',e=>{
+  const zone=e.target.closest('.fold');if(zone&&!zone.contains(e.relatedTarget))zone.classList.remove('over');
+  const row=e.target.closest('.iw');if(row&&!row.contains(e.relatedTarget)){row.classList.remove('over');row.removeAttribute('data-hint')}
+});
 $('list').addEventListener('drop',async e=>{
-  $('list').querySelectorAll('.over').forEach(n=>n.classList.remove('over'));
-  const files=[...e.dataTransfer.files];
   const botEl=e.target.closest('[data-dropbot]');
-  if(files.length&&botEl){e.preventDefault();openConv(botEl.dataset.dropbot);addFiles(files);return}
+  const target=botEl?.dataset.dropbot||'';
+  const msg=draggingMsg;
+  clearDrop();
+  if(msg&&target&&target!==msg.conv){e.preventDefault();askCopy(target,{...msg,files:(msg.files||[]).map(f=>({...f}))});return}
+  if(draggingId&&target&&isG(target)&&bot(draggingId)){e.preventDefault();joinGroup(draggingId,target);return}
+  const files=[...e.dataTransfer.files];
+  if(files.length&&botEl){e.preventDefault();askSendFiles(target,files);return}
   const zone=e.target.closest('[data-drop]');
   const id=e.dataTransfer.getData('application/x-octa-conv')||draggingId;
   if(!zone||!id)return;
@@ -936,6 +963,50 @@ $('list').addEventListener('drop',async e=>{
   if((c?.folder||null)===(folder||null))return;
   try{await api('move','POST',{id,folder});toast(folder?'已拖進這個分區':'已移回未分區');refresh()}catch(err){toast(err.message)}
 });
+async function joinGroup(botId,groupId){
+  const g=S.groups.find(x=>x.id===groupId),b=bot(botId);if(!g||!b)return;
+  if(g.members.includes(botId)){toast('已經在這個群組');return}
+  try{await api('groups/'+groupId,'PUT',{name:g.name,task:g.task||'',members:[...g.members,botId],folder:g.folder||null});
+    toast('「'+b.name+'」已加入「'+g.name+'」');await refresh()}catch(err){toast(err.message)}}
+function askCopy(targetId,msg){
+  const target=conv(targetId);if(!target||!msg)return;
+  const who=esc(target.name);
+  const preview=esc((msg.text||'').replace(/\s+/g,' ').trim().slice(0,80)||'（沒有文字）');
+  const extra=msg.files?.length?`，含 ${msg.files.length} 個圖片或檔案`:'';
+  $('veil').innerHTML=`<div class="sheet"><h2>確定要複製？</h2>
+    <p>複製到「<b data-u>${who}</b>」${extra}。那邊會開始處理這則。</p>
+    <p data-u>${preview}</p>
+    <p class="hmuted">「複製並蓋掉原本的訊息」會把這邊這一則刪掉，只留在「<span data-u>${who}</span>」。</p>
+    <div class="errmsg" id="cfE"></div>
+    <div class="acts"><button type="button" class="no" id="sx">取消</button><button type="button" class="btn" id="cfKeep">複製</button><button type="button" class="del" id="cfOver">複製並蓋掉原本的訊息</button></div></div>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;
+  const go=replace=>async()=>{$('cfKeep').disabled=$('cfOver').disabled=true;
+    try{await copyDropped(targetId,msg,replace);closeSheet()}catch(e){$('cfE').textContent=e.message;$('cfKeep').disabled=$('cfOver').disabled=false}};
+  $('cfKeep').onclick=go(false);$('cfOver').onclick=go(true)}
+async function copyDropped(targetId,msg,replace){
+  await api('messages/copy','POST',{to:targetId,from:msg.conv,id:msg.id,replace:!!replace});
+  if(replace&&MSG[msg.conv])MSG[msg.conv].list=MSG[msg.conv].list.filter(m=>String(m.id)!==String(msg.id));
+  toast(replace?'已複製，原本的訊息已蓋掉':'已複製');
+  await refresh();
+  if(MSG[targetId]?.loaded)await loadMsgs(targetId,'new');
+  if(cur===targetId||cur===msg.conv)render(true)}
+function askSendFiles(targetId,files){
+  const target=conv(targetId);if(!target)return;
+  const list=[...files].slice(0,6);
+  confirmSheet('確定要複製？',`<p>要把 ${list.length} 個檔案傳給「<b data-u>${esc(target.name)}</b>」？那邊會開始處理。</p>`,'複製過去',false,()=>sendFilesTo(targetId,list))}
+async function sendFilesTo(convId,list){
+  const ids=[];
+  for(const file of list){
+    const isImg=/^image\//.test(file.type)&&file.type!=='image/gif';
+    const blob=isImg?await shrink(file):file;
+    if(blob.size>10_000_000)throw new Error(file.name+' '+I18N.t('太大（上限 10MB）'));
+    const r=await api('files','POST',{conv:convId,name:isImg?file.name.replace(/\.\w+$/,'')+'.jpg':file.name,mime:isImg?'image/jpeg':(file.type||'application/octet-stream'),data:await b64(blob)});
+    ids.push(r.id)}
+  if(!ids.length)return;
+  await api('messages','POST',{conv:convId,text:'',files:ids});
+  toast('已複製過去');await refresh();
+  if(MSG[convId]?.loaded)await loadMsgs(convId,'new');
+  if(cur===convId)render(true)}
 function openConv(id){saveDraft();cur=id;try{localStorage.setItem('ebot_cur',cur)}catch(e){}
   pending=[];renderAtt();loadDraft();render(true);$('app').classList.add('chat');
   loadMsgs(id,MSG[id]?.loaded?'new':'first').then(()=>{if(cur===id)render(true)}).catch(()=>{});
@@ -1078,7 +1149,7 @@ $('pane').addEventListener('drop',e=>{
   const files=[...e.dataTransfer.files];
   if(files.length){e.preventDefault();addFiles(files);return}
   const text=e.dataTransfer.getData('text/plain');
-  if(!text||draggingId)return;
+  if(!text||draggingId||draggingMsg)return;
   e.preventDefault();insertText(text);
 });
 
@@ -1189,7 +1260,7 @@ function alertSheet(t,p){$('veil').innerHTML=`<div class="sheet"><h2>${esc(t)}</
 const ago=t=>{const m=Math.round((Date.now()-t)/60000),rt=new Intl.RelativeTimeFormat(I18N.lang,{numeric:'auto'});return m<60?rt.format(-m,'minute'):m<1440?rt.format(-Math.round(m/60),'hour'):rt.format(-Math.round(m/1440),'day')};
 /* ---------- bot browsers ---------- */
 async function openBrowser(id,url,hide){const b=bot(id);if(!b)return;
-  try{await api('open','POST',{bot:id,conv:cur,url:url||'',hide:!!hide});toast(I18N.t(!S.runnerOnline?'主機電腦離線，連上後就會處理':hide?'已收到背景':(window.octaDesktop?'已在右側打開':'已請電腦版把瀏覽器顯示出來')));refresh()}
+  try{await api('open','POST',{bot:id,conv:cur,url:url||'',hide:!!hide,expand:!hide});toast(I18N.t(!S.runnerOnline?'主機電腦離線，連上後就會處理':hide?'已收到背景':(window.octaDesktop?'已打開':'已請電腦版打開瀏覽器')));refresh()}
   catch(e){toast(e.message)}}
 $('browser').onclick=e=>{
   const c=conv(cur);if(!c)return;e.stopPropagation();
@@ -1207,7 +1278,7 @@ function urlSheet(id){const b=bot(id);
   $('uf').onsubmit=ev=>{ev.preventDefault();const u=$('uu').value.trim();closeSheet();openBrowser(id,u)}}
 function shotSheet(ids){
   $('veil').innerHTML=`<div class="sheet"><h2>機器人的瀏覽器</h2>
-  <p>${window.octaDesktop?'網頁就開在這個視窗裡。寬的時候在右邊，窄的時候在下面。你看得到游標和點擊，登入也在同一個畫面。收到背景後它繼續在裡面工作。':'每個機器人在電腦版 OCTA 裡有自己的瀏覽器，嵌在視窗裡（較舊的電腦版會另外開 Chrome）。按下面的按鈕就會把它顯示出來，你可以看它在做什麼、幫它登入。'}</p>
+  <p>${window.octaDesktop?'平常縮在角落，點一下打開，按「收回」就縮回去，聊天不會被擋住。你看得到游標和點擊，登入也在同一個畫面。收到背景後它繼續在裡面工作。':'每個機器人在電腦版 OCTA 裡有自己的瀏覽器，平常縮在角落，點一下打開。按下面的按鈕就會把它顯示出來，你可以看它在做什麼、幫它登入。'}</p>
   ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
     ${b.shot_ts?`<img class="shot" alt="${esc(b.name)}" id="img_${id}"><div class="meta">截圖：${ago(b.shot_ts)}${b.page?' · <span data-u>'+esc(b.page)+'</span>':''}</div>`:`<div class="noshot">還沒有畫面。機器人用過瀏覽器後，這裡會顯示它最後停在哪一頁。</div>`}
     ${b.browser==='mine'?`<div class="meta">這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。</div>`:`<div class="row2"><button class="btn" data-open="${id}">${showBrowserLabel()}</button><button class="ghost" data-hide="${id}">收到背景</button><button class="ghost" data-url="${id}">讓它打開網址…</button></div>`}</div>`}).join('')}
