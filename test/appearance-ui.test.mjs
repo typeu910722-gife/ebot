@@ -67,8 +67,8 @@ test('attachments show as thumbnails or file cards before and after sending', ()
 
 test('the desktop version matches the changelog, and the appearance release is still recorded', () => {
   assert.equal(pkg.version, log[0].v);
-  assert.equal(log[0].v, '3.0.14');
-  assert.ok(log[0].notes.some(n => n.includes('網頁會開在這裡')));
+  assert.equal(log[0].v, '3.0.15');
+  assert.ok(log[0].notes.some(n => n.includes('名字標籤')));
   const look = log.find(x => x.v === '3.0.13');
   assert.ok(look.notes.some(n => n.includes('字體大小')));
   assert.ok(look.notes.some(n => n.includes('縮圖')));

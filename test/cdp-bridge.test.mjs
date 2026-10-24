@@ -110,6 +110,11 @@ test('Playwright can attach to the in-app page and navigate it', async () => {
   const onUnhandled = e => unhandled.push(String(e && e.message));
   process.on('unhandledRejection', onUnhandled);
   try {
+    // the name tag connects and attaches the page before the bot's tools do
+    const tag = await client(bridge.port);
+    await tag.send('Target.setDiscoverTargets', { discover: true });
+    const tagged = await tag.send('Target.attachToTarget', { targetId: 'page-1', flatten: true });
+    assert.ok(tagged.sessionId);
     const browser = await chromium.connectOverCDP(`http://127.0.0.1:${bridge.port}`, { timeout: 8000, noDefaults: true });
     const page = browser.contexts()[0].pages()[0];
     assert.equal(page.url(), 'data:text/html,hi');
@@ -118,6 +123,7 @@ test('Playwright can attach to the in-app page and navigate it', async () => {
     assert.equal(page.url(), 'https://account.line.biz/');
     assert.deepEqual(unhandled, []);
     await browser.close();
+    tag.ws.close();
   } finally {
     process.off('unhandledRejection', onUnhandled);
     await bridge.close();

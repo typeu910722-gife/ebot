@@ -51,17 +51,37 @@ function createParser(onText, onControl) {
 export function startCdpBridge(adapter, port = 0) {
   const clients = new Set();
   const sessions = new Map();
+  const told = new WeakMap(); // socket → Set of target ids it has already been given
   let seq = 0, autoAttach = false, waitDbg = false;
-  const attach = t => {
-    const sessionId = 's' + (++seq);
-    sessions.set(sessionId, t.id);
-    sendAll({ method: 'Target.attachedToTarget', params: { sessionId, targetInfo: { ...info(t), attached: true }, waitingForDebugger: waitDbg } });
+  const sendTo = (socket, obj) => { try { socket.write(encodeFrame(JSON.stringify(obj))); } catch { } };
+  const sendAll = obj => { for (const socket of clients) sendTo(socket, obj); };
+  const sessionFor = targetId => [...sessions].find(([, id]) => id === targetId)?.[0] || null;
+  // each connection hears about a page once. the name tag connects first; the bot's browser tools connect
+  // later and must still be told, or they see no page and cannot open anything
+  function notify(t, sockets) {
+    let sessionId = sessionFor(t.id);
+    if (!sessionId) { sessionId = 's' + (++seq); sessions.set(sessionId, t.id); }
+    const msg = { method: 'Target.attachedToTarget', params: { sessionId, targetInfo: { ...info(t), attached: true }, waitingForDebugger: waitDbg } };
+    for (const socket of sockets) {
+      if (!clients.has(socket)) continue;
+      let seen = told.get(socket);
+      if (!seen) told.set(socket, seen = new Set());
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      sendTo(socket, msg);
+    }
     return sessionId;
-  };
-  const sendAll = obj => {
-    const frame = encodeFrame(JSON.stringify(obj));
-    for (const socket of clients) { try { socket.write(frame); } catch { } }
-  };
+  }
+  function forget(socket) {
+    clients.delete(socket);
+    const seen = told.get(socket);
+    told.delete(socket);
+    if (!seen) return;
+    for (const id of seen) {
+      if ([...clients].some(c => told.get(c)?.has(id))) continue;
+      for (const [sid, tid] of [...sessions]) if (tid === id) sessions.delete(sid);
+    }
+  }
   adapter.onEvent?.((targetId, method, params) => {
     for (const [sessionId, id] of sessions) if (id === targetId) sendAll({ method, params: params || {}, sessionId });
   });
@@ -69,7 +89,7 @@ export function startCdpBridge(adapter, port = 0) {
   // page target carries a browserContextId, even when that context is the default one.
   const CONTEXT = 'octa';
   const info = t => ({ targetId: t.id, type: 'page', title: t.title || '', url: t.url || 'about:blank', attached: false, canAccessOpener: false, browserContextId: CONTEXT });
-  async function browserCommand(method, params) {
+  async function browserCommand(method, params, socket) {
     if (method === 'Browser.getVersion') return { protocolVersion: '1.3', product: 'Chrome/128.0.6613.186', revision: 'octa', userAgent: 'OCTA', jsVersion: '12.0' };
     if (method === 'Browser.getWindowForTarget') return adapter.bounds?.(params?.targetId) || { windowId: 1, bounds: { left: 0, top: 0, width: 1100, height: 800, windowState: 'normal' } };
     if (method === 'Browser.setWindowBounds') { await adapter.setBounds?.(params?.bounds || {}); return {}; }
@@ -92,27 +112,33 @@ export function startCdpBridge(adapter, port = 0) {
     if (method === 'Target.setAutoAttach') {
       autoAttach = !!params?.autoAttach;
       waitDbg = !!params?.waitForDebuggerOnStart;
-      if (autoAttach) for (const t of adapter.list()) if (![...sessions.values()].includes(t.id)) attach(t);
+      if (autoAttach) for (const t of adapter.list()) notify(t, [socket]);
       return {};
     }
     if (method === 'Target.attachToTarget') {
-      const known = [...sessions].find(([, id]) => id === params.targetId);
-      const sessionId = known ? known[0] : attach(adapter.list().find(t => t.id === params.targetId) || { id: params.targetId, title: '', url: 'about:blank' });
-      return { sessionId };
+      const t = adapter.list().find(x => x.id === params.targetId) || { id: params.targetId, title: '', url: 'about:blank' };
+      return { sessionId: notify(t, [socket]) };
     }
-    if (method === 'Target.detachFromTarget') { for (const [sid, id] of sessions) if (sid === params?.sessionId || id === params?.targetId) sessions.delete(sid); return {}; }
+    if (method === 'Target.detachFromTarget') {
+      const tid = params?.targetId || (params?.sessionId && sessions.get(params.sessionId));
+      if (tid) told.get(socket)?.delete(tid);
+      if (tid && ![...clients].some(c => told.get(c)?.has(tid))) { for (const [sid, id] of [...sessions]) if (id === tid) sessions.delete(sid); }
+      return {};
+    }
     if (method === 'Target.activateTarget') { await adapter.activateTarget?.(params.targetId); return {}; }
     if (method === 'Target.createTarget') {
       const created = await adapter.createTarget(params || {});
-      // reusing the open tab (the splash page) must not attach it a second time: Playwright closes the
-      // connection on a duplicate target, and every browser tool then fails
-      if (![...sessions.values()].includes(created.id)) {
-        sendAll({ method: 'Target.targetCreated', params: { targetInfo: info(created) } });
-        if (autoAttach) attach(created);
-      }
+      if (!sessionFor(created.id)) sendAll({ method: 'Target.targetCreated', params: { targetInfo: info(created) } });
+      notify(created, autoAttach ? [...clients] : [socket]);
       return { targetId: created.id };
     }
-    if (method === 'Target.closeTarget') { await adapter.closeTarget?.(params.targetId); sendAll({ method: 'Target.targetDestroyed', params: { targetId: params.targetId } }); return { success: true }; }
+    if (method === 'Target.closeTarget') {
+      await adapter.closeTarget?.(params.targetId);
+      for (const c of clients) told.get(c)?.delete(params.targetId);
+      for (const [sid, id] of [...sessions]) if (id === params.targetId) sessions.delete(sid);
+      sendAll({ method: 'Target.targetDestroyed', params: { targetId: params.targetId } });
+      return { success: true };
+    }
     const err = new Error('OCTA 瀏覽器沒有這個指令：' + method);
     err.expose = true;
     throw err;
@@ -128,7 +154,7 @@ export function startCdpBridge(adapter, port = 0) {
         const targetId = sessions.get(msg.sessionId);
         if (!targetId) throw new Error('分頁連線已結束');
         reply({ result: await adapter.command(targetId, msg.method, msg.params || {}) || {} });
-      } else reply({ result: await browserCommand(msg.method, msg.params || {}) || {} });
+      } else reply({ result: await browserCommand(msg.method, msg.params || {}, socket) || {} });
     } catch (e) { reply({ error: { code: -32000, message: String(e.message || e) } }); }
   }
   const server = createServer((req, res) => {
@@ -150,9 +176,9 @@ export function startCdpBridge(adapter, port = 0) {
     const feed = createParser(text => onMessage(text, socket), (kind, payload) => {
       if (kind === 'pong') { try { socket.write(encodeFrame(payload, 0x8a)); } catch { } }
     });
-    socket.on('data', chunk => { if (feed(chunk) === 'close') { clients.delete(socket); try { socket.end(); } catch { } } });
-    socket.on('close', () => clients.delete(socket));
-    socket.on('error', () => clients.delete(socket));
+    socket.on('data', chunk => { if (feed(chunk) === 'close') { forget(socket); try { socket.end(); } catch { } } });
+    socket.on('close', () => forget(socket));
+    socket.on('error', () => forget(socket));
   });
   return new Promise((ok, no) => {
     server.once('error', no);

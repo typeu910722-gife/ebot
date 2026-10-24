@@ -1,5 +1,15 @@
 [
  {
+  "v": "3.0.15",
+  "date": "2026-10-24",
+  "notes": [
+   "機器人打得開內建瀏覽器裡的網頁了：名字標籤先連上時，瀏覽器工具還是看得到同一個分頁，可以把它導到要開的網站"
+  ],
+  "notes_en": [
+   "The bot can open a page in the built-in browser. When the name tag connects first, the browser tools still see that same tab and can navigate it"
+  ]
+ },
+ {
   "v": "3.0.14",
   "date": "2026-10-24",
   "notes": [
