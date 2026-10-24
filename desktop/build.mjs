@@ -10,4 +10,4 @@ const apiSrc = readFileSync(join(root, 'functions', 'api', '[[path]].js'), 'utf8
 writeFileSync(join(here, 'api.js'), apiSrc);
 copyFileSync(join(root, 'public', 'model-route.mjs'), join(here, 'model-route.mjs'));
 copyFileSync(join(root, 'schema.sql'), join(here, 'schema.sql'));
-console.log('web, api.js, schema.sql 已更新');
+console.log('web, api.js, model-route.mjs, schema.sql 已更新');

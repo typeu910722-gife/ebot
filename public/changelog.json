@@ -1,5 +1,15 @@
 [
  {
+  "v": "3.0.1",
+  "date": "2026-10-24",
+  "notes": [
+   "修正桌面版無法啟動：安裝檔漏了模型路由檔，開啟時會出現找不到 model-route.mjs"
+  ],
+  "notes_en": [
+   "Fixed the desktop app not starting: the installer left out the model routing file, so launch failed with model-route.mjs not found"
+  ]
+ },
+ {
   "v": "3.0.0",
   "date": "2026-10-24",
   "notes": [
