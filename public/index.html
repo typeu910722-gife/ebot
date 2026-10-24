@@ -508,7 +508,7 @@ details.adv[open]{display:grid;gap:8px}
     <h2>它會做什麼</h2>
     <div class="hgrid">
       <div><b>看得到畫面</b><span>遊戲、後台、分數，它看圖，不靠猜。圖裡沒有的數字，它會直說沒看到。</span></div>
-      <div><b>網頁縮在角落</b><span>桌面版平常只顯示一小張，點一下打開，按收回就縮回去。聊天不會被擠到一邊。</span></div>
+      <div><b>網頁縮成小卡</b><span>桌面版平常是一張圓角小卡，拖到你要的位置就停在那裡。點一下打開，按收回就縮回去。</span></div>
       <div><b>重要的事先問你</b><span>付錢、刪除、傳給別人，它會停下來等你點頭。</span></div>
       <div><b>拖一下就過去</b><span>訊息、圖片、檔案拖到另一個機器人會先問你，也可以蓋掉原本那則。機器人拖進群組就直接加入。</span></div>
     </div>
@@ -1278,7 +1278,7 @@ function urlSheet(id){const b=bot(id);
   $('uf').onsubmit=ev=>{ev.preventDefault();const u=$('uu').value.trim();closeSheet();openBrowser(id,u)}}
 function shotSheet(ids){
   $('veil').innerHTML=`<div class="sheet"><h2>機器人的瀏覽器</h2>
-  <p>${window.octaDesktop?'平常縮在角落，點一下打開，按「收回」就縮回去，聊天不會被擋住。你看得到游標和點擊，登入也在同一個畫面。收到背景後它繼續在裡面工作。':'每個機器人在電腦版 OCTA 裡有自己的瀏覽器，平常縮在角落，點一下打開。按下面的按鈕就會把它顯示出來，你可以看它在做什麼、幫它登入。'}</p>
+  <p>${window.octaDesktop?'平常縮成圓角小卡，可以拖到你要的位置停住。點一下打開，按「收回」就縮回去，聊天不會被擋住。你看得到游標和點擊，登入也在同一個畫面。收到背景後它繼續在裡面工作。':'每個機器人在電腦版 OCTA 裡有自己的瀏覽器，平常縮成圓角小卡，可以拖到想放的位置。按下面的按鈕就會把它顯示出來，你可以看它在做什麼、幫它登入。'}</p>
   ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
     ${b.shot_ts?`<img class="shot" alt="${esc(b.name)}" id="img_${id}"><div class="meta">截圖：${ago(b.shot_ts)}${b.page?' · <span data-u>'+esc(b.page)+'</span>':''}</div>`:`<div class="noshot">還沒有畫面。機器人用過瀏覽器後，這裡會顯示它最後停在哪一頁。</div>`}
     ${b.browser==='mine'?`<div class="meta">這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。</div>`:`<div class="row2"><button class="btn" data-open="${id}">${showBrowserLabel()}</button><button class="ghost" data-hide="${id}">收到背景</button><button class="ghost" data-url="${id}">讓它打開網址…</button></div>`}</div>`}).join('')}

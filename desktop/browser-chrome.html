@@ -2,33 +2,89 @@
 <meta charset="utf-8">
 <title>瀏覽器</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #1c1814; color: #f3ead3; font-family: "Segoe UI", "PingFang TC", sans-serif; }
-  button { all: unset; box-sizing: border-box; display: block; width: 100%; height: 100%; cursor: pointer; position: relative; }
+  html, body { margin: 0; height: 100%; background: transparent; color: #f3ead3; font-family: "Segoe UI", "PingFang TC", sans-serif; overflow: hidden; }
+  #card { box-sizing: border-box; width: 100%; height: 100%; border-radius: 18px; overflow: hidden; background: #1c1814; border: 1px solid rgba(212, 175, 106, .75); cursor: grab; position: relative; }
+  button { all: unset; box-sizing: border-box; display: block; width: 100%; height: 100%; cursor: inherit; position: relative; }
   img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; background: #1c1814; }
   .cap { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; justify-content: space-between; gap: 6px; align-items: center; }
   .name { background: rgba(28, 24, 20, .86); border-radius: 999px; padding: 3px 8px; font-size: 12px; }
   .bar { display: none; height: 100%; align-items: center; justify-content: space-between; padding: 0 12px; gap: 12px; }
+  body.open #card { border-radius: 0; border: 0; cursor: default; }
   body.open img, body.open .cap { display: none; }
   body.open .bar { display: flex; }
-  .back { border: 1px solid #c4a574; border-radius: 999px; padding: 4px 12px; font-size: 12px; color: #e7d3a1; }
+  body.dragging #card { position: absolute; cursor: grabbing; }
+  .back { border: 1px solid #c4a574; border-radius: 999px; padding: 4px 12px; font-size: 12px; color: #e7d3a1; cursor: pointer; }
 </style>
 <body>
-  <button id="hit" type="button" aria-label="打開瀏覽器">
-    <img id="pic" alt="">
-    <span class="cap"><span class="name" id="name">瀏覽器</span><span class="name">打開</span></span>
-    <span class="bar"><span id="name2">瀏覽器</span><span class="back">收回</span></span>
-  </button>
+  <div id="card">
+    <button id="hit" type="button" aria-label="打開瀏覽器">
+      <img id="pic" alt="">
+      <span class="cap"><span class="name" id="name">瀏覽器</span><span class="name">拖動</span></span>
+      <span class="bar"><span id="name2">瀏覽器</span><span class="back">收回</span></span>
+    </button>
+  </div>
   <script>
     const hit = document.getElementById('hit');
+    const card = document.getElementById('card');
     const pic = document.getElementById('pic');
     const name = document.getElementById('name');
     const name2 = document.getElementById('name2');
-    hit.onclick = () => window.octaBrowser && window.octaBrowser.toggle();
-    if (window.octaBrowser) window.octaBrowser.onFrame(d => {
+    const api = () => window.octaBrowser;
+    let down = null;
+    function place(d) {
+      if (!d || !d.dragging) {
+        document.body.classList.remove('dragging');
+        card.style.left = card.style.top = card.style.width = card.style.height = '';
+        return;
+      }
+      document.body.classList.add('dragging');
+      card.style.left = d.x + 'px';
+      card.style.top = d.y + 'px';
+      card.style.width = d.w + 'px';
+      card.style.height = d.h + 'px';
+    }
+    function endDrag(moved) {
+      down = null;
+      if (moved) api()?.dragEnd();
+      else if (!document.body.classList.contains('dragging')) api()?.toggle();
+    }
+    hit.addEventListener('pointerdown', e => {
+      if (document.body.classList.contains('open') || e.button !== 0) return;
+      down = { sx: e.screenX, sy: e.screenY, moved: false, pid: e.pointerId };
+      try { hit.setPointerCapture(e.pointerId); } catch { }
+      e.preventDefault();
+    });
+    hit.addEventListener('pointermove', e => {
+      if (!down || e.pointerId !== down.pid) return;
+      const dx = e.screenX - down.sx, dy = e.screenY - down.sy;
+      if (!down.moved) {
+        if (Math.hypot(dx, dy) < 6) return;
+        down.moved = true;
+        const box = api()?.dragStart();
+        place(box ? { dragging: true, ...box } : null);
+        if (!box) { down = null; return; }
+      }
+      down.sx = e.screenX;
+      down.sy = e.screenY;
+      api()?.dragBy(dx, dy);
+    });
+    hit.addEventListener('pointerup', e => {
+      if (document.body.classList.contains('open')) { api()?.toggle(); return; }
+      if (!down || e.pointerId !== down.pid) return;
+      const moved = down.moved;
+      try { hit.releasePointerCapture(e.pointerId); } catch { }
+      endDrag(moved);
+    });
+    hit.addEventListener('pointercancel', () => { if (down) endDrag(down.moved); });
+    window.addEventListener('blur', () => { if (down?.moved) endDrag(true); else down = null; });
+    if (api()) api().onFrame(d => {
       document.body.classList.toggle('open', d.mode === 'open');
       hit.setAttribute('aria-label', d.mode === 'open' ? '收回瀏覽器' : '打開瀏覽器');
       if (d.name) { name.textContent = d.name; name2.textContent = d.name; }
       if (d.jpeg) pic.src = 'data:image/jpeg;base64,' + d.jpeg;
+      if (d.mode === 'open') place(null);
+      else if (d.dragging) place(d);
+      else if (!down?.moved) place(null);
     });
   </script>
 </body>

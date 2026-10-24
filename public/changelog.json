@@ -1,5 +1,15 @@
 [
  {
+  "v": "3.0.11",
+  "date": "2026-10-24",
+  "notes": [
+   "縮下去的瀏覽器改成圓角小卡，拖到哪就停在哪，下次還在那個位置"
+  ],
+  "notes_en": [
+   "The collapsed browser is a rounded card. Drag it where you want, and it stays there"
+  ]
+ },
+ {
   "v": "3.0.10",
   "date": "2026-10-24",
   "notes": [

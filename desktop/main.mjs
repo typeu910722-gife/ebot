@@ -10,7 +10,7 @@ import { existsSync, appendFileSync, mkdirSync, readFileSync, writeFileSync, rmS
 import os from 'node:os';
 import { startServer } from './server.mjs';
 import { startCdpBridge } from './cdp-bridge.mjs';
-import { PAGE, dockLayout, embedFrames, isBlankUrl } from './embed-layout.mjs';
+import { PAGE, THUMB_RADIUS, dockLayout, embedFrames, isBlankUrl, thumbBox } from './embed-layout.mjs';
 
 // ---------- updates (GitHub Releases) ----------
 const { autoUpdater } = createRequire(import.meta.url)('electron-updater');
@@ -174,7 +174,17 @@ function parkView(bucket, view, visible) {
 function sendFrame(bucket, extra) {
   const wc = bucket.chrome?.webContents;
   if (!wc || wc.isDestroyed()) return;
-  wc.send('octa:browser-frame', { name: bucket.name, mode: bucket.shown || 'thumb', ...extra });
+  const drag = bucket.dragging && bucket.thumbBox ? { dragging: true, x: bucket.thumbBox.x, y: bucket.thumbBox.y, w: bucket.thumbBox.width, h: bucket.thumbBox.height } : {};
+  wc.send('octa:browser-frame', { name: bucket.name, mode: bucket.shown || 'thumb', ...drag, ...extra });
+}
+function roundChrome(view, radius) {
+  if (!view) return;
+  try { view.setBackgroundColor('#00000000'); } catch { }
+  try { view.setBorderRadius?.(Math.max(0, radius || 0)); } catch { }
+}
+function savedThumbAt() {
+  const at = cfg.thumbAt;
+  return at && Number.isFinite(+at.x) && Number.isFinite(+at.y) ? { x: +at.x, y: +at.y } : null;
 }
 function stopThumbs(bucket) { clearTimeout(bucket.thumbTimer); bucket.thumbTimer = null; }
 function startThumbs(bucket) {
@@ -204,6 +214,7 @@ function placeBucket(bucket, frames) {
   if (frames.chrome && bucket.chrome && win) {
     if (!win.contentView.children.includes(bucket.chrome)) win.contentView.addChildView(bucket.chrome);
     fitView(bucket.chrome, frames.chrome, true);
+    roundChrome(bucket.chrome, frames.mode === 'thumb' ? THUMB_RADIUS : 0);
     try { win.contentView.removeChildView(bucket.chrome); win.contentView.addChildView(bucket.chrome); } catch { }
   }
 }
@@ -213,8 +224,19 @@ function layoutEmbed() {
   const main = win.contentView.children.find(v => v.webContents === win.webContents);
   const side = [...embeds.values()].find(e => e.shown);
   if (!side) { fitView(main, { x: 0, y: 0, width: w, height: h }, true); return; }
-  const frames = embedFrames(w, h, side.shown);
+  const frames = embedFrames(w, h, side.shown, side.thumbAt || savedThumbAt());
   fitView(main, frames.main, true);
+  if (side.dragging && side.shown === 'thumb' && side.chrome) {
+    const box = thumbBox(w, h, side.thumbAt);
+    side.thumbAt = { x: box.x, y: box.y };
+    side.thumbBox = box;
+    for (const v of side.tabs) parkView(side, v, v === side.active);
+    roundChrome(side.chrome, 0);
+    if (!win.contentView.children.includes(side.chrome)) win.contentView.addChildView(side.chrome);
+    fitView(side.chrome, { x: 0, y: 0, width: w, height: h }, true);
+    sendFrame(side, { mode: 'thumb' });
+    return;
+  }
   placeBucket(side, frames);
 }
 function hookPage(wc, id, bucket) {
@@ -274,7 +296,8 @@ async function embedStart(bot, port) {
   const view = new WebContentsView({ webPreferences: prefs });
   const name = String(bot.name || '機器人').replace(/[<&]/g, '');
   const chrome = new WebContentsView({ webPreferences: { preload: join(here, 'browser-preload.cjs'), contextIsolation: true, sandbox: true, backgroundThrottling: false } });
-  const bucket = { port, prefs, tabs: [view], active: view, pages: new Map(), shown: false, onEvent: null, hidden: [], bridge: null, splash: '', chrome, name, host: null, thumbTimer: null };
+  const bucket = { port, prefs, tabs: [view], active: view, pages: new Map(), shown: false, onEvent: null, hidden: [], bridge: null, splash: '', chrome, name, host: null, thumbTimer: null, thumbAt: savedThumbAt(), dragging: false, thumbBox: null };
+  roundChrome(chrome, THUMB_RADIUS);
   hookPage(view.webContents, 'p' + (++embedSeq), bucket);
   view.webContents.setWindowOpenHandler(({ url }) => { focusTab(bucket, view); view.webContents.loadURL(url).catch(() => { }); embedShow(port, true); return { action: 'deny' }; });
   bucket.splash = `data:text/html;charset=utf-8,${encodeURIComponent(`<title>${name} 的瀏覽器</title><body style="margin:0;display:grid;place-items:center;height:100vh;background:#1c1814;color:#f3ead3;font-family:sans-serif;text-align:center"><div style="font-size:40px">🐙</div><div style="font-size:18px;margin-top:8px">${name}</div><div style="font:400 14px sans-serif;opacity:.8;margin-top:10px">網頁會開在這裡，登入會留在這台電腦</div></body>`)}`;
@@ -396,11 +419,56 @@ async function startRunnerFor(url, token) {
 
 // only OCTA's own pages may use the bridge
 const trusted = e => { const u = e.senderFrame?.url || ''; return u.startsWith(CLOUD + '/') || u === CLOUD || (server && u.startsWith(server.url)) || u.startsWith('file:'); };
+function chromeBucket(sender) {
+  for (const [, bucket] of embeds) if (bucket.chrome?.webContents === sender) return bucket;
+  return null;
+}
 ipcMain.on('octa:browser-toggle', e => {
   if (!trusted(e)) return;
-  for (const [port, bucket] of embeds) {
-    if (bucket.chrome?.webContents === e.sender) { embedShow(port, bucket.shown === 'open' ? 'thumb' : 'open'); return; }
+  const bucket = chromeBucket(e.sender);
+  if (!bucket || bucket.dragging) return;
+  embedShow(bucket.port, bucket.shown === 'open' ? 'thumb' : 'open');
+});
+ipcMain.on('octa:browser-drag-start', e => {
+  const none = { dragging: false };
+  try {
+    if (!trusted(e) || !win || win.isDestroyed()) { e.returnValue = none; return; }
+    const bucket = chromeBucket(e.sender);
+    if (!bucket || bucket.shown !== 'thumb') { e.returnValue = none; return; }
+    const [w, h] = win.getContentSize();
+    const box = thumbBox(w, h, bucket.thumbAt || savedThumbAt());
+    bucket.dragging = true;
+    bucket.thumbAt = { x: box.x, y: box.y };
+    bucket.thumbBox = box;
+    roundChrome(bucket.chrome, 0);
+    if (!win.contentView.children.includes(bucket.chrome)) win.contentView.addChildView(bucket.chrome);
+    fitView(bucket.chrome, { x: 0, y: 0, width: w, height: h }, true);
+    e.returnValue = { dragging: true, x: box.x, y: box.y, w: box.width, h: box.height };
+  } catch (err) {
+    logError('thumb-drag', err);
+    e.returnValue = none;
   }
+});
+ipcMain.on('octa:browser-drag-by', (e, delta) => {
+  if (!trusted(e) || !win || win.isDestroyed()) return;
+  const bucket = chromeBucket(e.sender);
+  if (!bucket?.dragging) return;
+  const dx = Number(delta?.dx), dy = Number(delta?.dy);
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+  const [w, h] = win.getContentSize();
+  const box = thumbBox(w, h, { x: (bucket.thumbAt?.x || 0) + dx, y: (bucket.thumbAt?.y || 0) + dy });
+  bucket.thumbAt = { x: box.x, y: box.y };
+  bucket.thumbBox = box;
+  sendFrame(bucket, { mode: 'thumb' });
+});
+ipcMain.on('octa:browser-drag-end', e => {
+  if (!trusted(e)) return;
+  const bucket = chromeBucket(e.sender);
+  if (!bucket) return;
+  bucket.dragging = false;
+  if (bucket.thumbAt) { cfg = { ...cfg, thumbAt: bucket.thumbAt }; writeCfg(cfg); }
+  layoutEmbed();
+  sendFrame(bucket, { mode: bucket.shown || 'thumb', dragging: false });
 });
 const handle = (ch, fn) => ipcMain.handle(ch, (e, ...a) => { if (!trusted(e)) throw new Error('not allowed'); return fn(e, ...a); });
 handle('octa:version', () => app.getVersion());

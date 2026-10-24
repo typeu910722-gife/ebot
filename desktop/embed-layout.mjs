@@ -3,6 +3,26 @@
 // Narrow windows: browser underneath, so the page does not collapse into the phone layout.
 
 export const PAGE = { width: 1280, height: 800 };
+export const THUMB_RADIUS = 18;
+
+// Where the collapsed browser card sits. `at` is the place the person dragged it to.
+export function thumbBox(w, h, at) {
+  w = Math.max(1, Math.round(w));
+  h = Math.max(1, Math.round(h));
+  const margin = 12;
+  const width = Math.min(220, Math.max(120, w - margin * 2));
+  const height = Math.min(148, Math.max(84, Math.round(width * 0.67)));
+  const maxX = Math.max(margin, w - width - margin);
+  const maxY = Math.max(margin, h - height - margin);
+  const x = at && Number.isFinite(+at.x) ? Math.round(+at.x) : maxX;
+  const y = at && Number.isFinite(+at.y) ? Math.round(+at.y) : maxY;
+  return {
+    x: Math.min(maxX, Math.max(Math.min(margin, maxX), x)),
+    y: Math.min(maxY, Math.max(Math.min(margin, maxY), y)),
+    width,
+    height
+  };
+}
 
 export function isBlankUrl(url) {
   const u = String(url || '');
@@ -11,24 +31,12 @@ export function isBlankUrl(url) {
 
 // thumb: a corner preview, the chat keeps the whole window.
 // open: the page docks beside or under the chat, with a bar to collapse it.
-export function embedFrames(w, h, mode) {
+export function embedFrames(w, h, mode, at) {
   w = Math.max(1, Math.round(w));
   h = Math.max(1, Math.round(h));
   const main = { x: 0, y: 0, width: w, height: h };
   if (mode === 'thumb') {
-    const width = Math.min(220, Math.max(120, w - 28));
-    const height = Math.min(148, Math.max(84, Math.round(width * 0.67)));
-    return {
-      mode: 'thumb',
-      main,
-      page: null,
-      chrome: {
-        x: Math.max(8, w - width - 14),
-        y: Math.max(8, h - height - 14),
-        width: Math.min(width, Math.max(1, w - 8)),
-        height: Math.min(height, Math.max(1, h - 8))
-      }
-    };
+    return { mode: 'thumb', main, page: null, chrome: thumbBox(w, h, at) };
   }
   if (mode === 'open') {
     const dock = dockLayout(w, h);
