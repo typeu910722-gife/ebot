@@ -1,5 +1,19 @@
 [
  {
+  "v": "3.0.5",
+  "date": "2026-10-24",
+  "notes": [
+   "機器人看畫面：每一輪先把瀏覽器截成圖，回答分數、電池、機架之前要讀那張圖，圖裡沒有的數字不准編",
+   "拖一下就歸類：把機器人拖進分區。文字拖進輸入框會貼上，檔案丟進對話會附上",
+   "主畫面改短、改口語。工作中的頭貼會輕輕動"
+  ],
+  "notes_en": [
+   "Bots look at the screen: each turn saves a picture of the browser, and scores, battery and racks are read from that picture",
+   "Drag a bot into a folder to sort it. Dragged text pastes into the box, and dropped files attach",
+   "The home screen is shorter and more conversational. A working avatar moves a little"
+  ]
+ },
+ {
   "v": "3.0.4",
   "date": "2026-10-24",
   "notes": [

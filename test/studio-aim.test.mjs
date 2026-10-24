@@ -9,7 +9,8 @@ function prompt(extra = {}) {
     history: [],
     nick: 'Yzz',
     lang: 'zh-TW',
-    group: extra.group
+    group: extra.group,
+    eyes: extra.eyes
   }, '/tmp/octa-studio-aim');
 }
 
@@ -27,6 +28,8 @@ test('a capability question is something to learn, not a work-only refusal', () 
   assert.match(text, /機架/);
   assert.match(text, /這次畫面沒有這個數字/);
   assert.match(text, /畫面上的數字只能照這次看到的抄/);
+  assert.match(text, /看畫面要用眼睛/);
+  assert.match(text, /畫面\.jpg/);
   assert.equal(text.includes('我目前的功能主要用來處理工作'), false);
   assert.equal(text.includes('視窗右側'), false);
 });
@@ -36,4 +39,11 @@ test('a standing task stays a specialty and does not ban new topics', () => {
   assert.match(text, /長期本業，不是能力上限/);
   assert.match(text, /每 30 分鐘看一次 LINE/);
   assert.match(text, /不要推說這不是你的工作/);
+});
+
+test('a saved screenshot is the picture the bot must read', () => {
+  const text = prompt({ eyes: '/tmp/octa-studio-aim/畫面.jpg', prompt: '現在有幾台礦機' });
+  assert.match(text, /\/tmp\/octa-studio-aim\/畫面\.jpg/);
+  assert.match(text, /用 Read 讀它/);
+  assert.match(text, /讀不到圖就老實說/);
 });

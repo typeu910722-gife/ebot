@@ -21,7 +21,7 @@ import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { probeCodingHosts, listRecoverableStates, runCodingTask, selectProvider } from './coding-runtime.mjs';
 
-export const VERSION = '17.7';
+export const VERSION = '17.8';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -159,12 +159,13 @@ function studioAim() {
     '遊戲、創作、研究、生活、寫程式、操作軟體，使用者問得出口的都要接。禁止用「我只處理工作」「遊戲我還不能」「這不在我的功能裡」收尾，也不要把話題拉回「有沒有工作要我做」。',
     '不會就學，而且要在授權下真的試：先查做法（搜尋、讀說明、打開網站或程式看畫面），再在你自己的瀏覽器或資料夾裡做最小的一次嘗試，把學會的步驟用 🧩技能 或 🗺️網站筆記 留下。沒試過不能說不會。',
     '查看、搜尋、打開、練習直接做。安裝軟體、付款、刪除、更改帳號、對別人發出訊息，先寫 ✅待確認 取得授權再做；還沒授權時說明你卡在哪一個授權，不要改口說自己沒有這個能力。',
-    '頁面上的數字不准編。電池、金額、礦機、機架、數量、名次，只能抄這一次畫面裡看得到的字；看不清就寫「這次畫面沒有這個數字」，不要沿用上一則回覆，也不要自己估。使用者說數字不對時，重新打開那一頁再讀，不要把舊數字再說一次。畫面是遊戲或圖、文字很少時，描述你實際看到的東西，不要自製一張數據表。',
+    '頁面上的數字不准編。電池、金額、礦機、機架、數量、名次，只能抄這一次畫面裡看得到的字或圖；看不清就寫「這次畫面沒有這個數字」，不要沿用上一則回覆，也不要自己估。使用者說數字不對時，重新打開那一頁、看過圖再讀，不要把舊數字再說一次。畫面是遊戲或圖、文字很少時，描述你實際看到的東西，不要自製一張數據表。',
+    '看畫面要用眼睛：文字讀不到的分數、電池、機架、金額，以「畫面.jpg」這張圖為準。圖裡沒有的數字寫「這次畫面沒有這個數字」，不要沿用舊回覆。',
     cfg.embed ? '你的瀏覽器在 OCTA 視窗右側，使用者看得到你的游標和點擊。不要說瀏覽器開在別的程式。' : ''
   ].filter(Boolean);
 }
 function turnGuide() {
-  return '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。畫面上的數字只能照這次看到的抄。(3) 問你會不會、能不能，或要你做一件還沒做過的事（包含玩遊戲、學新軟體）→ 不要推辭。先用一句話說你會學，然後立刻做第一個學習動作（搜尋做法、打開相關頁面，或在自己的資料夾試一個最小例子）；需要他指定對象時，一邊查通用做法，一邊只問要哪一個。(4) 其他要你做事的 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。';
+  return '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。先讀「畫面.jpg」或自行截圖，畫面上的數字只能照這次看到的抄。(3) 問你會不會、能不能，或要你做一件還沒做過的事（包含玩遊戲、學新軟體）→ 不要推辭。先用一句話說你會學，然後立刻做第一個學習動作（搜尋做法、打開相關頁面，或在自己的資料夾試一個最小例子）；需要他指定對象時，一邊查通用做法，一邊只問要哪一個。(4) 其他要你做事的 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。';
 }
 // today's date said plainly, and the bot's own work notes (what it already found), so it doesn't start from zero each time
 function dayInfo(job) {
@@ -263,7 +264,7 @@ export function buildPrompt(job, here) {
     lines.push(`【${h.who}】${t}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : ''));
   });
   lines.push('', ...dayInfo(job), '', ...workNotes(job));
-  lines.push('', ...tabsNow(job), '', turnGuide(), '', whoAmI(job), '現在請處理這則指示：', job.prompt);
+  lines.push('', ...tabsNow(job), '', ...seeNow(job), '', turnGuide(), '', whoAmI(job), '現在請處理這則指示：', job.prompt);
   return lines.filter(l => l !== '').join('\n');
 }
 
@@ -275,6 +276,13 @@ function tabsNow(job) {
   if (!t) return [];
   if (!t.length) return ['你的瀏覽器目前沒有開著的網頁。'];
   return ['你的瀏覽器目前開著的分頁（使用者可能剛幫你打開或登入好）：', ...t.map((x, i) => `${i + 1}. ${x.title || '(無標題)'} — ${x.url}`)];
+}
+// browser_snapshot is an outline of the text. Games and canvases are blank there, so the picture is the source.
+function seeNow(job) {
+  const lines = ['看畫面要用眼睛。browser_snapshot 只有文字大綱，遊戲、畫布、分數、電池、機架常常是空的。回答畫面上的數字或「你看到什麼」之前，先讀圖。圖裡沒有的數字寫「這次畫面沒有這個數字」。讀不到圖就老實說，不要編。'];
+  if (job.eyes) lines.push(`這一輪的畫面已經存成圖片，用 Read 讀它：${job.eyes}`);
+  else lines.push('這輪還沒有現成的圖。會開瀏覽器的話，先 browser_take_screenshot（jpeg）再回答畫面內容。');
+  return lines;
 }
 function aboutMe(job) {
   const e = job.bot.engine || 'claude', E = ENGINES[e] || ENGINES.claude, u = usageNow[e];
@@ -614,6 +622,7 @@ async function chatRun(job) {
   log(`▶ ${job.bot.name}［${job.bot.engine || 'claude'}］${job.group ? ' @' + job.group.name : ''}：${job.prompt.slice(0, 40)}`);
   job.bot.livePort = port;
   if (port) { try { job.bot.tabs = await cdp(port, async send => (await pagesOf(send)).filter(p => !/^(about:blank|chrome:)/.test(p.url)).slice(0, 6).map(p => ({ title: p.title.slice(0, 80), url: p.url.slice(0, 200) }))); } catch { } }
+  job.eyes = port ? await captureEyes(port, dir) : '';
   // live progress (at most every 4 s); if the user pressed 停止, the server says so and the run is stopped
   const ctl = {};
   let lastSent = 0, pendingText = '', timerP = null, stoppedByUser = false;
@@ -873,7 +882,7 @@ async function warmClaude(job, b, here, live) {
     // only what happened since the last turn, then the new instruction
     const fresh = job.history.filter(h => (h.id || 0) > s.lastId && !(h.who === '使用者' && h.text === job.prompt));
     text = [fresh.length ? '（上次之後的新對話）\n' + fresh.map(h => `【${h.who}】${h.text}` + (h.paths?.length ? `\n（附件，可直接讀取這些檔案：${h.paths.join('、')}）` : '')).join('\n') : '',
-      dayInfo(job).join('\n'), workNotes(job).join('\n'), tabsNow(job).join('\n'), studioAim().join('\n'), turnGuide(), whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
+      dayInfo(job).join('\n'), workNotes(job).join('\n'), tabsNow(job).join('\n'), seeNow(job).join('\n'), studioAim().join('\n'), turnGuide(), whoAmI(job), '現在請處理這則指示：', job.prompt].filter(Boolean).join('\n\n');
     log(`⚡ ${job.bot.name}：AI 待機中，直接接續`);
   } else {
     if (s) closeSession(job.bot.id);
@@ -1091,6 +1100,15 @@ async function openBrowser(bot, opts = {}) {
   // the window stays on the desktop (cascaded per bot) so you can click into any bot's browser at any time
   await tagBrowser(port, bot.name).catch(() => { });
   return port;
+}
+async function captureEyes(port, dir) {
+  try {
+    const live = await browserSnapshot(port);
+    if (!live?.jpeg) return '';
+    const p = join(dir, '畫面.jpg');
+    writeFileSync(p, live.jpeg);
+    return p;
+  } catch (e) { log('看畫面失敗：' + e.message); return ''; }
 }
 async function browserSnapshot(port, since) {   // screenshot + address of the tab the bot used last
   return cdp(port, async send => {
