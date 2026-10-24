@@ -1,5 +1,19 @@
 [
  {
+  "v": "3.0.0",
+  "date": "2026-10-24",
+  "notes": [
+   "程式任務：在你的電腦上開一個隔離的工作區，檢查、修改、跑測試，最多自動修復 3 次，再給你看實際的 git diff。正式部署一定要你核准，而且核准後也不會自動部署",
+   "備援 AI 會先看是哪一種錯誤：額度用完才換下一個、被限流先用同一個模型再試一次、登入或 API Key 無效就停下來、程式錯誤則修程式而不是換模型",
+   "對話列表可以收合，標題會顯示首席模型，以及現在實際在跑的模型"
+  ],
+  "notes_en": [
+   "Coding tasks run in an isolated workspace on your computer: inspect, edit, test, repair at most three times, then show the real git diff. Production deploy needs your approval and still does not deploy by itself",
+   "Backup AIs classify the error: quota switches, a rate limit retries the same model once, a bad login stops, and a code failure repairs the code instead of switching models",
+   "The conversation list can collapse, and the header shows the chief model and the model that is actually running"
+  ]
+ },
+ {
   "v": "2.9.7",
   "date": "2026-10-23",
   "notes": [
