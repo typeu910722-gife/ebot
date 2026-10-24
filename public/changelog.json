@@ -1,5 +1,15 @@
 [
  {
+  "v": "3.0.3",
+  "date": "2026-10-24",
+  "notes": [
+   "圖示：金色章魚的線條加粗、顏色加深，縮小成工作列或網頁小圖示時比較看得清楚"
+  ],
+  "notes_en": [
+   "Icon: the gold octopus has thicker, deeper lines so it stays recognizable as a small taskbar or browser icon"
+  ]
+ },
+ {
   "v": "3.0.2",
   "date": "2026-10-24",
   "notes": [

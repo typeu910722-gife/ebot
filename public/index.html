@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="OCTA">
 <meta name="robots" content="noindex,nofollow">
 <title>OCTA｜奧克塔</title>
-<link rel="icon" href="/icon.png?v=octopus">
+<link rel="icon" href="/icon.png?v=octopus2">
 <script src="/i18n-dict.js?v=25"></script>
 <script src="/i18n-core.js?v=2"></script>
 <link rel="apple-touch-icon" href="/icon-192.png">
@@ -434,7 +434,7 @@ details.adv[open]{display:grid;gap:8px}
 </head>
 <body>
 <div class="boot" id="boot" role="progressbar" aria-label="載入中">
-  <img src="/icon.png?v=octopus" alt="">
+  <img src="/icon.png?v=octopus2" alt="">
   <div class="brand" data-u>OCTA｜奧克塔</div>
   <div class="ytrack"><div class="yfill" id="bootFill"></div></div>
   <div class="yrow"><span id="bootMsg">載入中…</span><span><b class="yzm" data-u>YZ</b> <span id="bootPct" data-u>0%</span></span></div>
@@ -442,9 +442,9 @@ details.adv[open]{display:grid;gap:8px}
 <div class="ytop" aria-hidden="true"><div></div></div>
 
 <div class="home" id="home" hidden>
-  <header class="hhd"><div class="hl"><img src="/icon.png?v=octopus" alt="" class="logo"><div class="brand" data-u>OCTA｜奧克塔</div></div><div class="row2"><span id="hLang"></span><button class="ghost" id="hLogin">登入網頁版</button></div></header>
+  <header class="hhd"><div class="hl"><img src="/icon.png?v=octopus2" alt="" class="logo"><div class="brand" data-u>OCTA｜奧克塔</div></div><div class="row2"><span id="hLang"></span><button class="ghost" id="hLogin">登入網頁版</button></div></header>
   <section class="hero">
-    <img src="/icon.png?v=octopus" alt="OCTA 章魚標誌" class="logo-xl">
+    <img src="/icon.png?v=octopus2" alt="OCTA 章魚標誌" class="logo-xl">
     <h1>你的 AI 同事團隊<br>交代一次，它自己做完</h1>
     <p>用聊天的方式告訴機器人要負責什麼，它會自己整理成工作、設好排程，打開網站一路做完再回報；要發訊息或付款前先等你核准。機器人在你自己的電腦上工作，可以自由選 Claude、ChatGPT、Gemini 等你已經有的 AI，不用另外付 API 費用。</p>
     <div class="row2 cta"><a class="btn big" id="hDl" href="#">下載 Windows 版（免費）</a><button class="ghost big" id="hWeb">改用網頁版</button></div>
@@ -491,7 +491,7 @@ details.adv[open]{display:grid;gap:8px}
 
 <div class="login" id="login" hidden>
   <form id="lf">
-    <img src="/icon.png?v=octopus" alt="" class="logo-lg"><div class="brand">OCTA｜奧克塔</div>
+    <img src="/icon.png?v=octopus2" alt="" class="logo-lg"><div class="brand">OCTA｜奧克塔</div>
     <h1 id="lt">登入</h1>
     <p>登入 OCTA。機器人在你的主機電腦上，用你自己的 AI 帳號工作；手機和其他電腦登入同一個帳號就能指揮。</p>
     <label class="field">帳號<input id="ln" autocomplete="username" required></label>
@@ -505,7 +505,7 @@ details.adv[open]{display:grid;gap:8px}
     <div id="lLang" style="justify-self:center"></div>
   </form>
   <form id="rf" class="lf2" hidden style="width:min(360px,100%)">
-    <img src="/icon.png?v=octopus" alt="" class="logo-lg"><h1>重設密碼</h1>
+    <img src="/icon.png?v=octopus2" alt="" class="logo-lg"><h1>重設密碼</h1>
     <p>需要重設碼（15 分鐘內有效），兩種取得方式：<br>1. 在已登入的裝置（例如主機電腦）打開「設定 → 帳號與裝置 → 產生重設碼」。<br>2. 帳號有設定 Telegram 或 LINE 通知的話，按下面按鈕把重設碼傳過去。</p>
     <label class="field">帳號<input id="rn" autocomplete="username" required></label>
     <button type="button" class="ghost" id="rSend">把重設碼傳到我的 Telegram／LINE</button>
@@ -519,7 +519,7 @@ details.adv[open]{display:grid;gap:8px}
 
 <div class="app" id="app" hidden>
   <aside class="rail">
-    <header><div class="hl"><img src="/icon.png?v=octopus" alt="" class="logo"><div><div class="brand">OCTA｜奧克塔</div><h1>機器人</h1></div></div>
+    <header><div class="hl"><img src="/icon.png?v=octopus2" alt="" class="logo"><div><div class="brand">OCTA｜奧克塔</div><h1>機器人</h1></div></div>
       <div class="hr"><span class="pill p-off" id="online">電腦離線</span><button class="gear" id="settings">設定</button></div></header>
     <div class="upd" id="upd" hidden></div>
     <div class="new"><button id="nb">＋ 機器人</button><button id="ng">＋ 群組</button><button id="nf">＋ 分區</button></div>
@@ -690,7 +690,7 @@ function notifyNew(prevTop){
     const who=isG(c)?nameOf(l.by)+' · '+cv.name:cv.name;
     if(!document.hidden)toast(who+'：'+l.text.slice(0,40));
     if(notiOn()&&'Notification' in window&&Notification.permission==='granted'&&(document.hidden||c!==cur)){
-      try{const n=new Notification('OCTA · '+who,{body:l.text.replace(/\s+/g,' ').slice(0,180),icon:'/icon.png?v=octopus',tag:'octa-'+c});
+      try{const n=new Notification('OCTA · '+who,{body:l.text.replace(/\s+/g,' ').slice(0,180),icon:'/icon.png?v=octopus2',tag:'octa-'+c});
         n.onclick=()=>{window.focus();window.octaDesktop?.show?.();openConv(c);n.close()}}catch(e){}}}}
 const fileCache={},fileMeta={},FCACHE='octa-files-v1';
 // files never change once saved: keep a copy in the browser so opening one again doesn't download it again
@@ -1381,7 +1381,7 @@ async function openNotify(){
   $('nDev').onclick=async()=>{const want=!$('nDev').classList.contains('on');
     if(want&&Notification.permission!=='granted'){const p=await Notification.requestPermission().catch(()=>'denied');if(p!=='granted'){toast(I18N.t('沒有取得通知權限'));return openNotify()}}
     try{localStorage.setItem(NOTI_KEY,want?'1':'0')}catch(e){}$('nDev').classList.toggle('on',want);
-    if(want)try{new Notification('OCTA',{body:I18N.t('通知已開啟'),icon:'/icon.png?v=octopus'})}catch(e){}};
+    if(want)try{new Notification('OCTA',{body:I18N.t('通知已開啟'),icon:'/icon.png?v=octopus2'})}catch(e){}};
   $('nAll').onclick=()=>$('nAll').classList.toggle('on');
   const say=t=>$('sMsg').textContent=t;
   const saveS=()=>api('settings','PUT',{notifyAll:$('nAll').classList.contains('on'),tg:{token:$('tgTok').value,chat:$('tgChat').value},line:{token:$('lnTok').value,to:$('lnTo').value}});
