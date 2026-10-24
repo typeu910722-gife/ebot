@@ -1,5 +1,19 @@
 [
  {
+  "v": "3.0.13",
+  "date": "2026-10-24",
+  "notes": [
+   "電腦版的設定改成大一頁、分左右兩欄：左邊是分類，右邊是內容，不用一層層點進去",
+   "新增「外觀」：深色或紙色只在這裡切換，切換時顏色會漸漸過去；整個介面的字體大小可以選小、標準、大、特大，手機和電腦各自記住",
+   "附加檔案時，圖片直接顯示縮圖、檔案顯示類型和大小；傳出去後訊息裡也會顯示圖片或檔案卡，點一下就打開"
+  ],
+  "notes_en": [
+   "Settings on a computer is one wide page with the sections down the left and the content on the right",
+   "New Appearance page: dark / paper is switched only here and fades across; the whole interface's text size can be small, standard, large or extra large, remembered per device",
+   "Attached pictures show as thumbnails and files show their type and size before sending; sent messages show the picture or a file card that opens on tap"
+  ]
+ },
+ {
   "v": "3.0.12",
   "date": "2026-10-24",
   "notes": [

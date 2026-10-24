@@ -1672,7 +1672,8 @@ async function route({ request: req, env, params }) {
       const bot = bots.find(b => b.id === conv), group = groups.find(g => g.id === conv);
       if (!bot && !group) return err('找不到對話', 404);
       const fileIds = (Array.isArray(body.files) ? body.files : []).slice(0, 6).map(x => clean(x, 64));
-      const files = fileIds.length ? (await db.prepare(`SELECT id,name,mime FROM files WHERE user_id=? AND id IN (${fileIds.map(() => '?').join(',')})`).bind(U, ...fileIds).all()).results : [];
+      const files = fileIds.length ? (await db.prepare(`SELECT id,name,mime,size FROM files WHERE user_id=? AND id IN (${fileIds.map(() => '?').join(',')})`).bind(U, ...fileIds).all()).results : [];
+      files.sort((x, y) => fileIds.indexOf(x.id) - fileIds.indexOf(y.id));   // keep the order they were attached in
       if (files.length) await db.prepare(`UPDATE files SET conv=? WHERE user_id=? AND conv IS NULL AND id IN (${files.map(() => '?').join(',')})`).bind(conv, U, ...files.map(f => f.id)).run();
       await addMsg(db, U, conv, 'me', text || '（附件）', files);
       await enqueueTurn(db, U, conv, text, bot, group, bots);

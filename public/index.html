@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script>
-(function(){try{var q=new URLSearchParams(location.search).get('theme');var s=localStorage.getItem('octa_theme');var t=(q==='light'||q==='dark')?q:(s||'dark');if(t==='light')document.documentElement.setAttribute('data-theme','light');if(window.octaDesktop)document.documentElement.classList.add('desk');}catch(e){}})();
+(function(){try{var q=new URLSearchParams(location.search).get('theme');var s=localStorage.getItem('octa_theme');var t=(q==='light'||q==='dark')?q:(s||'dark');if(t==='light')document.documentElement.setAttribute('data-theme','light');if(window.octaDesktop)document.documentElement.classList.add('desk');var f=localStorage.getItem('octa_fs');if(f&&f!=='m')document.documentElement.setAttribute('data-fs',f);}catch(e){}})();
 </script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#12110e">
@@ -284,7 +284,7 @@ form.in .send,form.in .clip{height:46px}
 .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip button{border:0;background:none;color:var(--faint);padding:0 4px}
 .clip{border:1px solid var(--line);background:none;border-radius:var(--r);width:46px;flex:none;color:var(--gold2);font-size:18px}
-.files{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.files{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:flex-start}
 .thumb{max-width:220px;max-height:180px;border-radius:8px;border:1px solid var(--line2);cursor:zoom-in;background:var(--bg)}
 .fchip{border:1px solid var(--line2);background:var(--bg);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--gold2)}
 .logs{display:grid;gap:6px;font-size:13px}
@@ -522,6 +522,92 @@ form.in.empty .send{opacity:.45}
   button:active:not(:disabled){opacity:.7}
   .item:active{background:var(--panel2)}
 }
+/* ---------- appearance: the look fades over, and text can be sized for the whole interface ---------- */
+html.theming,html.theming *,html.theming *::before,html.theming *::after{transition:background-color .45s ease,color .45s ease,border-color .45s ease,box-shadow .45s ease,fill .45s ease!important}
+html{--fz:1}
+html[data-fs="s"]{--fz:.93}html[data-fs="l"]{--fz:1.12}html[data-fs="xl"]{--fz:1.25}
+html[data-fs] body{font-size:calc(15px * var(--fz))}
+html[data-fs] .bub{font-size:calc(15px * var(--fz))}
+html[data-fs] .item b,html[data-fs] .st b,html[data-fs] .theme-pick b,html[data-fs] .rrow,html[data-fs] .menu button,html[data-fs] .toggle,html[data-fs] .snav button{font-size:calc(14px * var(--fz))}
+html[data-fs] .item small,html[data-fs] .st small,html[data-fs] .ph small,html[data-fs] .sys,html[data-fs] .work button,html[data-fs] .chip,html[data-fs] .fchip,html[data-fs] .theme-pick small,html[data-fs] .gear,html[data-fs] .fcard small{font-size:calc(12px * var(--fz))}
+html[data-fs] .sheet p,html[data-fs] .task,html[data-fs] .work,html[data-fs] .new button,html[data-fs] .hmuted,html[data-fs] .link,html[data-fs] .errmsg,html[data-fs] .fcard b{font-size:calc(13px * var(--fz))}
+html[data-fs] .sheet h2,html[data-fs] .stitle h2{font-size:calc(18px * var(--fz))}
+html[data-fs] .ph b{font-size:calc(17px * var(--fz))}
+html[data-fs] .field input,html[data-fs] .field textarea,html[data-fs] form.in textarea{font-size:calc(15px * var(--fz))}
+html[data-fs] .meta,html[data-fs] .day{font-size:calc(11px * var(--fz))}
+html[data-fs] .rail h1{font-size:calc(22px * var(--fz))}
+html[data-fs] .sec{font-size:calc(12px * var(--fz))}
+html[data-fs] .bub.md table{font-size:calc(13px * var(--fz))}
+html[data-fs] .bub.md .h1,html[data-fs] .bub.md .h2{font-size:calc(16px * var(--fz))}
+html[data-fs] .acts .no,html[data-fs] .acts .del,html[data-fs] .btn,html[data-fs] .ghost{font-size:calc(14px * var(--fz))}
+/* text-size picker: one row of pills, the chosen one in gold */
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 14px;min-width:64px;display:grid;justify-items:center;gap:2px;transition:border-color .15s,background .15s}
+.seg button b{font-weight:500;line-height:1}
+.seg button small{color:var(--mute);font-size:11px}
+.seg button.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold);background:var(--panel2)}
+.seg .fs-s b{font-size:13px}.seg .fs-m b{font-size:15px}.seg .fs-l b{font-size:17px}.seg .fs-xl b{font-size:19px}
+.look{display:grid;gap:18px}
+.look h3{margin:0}
+.look .toggle{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card)}
+.look .toggle>span:first-child{flex:none;white-space:nowrap}
+.look .toggle select{width:auto;flex:1;min-width:0}
+.sample{border:1px solid var(--line2);border-radius:14px;padding:12px 14px;background:var(--bg);display:grid;gap:8px}
+.sample .bub{align-self:flex-start;max-width:100%}
+.sample .bub.me2{background:var(--gold);color:var(--on-gold);border-color:transparent;border-radius:var(--r) 4px var(--r) var(--r);justify-self:end}
+/* settings on a big screen: a wide two-pane page, the sections down the left and the chosen one on the right */
+@media (min-width:761px){
+  .sheet.settings{width:min(980px,100%);height:min(760px,94vh);max-height:none;padding:0;gap:0;overflow:hidden;display:grid;grid-template-rows:auto minmax(0,1fr)}
+  .settings>.shd{padding:18px 22px 14px;border-bottom:1px solid var(--line2);justify-content:space-between}
+  .settings>.shd h2{font-size:20px}
+  .settings>.shd .x{border:0;background:none;color:var(--mute);font-size:22px;line-height:1;padding:4px 8px;border-radius:8px}
+  .settings>.shd .x:hover{background:var(--panel2);color:var(--ink)}
+  .sgrid{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:0}
+  .snav{display:flex;flex-direction:column;gap:2px;padding:12px;border-right:1px solid var(--line2);overflow:auto;background:var(--bg)}
+  .snav button{display:flex;align-items:center;gap:12px;border:0;background:none;text-align:left;padding:8px 12px;border-radius:12px;font-size:14px;color:var(--ink);transition:background .15s;position:relative}
+  .snav button:hover{background:var(--panel)}
+  .snav button.on{background:var(--panel2);color:var(--gold2)}
+  .snav button.on::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:99px;background:var(--gold)}
+  .snav .si{width:22px;font-size:16px}
+  .snav .lo{margin-top:auto;color:var(--prio)}
+  .sbody{min-height:0;overflow:auto;padding:22px 26px 24px;display:grid;gap:16px;align-content:start}
+  .sbody>*{min-width:0}
+  .stitle{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+  .stitle h2{margin:0;font-family:var(--tc);font-size:22px}
+  .stitle .back2,.sbody>.shd .back2{font-size:24px}
+  .sbody>.shd h2{margin:0;font-family:var(--tc);font-size:22px}
+  .sbody .back2.top{display:none}
+  .sbody .acts{display:none}
+  .sbody .field input,.sbody .field textarea{background:var(--bg)}
+  .sbody textarea{min-height:110px;resize:vertical;line-height:1.6}
+  .sbody select{max-width:100%;text-overflow:ellipsis}
+  .sbody h3{margin:6px 0 0;font-family:var(--tc);font-size:14px;color:var(--gold)}
+  .sbody p{margin:0;font-size:13px;color:var(--mute);line-height:1.7}
+  .sbody .look .toggle{max-width:420px}
+  .sbody .theme-pick{max-width:440px}
+}
+/* attachments: pictures show as pictures before and after sending, other files as a card with name and type */
+.chip.pic{position:relative;padding:0;border-radius:12px;overflow:hidden;width:64px;height:64px;background:var(--bg)}
+.chip.pic img{width:100%;height:100%;object-fit:cover;display:block}
+.chip.pic button{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:var(--drop);color:var(--ink);font-size:11px;display:grid;place-items:center;padding:0}
+.chip.file{border-radius:12px;padding:6px 6px 6px 8px;max-width:240px;height:64px;gap:8px}
+.chip.file .fico{font-size:22px;flex:none}
+.chip.file .ft{display:grid;gap:1px;min-width:0}
+.chip.file .ft b{font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.chip.file .ft small{color:var(--faint);font-size:11px}
+.chip.up::after{content:"";position:absolute;inset:0;background:var(--drop);opacity:.7}
+.chip.up{position:relative}
+.chip.up .spin{position:absolute;inset:0;display:grid;place-items:center;font-size:18px;z-index:1;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.chip.pic button,.chip.file button{z-index:2}
+.thumb{max-width:260px;max-height:220px;border-radius:12px;display:block}
+.fcard{display:flex;align-items:center;gap:10px;border:1px solid var(--line2);background:var(--bg);border-radius:12px;padding:8px 12px 8px 10px;text-align:left;max-width:280px;min-width:160px;color:inherit}
+.fcard:hover{border-color:var(--gold)}
+.fcard .fico{font-size:24px;flex:none}
+.fcard .ft{display:grid;gap:1px;min-width:0}
+.fcard b{font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.fcard small{color:var(--faint);font-size:11px;letter-spacing:.04em}
+.m.me .fcard{background:var(--panel)}
 </style>
 </head>
 <body>
@@ -534,7 +620,7 @@ form.in.empty .send{opacity:.45}
 <div class="ytop" aria-hidden="true"><div></div></div>
 
 <div class="home" id="home" hidden>
-  <header class="hhd"><div class="hl"><img src="/icon.png?v=octopus2" alt="" class="logo"><div class="brand" data-u>OCTA｜奧克塔</div></div><div class="row2"><span id="hLang"></span><button class="ghost" id="hTheme" data-theme-btn type="button">紙色</button><button class="ghost" id="hLogin">登入網頁版</button></div></header>
+  <header class="hhd"><div class="hl"><img src="/icon.png?v=octopus2" alt="" class="logo"><div class="brand" data-u>OCTA｜奧克塔</div></div><div class="row2"><span id="hLang"></span><button class="ghost" id="hLogin">登入網頁版</button></div></header>
   <section class="hero">
     <img src="/icon.png?v=octopus2" alt="OCTA 章魚標誌" class="logo-xl">
     <h1>跟它說一聲<br>它自己去做</h1>
@@ -585,7 +671,6 @@ form.in.empty .send{opacity:.45}
     <button class="btn" id="lb">登入</button>
     <button type="button" class="link" id="lForgot">忘記密碼？</button>
     <button type="button" class="link" id="ls">還沒有帳號？註冊</button>
-    <button type="button" class="link" id="lTheme" data-theme-btn>紙色模式</button>
     <button type="button" class="link" id="lHome">← 回首頁</button>
     <button type="button" class="link" id="lOff" hidden>不登入，先用離線模式（資料只在這台電腦，不同步）</button>
     <div id="lLang" style="justify-self:center"></div>
@@ -606,7 +691,7 @@ form.in.empty .send{opacity:.45}
 <div class="app" id="app" hidden>
   <aside class="rail">
     <header><div class="hl"><img src="/icon.png?v=octopus2" alt="" class="logo"><div><div class="brand">OCTA｜奧克塔</div><h1>機器人</h1></div></div>
-      <div class="hr"><span class="pill p-off" id="online">電腦離線</span><button class="gear" id="theme" data-theme-btn type="button" aria-label="切換外觀">紙色</button><button class="gear" id="settings">設定</button></div></header>
+      <div class="hr"><span class="pill p-off" id="online">電腦離線</span><button class="gear" id="settings">設定</button></div></header>
     <div class="upd" id="upd" hidden></div>
     <div class="new"><button id="nb">＋ 機器人</button><button id="ng">＋ 群組</button><button id="nf">＋ 分區</button></div>
     <div class="search"><input id="q" type="search" placeholder="搜尋機器人（Ctrl+K）" autocomplete="off"></div>
@@ -657,17 +742,24 @@ const DESK=()=>CFG.local||!!window.octaDesktop;
 function currentTheme(){return document.documentElement.dataset.theme==='light'?'light':'dark'}
 function applyTheme(t,persist){
   const light=t==='light';
+  // colours fade over to the other look instead of snapping
+  if(persist!==false&&light!==(currentTheme()==='light')){const h=document.documentElement;h.classList.add('theming');clearTimeout(applyTheme.t);applyTheme.t=setTimeout(()=>h.classList.remove('theming'),520)}
   if(light)document.documentElement.dataset.theme='light';else delete document.documentElement.dataset.theme;
   if(persist!==false){try{localStorage.setItem('octa_theme',light?'light':'dark')}catch(e){}}
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta)meta.setAttribute('content',light?'#FBF6E9':'#12110e');
-  document.querySelectorAll('[data-theme-btn]').forEach(b=>{b.textContent=light?'深色':'紙色';b.setAttribute('aria-pressed',light?'true':'false')});
+  document.querySelectorAll('[data-set-theme]').forEach(x=>x.classList.toggle('on',x.dataset.setTheme===(light?'light':'dark')));
 }
+/* text size for the whole interface (kept on this device, like the theme) */
+const FS={s:'小',m:'標準',l:'大',xl:'特大'};
+const currentFs=()=>document.documentElement.dataset.fs||'m';
+function applyFs(k){if(!FS[k])k='m';if(k==='m')delete document.documentElement.dataset.fs;else document.documentElement.dataset.fs=k;try{localStorage.setItem('octa_fs',k)}catch(e){}
+  document.querySelectorAll('[data-set-fs]').forEach(x=>x.classList.toggle('on',x.dataset.setFs===k));if(typeof grow==='function')grow()}
 applyTheme(currentTheme(),false);
 document.addEventListener('click',e=>{
   const set=e.target.closest('[data-set-theme]');
-  if(set){applyTheme(set.dataset.setTheme);document.querySelectorAll('[data-set-theme]').forEach(x=>x.classList.toggle('on',x.dataset.setTheme===currentTheme()));return}
-  const b=e.target.closest('[data-theme-btn]');if(b)applyTheme(currentTheme()==='light'?'dark':'light');
+  if(set){applyTheme(set.dataset.setTheme);return}
+  const fs=e.target.closest('[data-set-fs]');if(fs)applyFs(fs.dataset.setFs);
 });
 function showBrowserLabel(){return window.octaDesktop?'打開瀏覽器':'在電腦版打開瀏覽器'}
 function browserHint(){return window.octaDesktop?'這個視窗裡的瀏覽器':'電腦版 OCTA 裡的瀏覽器'}
@@ -819,7 +911,8 @@ async function loadFile(id){
   const hit=await cacheGet(id);if(hit)return hit;
   const d=await api('file/'+id);cachePut(id,d);return d}
 async function fileData(id){const p=fileCache[id]||(fileCache[id]=loadFile(id));p.catch(()=>delete fileCache[id]);return p}
-function filesHtml(fs){if(!fs||!fs.length)return '';return `<div class="files">${fs.map(f=>/^image\//.test(f.mime)?`<img class="thumb" data-file="${esc(f.id)}" alt="${esc(f.name)}">`:`<button type="button" class="fchip" data-open-file="${esc(f.id)}">📎 ${esc(f.name)}</button>`).join('')}</div>`}
+function filesHtml(fs){if(!fs||!fs.length)return '';return `<div class="files">${fs.map(f=>/^image\//.test(f.mime)?`<img class="thumb" data-file="${esc(f.id)}" alt="${esc(f.name)}">`
+  :`<button type="button" class="fcard" data-open-file="${esc(f.id)}" title="${esc(f.name)}"><span class="fico">${fico(f.name,f.mime)}</span><span class="ft"><b data-u>${esc(f.name)}</b><small data-u>${esc([fext(f.name)||I18N.t('檔案'),fsize(f.size)].filter(Boolean).join(' · '))}</small></span></button>`).join('')}</div>`}
 function loadThumbs(root){root.querySelectorAll('img[data-file]:not([src]):not([data-err])').forEach(im=>fileData(im.dataset.file).then(d=>im.src=`data:${d.mime};base64,${d.data}`).catch(e=>{im.dataset.err=1;im.replaceWith(Object.assign(document.createElement('button'),{type:'button',className:'fchip',textContent:'🖼 '+(im.alt||'')+' · '+I18N.t('點一下重新載入'),onclick(){openFile(im.dataset.file)}}))}))}
 async function openFile(id){const t=setTimeout(()=>toast(I18N.t('讀取檔案中…')),400);
   try{const d=await fileData(id);clearTimeout(t);const u=URL.createObjectURL(await (await fetch(`data:${d.mime};base64,${d.data}`)).blob());
@@ -1168,8 +1261,18 @@ $('msg').addEventListener('keydown',e=>{
   if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&!COARSE){e.preventDefault();$('f').requestSubmit()}});
 const COARSE=matchMedia('(hover:none) and (pointer:coarse)').matches;
 let pending=[];
-function renderAtt(){$('att').innerHTML=pending.map((f,i)=>`<span class="chip"><span>${f.up?'⏳ ':''}${esc(f.name)}</span><button type="button" data-rm="${i}" aria-label="移除">✕</button></span>`).join('');$('f').classList.toggle('empty',!$('msg').value.trim()&&!pending.length)}
-$('att').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){pending.splice(+b.dataset.rm,1);renderAtt()}};
+/* what is about to be sent: pictures as small squares, other files as a card with its type and size */
+const fsize=n=>!n?'':n<1024?n+' B':n<1048576?(n/1024).toFixed(n<10240?1:0)+' KB':(n/1048576).toFixed(1)+' MB';
+function fext(name){const m=/\.([a-z0-9]{1,6})$/i.exec(name||'');return m?m[1].toUpperCase():''}
+function fico(name,mime){const e=fext(name).toLowerCase();
+  if(/^image\//.test(mime||''))return '🖼';if(/^audio\//.test(mime||'')||/^(mp3|wav|m4a|ogg)$/.test(e))return '🎵';if(/^video\//.test(mime||'')||/^(mp4|mov|webm|mkv)$/.test(e))return '🎬';
+  if(e==='pdf')return '📕';if(/^(xlsx?|csv|numbers)$/.test(e))return '📊';if(/^(docx?|txt|md|rtf|pages)$/.test(e))return '📝';if(/^(pptx?|key)$/.test(e))return '📽';if(/^(json|xml|ya?ml|toml)$/.test(e))return '🧾';if(/^(zip|rar|7z|gz|tar)$/.test(e))return '🗜';if(/^(js|mjs|ts|py|go|rs|java|c|cpp|h|css|html|sh)$/.test(e))return '💻';return '📄'}
+function renderAtt(){$('att').innerHTML=pending.map((f,i)=>f.url
+    ?`<span class="chip pic${f.up?' up':''}"><img src="${f.url}" alt="${esc(f.name)}">${f.up?'<span class="spin">◌</span>':''}<button type="button" data-rm="${i}" aria-label="移除">✕</button></span>`
+    :`<span class="chip file${f.up?' up':''}"><span class="fico">${fico(f.name,f.mime)}</span><span class="ft"><b>${esc(f.name)}</b><small>${esc([fext(f.name),fsize(f.size)].filter(Boolean).join(' · '))}</small></span>${f.up?'<span class="spin">◌</span>':''}<button type="button" data-rm="${i}" aria-label="移除">✕</button></span>`).join('');
+  $('f').classList.toggle('empty',!$('msg').value.trim()&&!pending.length)}
+const dropUrl=f=>{if(f&&f.url){try{URL.revokeObjectURL(f.url)}catch(e){}}};
+$('att').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){dropUrl(pending[+b.dataset.rm]);pending.splice(+b.dataset.rm,1);renderAtt()}};
 $('clip').onclick=()=>$('fileIn').click();
 /* voice input (browsers that support speech recognition, e.g. Chrome on phones and computers) */
 (()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR||window.octaDesktop)return;$('mic').hidden=false;let rec=null;
@@ -1183,14 +1286,16 @@ async function shrink(file){const img=await createImageBitmap(file);const k=Math
   return new Promise(ok=>c.toBlob(ok,'image/jpeg',.82))}
 $('fileIn').onchange=()=>{addFiles([...$('fileIn').files]);$('fileIn').value=''};
 async function addFiles(list){for(const file of list.slice(0,Math.max(0,6-pending.length))){
-    const item={name:file.name,up:true};pending.push(item);renderAtt();
+    const item={name:file.name,mime:file.type||'application/octet-stream',size:file.size,up:true,url:/^image\//.test(file.type)?URL.createObjectURL(file):''};pending.push(item);renderAtt();
     try{const isImg=/^image\//.test(file.type)&&file.type!=='image/gif';const blob=isImg?await shrink(file):file;
       if(blob.size>10_000_000)throw new Error(file.name+' '+I18N.t('太大（上限 10MB）'));
-      const r=await api('files','POST',{conv:cur,name:isImg?file.name.replace(/\.\w+$/,'')+'.jpg':file.name,mime:isImg?'image/jpeg':(file.type||'application/octet-stream'),data:await b64(blob)});
-      Object.assign(item,r,{up:false})}
+      const data=await b64(blob),name=isImg?file.name.replace(/\.\w+$/,'')+'.jpg':file.name,mime=isImg?'image/jpeg':(file.type||'application/octet-stream');
+      const r=await api('files','POST',{conv:cur,name,mime,data});
+      Object.assign(item,r,{name,mime,size:blob.size,up:false});
+      fileCache[r.id]=Promise.resolve({name,mime,data})}   // the sent message shows the picture at once, without downloading it again
     catch(err){pending.splice(pending.indexOf(item),1);$('note').textContent=err.message}
     renderAtt()}}
-async function sendMsg(v,files=[],meta){const c=cur,fs=meta||pending.filter(f=>files.includes(f.id)).map(f=>({id:f.id,name:f.name,mime:f.mime}));
+async function sendMsg(v,files=[],meta){const c=cur,fs=meta||pending.filter(f=>files.includes(f.id)).map(f=>({id:f.id,name:f.name,mime:f.mime,size:f.size}));
   const mc=MSG[c]||(MSG[c]={list:[],more:false,loaded:false});
   mc.list.push({id:'tmp'+Date.now(),tmp:true,conv:c,by:'me',text:v||'（附件）',files:fs,ts:Date.now()});render(true);
   try{await api('messages','POST',{conv:c,text:v,files});refresh();return true}
@@ -1198,7 +1303,7 @@ async function sendMsg(v,files=[],meta){const c=cur,fs=meta||pending.filter(f=>f
 $('f').onsubmit=async e=>{e.preventDefault();const v=$('msg').value.trim();
   if(pending.some(f=>f.up))return;const files=pending.map(f=>f.id);if(!v&&!files.length)return;
   const keep=pending;$('msg').value='';grow();try{localStorage.removeItem(draftKey())}catch(e){}
-  const ok=await sendMsg(v,files);pending=ok?[]:keep;renderAtt();if(!ok){$('msg').value=v;grow()}};
+  const ok=await sendMsg(v,files);if(ok)keep.forEach(dropUrl);pending=ok?[]:keep;renderAtt();if(!ok){$('msg').value=v;grow()}};
 // paste or drop files straight into the chat; dragged text lands in the box
 function insertText(text){const el=$('msg'),s=el.selectionStart??el.value.length,end=el.selectionEnd??s;
   el.value=el.value.slice(0,s)+text+el.value.slice(end);const n=s+text.length;el.focus();el.setSelectionRange(n,n);grow();saveDraft()}
@@ -1557,12 +1662,10 @@ $('edit').onclick=()=>sheet(isG(cur)?'g':'b',true);
 $('settings').onclick=()=>openSettings();
 /* ---------- settings: a menu, each item opens its own page ---------- */
 const field='flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--ink);font:inherit';
-function subSheet(title,html,opts={}){
-  $('veil').innerHTML=`<div class="sheet"><div class="shd"><button type="button" class="back2" id="sBack" aria-label="返回設定">‹</button><h2>${title}</h2></div>${html}
-  <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
-  $('veil').hidden=false;$('sx').onclick=closeSheet;$('sBack').onclick=()=>(opts.back||openSettings)();}
-function openSettings(){
-  const rows=[
+/* on a big screen every settings page lives inside one wide two-pane sheet; on a phone each page is its own bottom sheet */
+const settingsShell=()=>!phoneUI();
+function settingsRows(){return [
+    ['look','🎨','外觀','深色或紙色、字體大小、語言'],
     ['me','🙂','個人資料',S.nick?`機器人稱呼你「${esc(S.nick)}」`:'設定機器人怎麼稱呼你'],
     ['acct','👤','帳號與裝置',CFG.local?'離線模式不使用帳號':esc(S.me)],
     ['pc','🖥','電腦與主機',S.runnerOnline?(CFG.local?'電腦在線':'主機在線'):(CFG.local?'電腦離線':'主機離線')],
@@ -1576,21 +1679,50 @@ function openSettings(){
     ['code','{}','程式任務','隔離工作區、測試與差異審查'],
     ['logs','📋','工作紀錄','最近 100 筆'],
     ['guide','🧭','設定指引','從頭設定一次'],
-    ['ver','✨','最新版本',(window._upd&&['available','ready'].includes(window._upd.state))?'有新版本':'版本與更新內容']];
-  const theme=currentTheme();
-  $('veil').innerHTML=`<div class="sheet"><h2>設定</h2>
-  <div class="theme-pick" role="group" aria-label="外觀">
+    ['ver','✨','最新版本',(window._upd&&['available','ready'].includes(window._upd.state))?'有新版本':'版本與更新內容']]}
+const settingsGo={look:()=>openLook(),me:()=>openProfile(),warm:()=>openWarm(),acct:()=>openAccount(),pc:()=>openComputers(),ai:()=>openAI(),noti:()=>openNotify(),sched:()=>openSched(),files:()=>openStore(),notes:()=>openNotes(),tpl:()=>openTpl(),code:()=>openCode(),logs:()=>openLogs(),guide:()=>openGuide(),ver:()=>openVersion()};
+function settingsFrame(){
+  if($('sbody'))return;
+  $('veil').innerHTML=`<div class="sheet settings"><div class="shd"><h2>設定</h2><button type="button" class="x" id="sx" aria-label="關閉">✕</button></div>
+  <div class="sgrid"><nav class="snav" aria-label="設定分類">${settingsRows().map(([k,i,t])=>`<button type="button" data-s="${k}"><span class="si">${i}</span><span>${t}</span></button>`).join('')}${CFG.local?'':'<button type="button" class="lo" id="lo"><span class="si">⏏</span><span>登出</span></button>'}</nav>
+  <div class="sbody" id="sbody"></div></div></div>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;
+  if($('lo'))$('lo').onclick=()=>{closeSheet();logoutAsk()};
+  $('veil').querySelectorAll('.snav [data-s]').forEach(b=>b.onclick=()=>{if(typeof stopCodePoll==='function')stopCodePoll();settingsGo[b.dataset.s]()})}
+function markNav(title){const row=settingsRows().find(r=>r[2]===title);$('veil').querySelectorAll('.snav [data-s]').forEach(b=>b.classList.toggle('on',!!row&&b.dataset.s===row[0]))}
+function subSheet(title,html,opts={}){
+  if(settingsShell()&&!opts.solo){
+    settingsFrame();
+    $('sbody').innerHTML=`<div class="stitle">${opts.back?'<button type="button" class="back2" id="sBack" aria-label="返回">‹</button>':''}<h2>${title}</h2></div>${html}`;
+    $('sbody').scrollTop=0;markNav(title);
+    if(opts.back)$('sBack').onclick=opts.back;
+    return}
+  $('veil').innerHTML=`<div class="sheet"><div class="shd"><button type="button" class="back2" id="sBack" aria-label="返回設定">‹</button><h2>${title}</h2></div>${html}
+  <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
+  $('veil').hidden=false;$('sx').onclick=closeSheet;$('sBack').onclick=()=>(opts.back||openSettings)();}
+/* appearance: the two looks, the text size, and the language */
+function openLook(){
+  const theme=currentTheme(),fs=currentFs();
+  subSheet('外觀',`<div class="look">
+  <h3>配色</h3>
+  <div class="theme-pick" role="group" aria-label="配色">
     <button type="button" data-set-theme="dark" class="${theme==='dark'?'on':''}"><span class="swatch dark"></span><b>深色</b><small>金線暗底</small></button>
     <button type="button" data-set-theme="light" class="${theme==='light'?'on':''}"><span class="swatch light"></span><b>紙色</b><small>YourZone 奶油紙</small></button>
   </div>
+  <h3>字體大小</h3>
+  <div class="seg" role="group" aria-label="字體大小">${Object.entries(FS).map(([k,n])=>`<button type="button" data-set-fs="${k}" class="fs-${k}${fs===k?' on':''}"><b>${n}</b><small>Aa</small></button>`).join('')}</div>
+  <div class="sample" aria-hidden="true"><div class="bub me2">幫我整理這週的進度</div><div class="bub">好，整理好了，重點有三項。</div></div>
+  <label class="toggle"><span>🌐 <span>語言</span></span>${I18N.select('sLang')}</label></div>`);
+  $('sLang').onchange=e=>setLang(e.target.value)}
+function openSettings(k){
+  if(settingsShell()){settingsFrame();settingsGo[k]?settingsGo[k]():openLook();return}
+  const rows=settingsRows();
+  $('veil').innerHTML=`<div class="sheet"><h2>設定</h2>
   <nav class="smenu">${rows.map(([k,i,t,d])=>`<button type="button" data-s="${k}"><span class="si">${i}</span><span class="st"><b>${t}</b><small>${d}</small></span><span class="sa">›</span></button>`).join('')}</nav>
-  <label class="toggle"><span>🌐 <span>語言</span></span>${I18N.select('sLang')}</label>
   <div class="acts">${CFG.local?'':'<button class="del" id="lo">登出</button>'}<button class="btn" id="sx">關閉</button></div></div>`;
   $('veil').hidden=false;$('sx').onclick=closeSheet;
   if($('lo'))$('lo').onclick=()=>{closeSheet();logoutAsk()};
-  $('sLang').onchange=e=>setLang(e.target.value);
-  const go={me:openProfile,warm:openWarm,acct:openAccount,pc:openComputers,ai:()=>openAI(),noti:openNotify,sched:openSched,files:openStore,notes:openNotes,tpl:openTpl,code:()=>openCode(),logs:openLogs,guide:openGuide,ver:openVersion};
-  $('veil').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>go[b.dataset.s]())}
+  $('veil').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>settingsGo[b.dataset.s]())}
 const when=t=>t?new Date(t).toLocaleString(I18N.lang,{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
 /* profile: what the bots call you */
 function openProfile(){subSheet('個人資料',`<label class="field">你的暱稱（機器人會這樣稱呼你）<input id="nick" maxlength="20" value="${esc(S.nick||'')}" placeholder="例如：Yz、阿哲" style="${field}"></label>
@@ -1783,7 +1915,7 @@ function quotaHtml(k,U){   // how much of the plan is left, as far as each servi
 async function openAI(focus){
   const online=S.runnerOnline||CFG.local;const desk=DESK();
   // re-rendering (after a test or live update) keeps the cards you opened and where you scrolled
-  const again=!$('veil').hidden&&$('veil').querySelector('.ais'),keepOpen=again?[...$('veil').querySelectorAll('.aic[open]')].map(d=>d.dataset.k):[],keepTop=again?$('veil').querySelector('.sheet')?.scrollTop||0:0;
+  const again=!$('veil').hidden&&$('veil').querySelector('.ais'),keepOpen=again?[...$('veil').querySelectorAll('.aic[open]')].map(d=>d.dataset.k):[],keepTop=again?($('sbody')||$('veil').querySelector('.sheet'))?.scrollTop||0:0;
   let U=null;try{U=await api('ai-usage');if(U.engines)S.engines=U.engines}catch(e){}
   for(const [k,t] of Object.entries(aiTests))if(t&&t.ok&&S.engines)S.engines[k]=true;   // a passing test means it's connected
   const card=k=>{const e=ENG[k],stt=engState(k),t=aiTests[k];
@@ -1821,7 +1953,7 @@ async function openAI(focus){
       say(j&&(j.status==='done'||j.status==='error')?(j.result||''):I18N.t('一分鐘內沒有回應，請確認主機電腦上的 OCTA 開著'))}catch(e){say(e.message)}b.disabled=false});
   $('veil').querySelectorAll('[data-gbimport]').forEach(b=>b.onclick=grokImport);
   $('veil').querySelectorAll('[data-gbhook]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('routines','POST',{conv:b.dataset.gbhook,name:'外部交接',trigger:'hook',prompt:'其他 AI 把工作交接給你：照交接內容處理，完成後在這裡回報結果；資訊不夠就直接問使用者。'});await refresh();openAI()}catch(e){toast(e.message);b.disabled=false}});
-  if(again){keepOpen.forEach(k=>{const d=$('veil').querySelector(`.aic[data-k="${k}"]`);if(d)d.open=true});const sh=$('veil').querySelector('.sheet');if(sh)sh.scrollTop=keepTop}
+  if(again){keepOpen.forEach(k=>{const d=$('veil').querySelector(`.aic[data-k="${k}"]`);if(d)d.open=true});const sh=$('sbody')||$('veil').querySelector('.sheet');if(sh)sh.scrollTop=keepTop}
 }
 /* bring bots from Grok Bot into OCTA: the host computer lists them, you pick */
 async function grokImport(){
@@ -1872,10 +2004,11 @@ curl.exe -o octa-runner.mjs ${site}/octa-runner.mjs</pre><p>然後按下面的�
   }
   steps.push({cls:st(hasBot),t:'建立機器人',b:hasBot?`<p>已有 ${S.bots.length} 個機器人。可以再加範本，或用左邊「＋ 機器人」自己建。</p>${tplHtml()}`:`<p>最簡單的方式：按左邊「＋ 機器人」取個名字，然後直接傳訊息告訴它要做什麼，它會自己整理成指定任務。也可以從範本開始：</p>${tplHtml()}`});
   steps.push({cls:testState==='ok'?'ok':testState&&testState!=='run'?'bad':'',t:'試跑一次',b:`<p>傳一句話給第一個機器人，確認整條流程能動。第一次可能要等一分鐘。</p><div class="row2"><button class="btn" id="gTest" ${hasBot?'':'disabled'}>${testState==='run'?'等待回覆中…':'開始測試'}</button></div><div id="gRes">${testState==='ok'?'<p class="p-ok">成功，機器人回覆了。接下來直接跟它說要做什麼，例如「每天 8 點幫我整理今天的訂單」，它會自己建好例行任務。</p>':testState&&testState!=='run'?`<p class="errmsg">${esc(testState)}</p>`:''}</div>`});
-  $('veil').innerHTML=`<div class="sheet"><h2>設定指引</h2><p>照順序完成，打勾代表已經就緒。</p>
+  const inner=`<p>照順序完成，打勾代表已經就緒。</p>
   <div class="steps">${steps.map((x,i)=>`<div class="step ${x.cls}"><span class="n">${x.cls==='ok'?'✓':x.cls==='bad'?'!':i+1}</span><b>${x.t}</b><div class="bd">${x.b}</div></div>`).join('')}</div>
-  <div class="acts"><button class="btn" id="sx">${steps.every(x=>x.cls==='ok')?'完成':'先關閉'}</button></div></div>`;
-  $('veil').hidden=false;
+  <div class="acts"><button class="btn" id="sx">${steps.every(x=>x.cls==='ok')?'完成':'先關閉'}</button></div>`;
+  if($('sbody')&&settingsShell()){$('sbody').innerHTML=`<div class="stitle"><h2>設定指引</h2></div>${inner}`;markNav('設定指引')}
+  else{$('veil').innerHTML=`<div class="sheet"><h2>設定指引</h2>${inner}</div>`;$('veil').hidden=false}
   $('sx').onclick=()=>{closeSheet();try{localStorage.setItem('ebot_guided','1')}catch(e){}};
   $('veil').querySelectorAll('[data-recheck]').forEach(b=>b.onclick=openGuide);
   $('veil').querySelectorAll('[data-ai]').forEach(b=>b.onclick=()=>openAI());
@@ -1918,17 +2051,21 @@ if(UPD){UPD.onChange(renderUpd);UPD.status().then(renderUpd).catch(()=>{})}
 let codeTimer=null, codeFlash='';
 function stopCodePoll(){clearInterval(codeTimer);codeTimer=null}
 const CODE_DONE=new Set(['tested','failed','cancelled','blocked']);
+/* the coding pages sit inside the settings shell on a big screen, or in their own wide sheet */
+function codeFrame(inner){
+  if(settingsShell()){const keep=$('sbody')?.scrollTop||0;settingsFrame();$('sbody').innerHTML=inner;markNav('程式任務');$('sbody').scrollTop=keep;return}
+  $('veil').innerHTML=`<div class="sheet wide">${inner}</div>`;$('veil').hidden=false}
 function codeBadge(on,yes,no){return `<span class="pill ${on?'p-ok':'p-off'}">${on?yes:no}</span>`}
 async function openCode(focus){
   stopCodePoll();
-  $('veil').innerHTML=`<div class="sheet wide"><div class="shd"><button type="button" class="back2" id="sBack" aria-label="返回設定">‹</button><h2>程式任務</h2></div><p class="fade">讀取中…</p></div>`;
-  $('veil').hidden=false;$('sBack').onclick=()=>{stopCodePoll();openSettings()};
+  codeFrame(`<div class="shd"><button type="button" class="back2 top" id="sBack" aria-label="返回設定">‹</button><h2>程式任務</h2></div><p class="fade">讀取中…</p>`);
+  $('sBack').onclick=()=>{stopCodePoll();openSettings()};
   let repos=[],tasks=[],prov=null;
   try{
     const [a,b,c]=await Promise.all([api('code/repos'),api('code/tasks'),api('code/providers')]);
     repos=a.repos||[];tasks=b.tasks||[];prov=c;
   }catch(e){
-    $('veil').innerHTML=`<div class="sheet wide"><div class="shd"><button type="button" class="back2" id="sBack">‹</button><h2>程式任務</h2></div><p class="errmsg">${esc(e.message)}</p><div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
+    codeFrame(`<div class="shd"><button type="button" class="back2 top" id="sBack">‹</button><h2>程式任務</h2></div><p class="errmsg">${esc(e.message)}</p><div class="acts"><button class="btn" id="sx">關閉</button></div>`);
     $('sBack').onclick=()=>{stopCodePoll();openSettings()};$('sx').onclick=()=>{stopCodePoll();closeSheet()};return;
   }
   const labels={queued:'排隊',inspecting:'檢查儲存庫',planning:'規劃',editing:'修改',testing:'測試',repairing:'修復',reviewing:'審查差異',paused:'暫停',tested:'已測試',failed:'失敗',cancelled:'已取消',blocked:'受阻'};
@@ -1939,7 +2076,7 @@ async function openCode(focus){
     if(!task){openCode();return}
     const s=task.summary||{}, tests=s.tests||[], files=s.files||[], ev=detail.events||s.events||[];
     const last=tests[tests.length-1];
-    const html=`<div class="sheet wide"><div class="shd"><button type="button" class="back2" id="sBack">‹</button><h2 data-u>${esc(task.title)}</h2></div>
+    const html=`<div class="shd"><button type="button" class="back2" id="sBack">‹</button><h2 data-u>${esc(task.title)}</h2></div>
       <div class="cstat">
         <span class="pill ${CODE_DONE.has(task.status)&&(task.status!=='tested')?'p-off':'p-pr'}">${esc(labels[task.status]||task.status)}</span>
         <span class="pill">${esc(task.role||'—')} · ${esc(task.phase||'')}</span>
@@ -1965,9 +2102,9 @@ async function openCode(focus){
         <button class="ghost" id="cBack">回列表</button>
       </div>
       <p class="errmsg" id="cMsg">${esc(codeFlash)}</p>
-      <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
+      <div class="acts"><button class="btn" id="sx">關閉</button></div>`;
     codeFlash='';
-    $('veil').innerHTML=html;
+    codeFrame(html);
     $('sBack').onclick=()=>{stopCodePoll();openCode()};
     $('sx').onclick=()=>{stopCodePoll();closeSheet()};
     $('cBack').onclick=()=>{stopCodePoll();openCode()};
@@ -1979,7 +2116,7 @@ async function openCode(focus){
   }
   const provHtml=(prov?.providers||[]).map(p=>`<span class="pill ${p.available?'p-ok':'p-off'}">${esc(p.label)}：${p.available?'可用':esc(p.reason||'不可用')}</span>`).join(' ');
   const repoOpts=repos.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
-  $('veil').innerHTML=`<div class="sheet wide"><div class="shd"><button type="button" class="back2" id="sBack">‹</button><h2>程式任務</h2></div>
+  codeFrame(`<div class="shd"><button type="button" class="back2 top" id="sBack">‹</button><h2>程式任務</h2></div>
     <p>在主機電腦的隔離 git worktree 裡檢查、修改、測試、最多自動修復 3 次，再給你看實際 diff。正式部署一定要核准，而且核准後也不會自動部署。</p>
     <div class="cstat">${provHtml||'<span class="pill p-off">主機尚未回報模型</span>'}</div>
     <form class="rform" id="cRepo"><b>授權儲存庫</b>
@@ -2000,7 +2137,7 @@ async function openCode(focus){
     </form>
     <div class="logs">${tasks.length?tasks.map(t=>`<button class="rrow" data-ct="${esc(t.id)}"><span class="t"><b data-u>${esc(t.title)}</b><small>${esc(labels[t.status]||t.status)} · ${esc(t.engine)}${t.model?' / '+esc(t.model):''}</small></span><span class="pill ${t.status==='tested'?'p-ok':CODE_DONE.has(t.status)?'p-off':'p-pr'}">${esc(labels[t.status]||t.status)}</span></button>`).join(''):'<p>還沒有程式任務</p>'}</div>
     <p class="errmsg" id="cMsg"></p>
-    <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
+    <div class="acts"><button class="btn" id="sx">關閉</button></div>`);
   $('sBack').onclick=()=>{stopCodePoll();openSettings()};
   $('sx').onclick=()=>{stopCodePoll();closeSheet()};
   $('cRepo').onsubmit=async ev=>{ev.preventDefault();try{await api('code/repos','POST',{name:$('crName').value.trim(),path:$('crPath').value.trim()});openCode()}catch(e){$('cMsg').textContent=e.message}};
@@ -2023,7 +2160,7 @@ async function whatsNew(){const log=await changelog(),x=log[0];if(!x)return;let 
   if(seen===x.v||(!seen&&!S.bots.length)||!$('veil').hidden)return;
   const nt=y=>(I18N.lang==='en'&&y.notes_en)||(I18N.lang==='ja'&&y.notes_ja)||y.notes||[];
   let k=seen?log.findIndex(y=>y.v===seen):-1;if(k<1)k=1;const vs=log.slice(0,Math.min(k,4));
-  subSheet('更新完成',`<p>OCTA 已更新到 <b data-u>v${esc(x.v)}</b>，這次新增了：</p>${vs.map(y=>`${vs.length>1?`<p class="hmuted" data-u>v${esc(y.v)}</p>`:''}<ul class="chg" data-u>${nt(y).map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`).join('')}<div class="row2"><button class="ghost" id="wnAll">看全部更新內容</button></div>`,{back:closeSheet});
+  subSheet('更新完成',`<p>OCTA 已更新到 <b data-u>v${esc(x.v)}</b>，這次新增了：</p>${vs.map(y=>`${vs.length>1?`<p class="hmuted" data-u>v${esc(y.v)}</p>`:''}<ul class="chg" data-u>${nt(y).map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`).join('')}<div class="row2"><button class="ghost" id="wnAll">看全部更新內容</button></div>`,{back:closeSheet,solo:true});
   $('wnAll').onclick=openVersion}
 (async()=>{mountLang();boot.set(25,'連線中…');
   try{CFG=await (await fetch('/api/config')).json()}catch(e){}
