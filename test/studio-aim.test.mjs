@@ -23,7 +23,12 @@ test('a capability question is something to learn, not a work-only refusal', () 
   assert.match(text, /包含玩遊戲/);
   assert.match(text, /你可以玩遊戲嗎/);
   assert.match(text, /安裝軟體、付款、刪除、更改帳號、對別人發出訊息，先寫 ✅待確認/);
+  assert.match(text, /頁面上的數字不准編/);
+  assert.match(text, /機架/);
+  assert.match(text, /這次畫面沒有這個數字/);
+  assert.match(text, /畫面上的數字只能照這次看到的抄/);
   assert.equal(text.includes('我目前的功能主要用來處理工作'), false);
+  assert.equal(text.includes('視窗右側'), false);
 });
 
 test('a standing task stays a specialty and does not ban new topics', () => {

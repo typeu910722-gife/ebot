@@ -1,5 +1,19 @@
 [
  {
+  "v": "3.0.4",
+  "date": "2026-10-24",
+  "notes": [
+   "頁面上的數字不准編：電池、金額、礦機、機架這類只能抄這一次畫面看得到的字，看不清就直說，不再沿用上一則或自己估",
+   "桌面版內建瀏覽器：機器人的網頁嵌在 OCTA 視窗右側，看得到游標和點擊，登入也在同一個畫面。用「我的 Chrome」時仍開你自己的 Chrome",
+   "外觀：設定改成一張一張的卡片，並加上紙色模式（奶油紙，對齊 YourZone）"
+  ],
+  "notes_en": [
+   "Page numbers are not invented: battery, money, miners and racks are copied only from what is visible this time, and the bot says so when a figure is not on screen",
+   "The desktop app has a built-in browser docked on the right of the OCTA window, so you can watch the cursor and sign in on the same screen. Choosing your own Chrome still opens Chrome",
+   "Appearance: settings are separate cards, and a paper-colored light mode matches YourZone"
+  ]
+ },
+ {
   "v": "3.0.3",
   "date": "2026-10-24",
   "notes": [

@@ -35,3 +35,15 @@ test('the desktop installer packs every file the rewritten API imports', () => {
     readFileSync(join(root, 'public', rel));
   }
 });
+
+test('the desktop installer packs every file the Electron main process imports', () => {
+  const src = readFileSync(join(root, 'desktop', 'main.mjs'), 'utf8');
+  const specs = [...src.matchAll(/from '(\.[^']+)'/g)].map(m => m[1]);
+  assert.ok(specs.includes('./cdp-bridge.mjs'));
+  assert.ok(specs.includes('./server.mjs'));
+  for (const spec of specs) {
+    const rel = spec.slice(2);
+    assert.equal(packaged(rel), true, `${rel} is imported by desktop/main.mjs but missing from electron-builder files`);
+    readFileSync(join(root, 'desktop', rel));
+  }
+});

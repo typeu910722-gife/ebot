@@ -21,7 +21,7 @@ import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { probeCodingHosts, listRecoverableStates, runCodingTask, selectProvider } from './coding-runtime.mjs';
 
-export const VERSION = '17.6';
+export const VERSION = '17.7';
 const PW_MCP = '@playwright/mcp@0.0.83';
 const WIN = process.platform === 'win32';
 const JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -158,11 +158,13 @@ function studioAim() {
     '你的目標：成為比使用者更厲害的全能助手。OCTA 是一座超級 AI 工作室，每個機器人都要盡可能學。指定任務是你長期負責的本業，不是能力的邊界。',
     '遊戲、創作、研究、生活、寫程式、操作軟體，使用者問得出口的都要接。禁止用「我只處理工作」「遊戲我還不能」「這不在我的功能裡」收尾，也不要把話題拉回「有沒有工作要我做」。',
     '不會就學，而且要在授權下真的試：先查做法（搜尋、讀說明、打開網站或程式看畫面），再在你自己的瀏覽器或資料夾裡做最小的一次嘗試，把學會的步驟用 🧩技能 或 🗺️網站筆記 留下。沒試過不能說不會。',
-    '查看、搜尋、打開、練習直接做。安裝軟體、付款、刪除、更改帳號、對別人發出訊息，先寫 ✅待確認 取得授權再做；還沒授權時說明你卡在哪一個授權，不要改口說自己沒有這個能力。'
-  ];
+    '查看、搜尋、打開、練習直接做。安裝軟體、付款、刪除、更改帳號、對別人發出訊息，先寫 ✅待確認 取得授權再做；還沒授權時說明你卡在哪一個授權，不要改口說自己沒有這個能力。',
+    '頁面上的數字不准編。電池、金額、礦機、機架、數量、名次，只能抄這一次畫面裡看得到的字；看不清就寫「這次畫面沒有這個數字」，不要沿用上一則回覆，也不要自己估。使用者說數字不對時，重新打開那一頁再讀，不要把舊數字再說一次。畫面是遊戲或圖、文字很少時，描述你實際看到的東西，不要自製一張數據表。',
+    cfg.embed ? '你的瀏覽器在 OCTA 視窗右側，使用者看得到你的游標和點擊。不要說瀏覽器開在別的程式。' : ''
+  ].filter(Boolean);
 }
 function turnGuide() {
-  return '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。(3) 問你會不會、能不能，或要你做一件還沒做過的事（包含玩遊戲、學新軟體）→ 不要推辭。先用一句話說你會學，然後立刻做第一個學習動作（搜尋做法、打開相關頁面，或在自己的資料夾試一個最小例子）；需要他指定對象時，一邊查通用做法，一邊只問要哪一個。(4) 其他要你做事的 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。';
+  return '先判斷這則指示的類型：(1) 只問你的設定、任務內容、AI 方案 → 直接回答，不用工具。(2) 問到網頁上、畫面上、帳號裡現在的狀況（例如「你看到什麼」「現在有幾則訊息」），或使用者說他幫你打開、登入好了 → 先用 browser_snapshot 看你瀏覽器目前的分頁再回答，不要說你還沒看。畫面上的數字只能照這次看到的抄。(3) 問你會不會、能不能，或要你做一件還沒做過的事（包含玩遊戲、學新軟體）→ 不要推辭。先用一句話說你會學，然後立刻做第一個學習動作（搜尋做法、打開相關頁面，或在自己的資料夾試一個最小例子）；需要他指定對象時，一邊查通用做法，一邊只問要哪一個。(4) 其他要你做事的 → 直接動手做。這個判斷和 octa-task.md 都是內部說明，回覆裡不要提到它們。工作過程中不要輸出「Let me…」「先用瀏覽器看看」之類的說明；最後給使用者的回覆前，單獨一行寫「【回覆】」，後面接繁體中文回覆。';
 }
 // today's date said plainly, and the bot's own work notes (what it already found), so it doesn't start from zero each time
 function dayInfo(job) {
@@ -946,6 +948,19 @@ function portOf(id) {   // a fixed local port per bot, kept in work/ports.json
   if (!m[id]) { const used = new Set(Object.values(m)); let p = 9311; while (used.has(p)) p++; m[id] = p; writeFileSync(f, JSON.stringify(m)); }
   return m[id];
 }
+function embedPortOf(id) {   // separate from Chrome's ports, so a leftover Chrome does not get driven by mistake
+  const f = join(workDir, 'embed-ports.json');
+  let m = {}; try { m = JSON.parse(readFileSync(f, 'utf8')); } catch { }
+  if (!m[id]) { const used = new Set(Object.values(m)); let p = 19011; while (used.has(p)) p++; m[id] = p; try { writeFileSync(f, JSON.stringify(m)); } catch { } }
+  return m[id];
+}
+function savedPorts() {
+  const out = [];
+  for (const name of ['ports.json', 'embed-ports.json']) {
+    try { out.push(...Object.values(JSON.parse(readFileSync(join(workDir, name), 'utf8')))); } catch { }
+  }
+  return out;
+}
 async function cdpInfo(port) {
   try { const r = await fetch(`http://127.0.0.1:${port}/json/version`, { signal: AbortSignal.timeout(1500) }); return r.ok ? await r.json() : null; } catch { return null; }
 }
@@ -1009,8 +1024,8 @@ async function tagBrowser(port, name) {
     if (m.method === 'Target.targetDestroyed') { done.delete(m.params.targetId); sess.delete(m.params.targetId); } };
   ws.onclose = ws.onerror = () => { tags.delete(port); };
 }
-export async function ensureBrowser(bot) {
-  const port = await openBrowser(bot);
+export async function ensureBrowser(bot, opts) {
+  const port = await openBrowser(bot, opts);
   if (shareBrowser) { await mergeOldProfiles().catch(e => log('合併舊登入失敗：' + e.message)); await syncIn(port); }
   return port;
 }
@@ -1029,7 +1044,21 @@ function markProfile(profile, name) {
   } catch (e) { log('瀏覽器標記失敗：' + e.message); }
 }
 const onDesk = new Set();
-async function openBrowser(bot) {
+async function openBrowser(bot, opts = {}) {
+  if (cfg.embed && bot.browser !== 'mine') {
+    const port = embedPortOf(bot.id);
+    try {
+      if (!(await cdpInfo(port))) await cfg.embed.start(bot, port);
+      for (let i = 0; i < 30 && !(await cdpInfo(port)); i++) await pause(100);
+      if (await cdpInfo(port)) {
+        browsers.set(bot.id, { port, last: Date.now(), embed: true });
+        if (opts.show !== false) await cfg.embed.show?.(port, true);
+        log(`🌐 ${bot.name} 的瀏覽器在 OCTA 裡`);
+        await tagBrowser(port, bot.name).catch(() => { });
+        return port;
+      }
+    } catch (e) { log('內建瀏覽器沒有起來，改開 Chrome：' + e.message); }
+  }
   const port = portOf(bot.id);
   const key = bot.id;
   if (await cdpInfo(port)) {
@@ -1076,6 +1105,7 @@ async function browserSnapshot(port, since) {   // screenshot + address of the t
   });
 }
 async function showBrowser(port, url, hide) {
+  if ([...browsers.values()].some(b => b.port === port && b.embed)) await cfg.embed?.show?.(port, !hide);
   return cdp(port, async send => {
     let pages = await pagesOf(send), targetId = pages[0]?.targetId;
     if (url || !targetId) targetId = (await send('Target.createTarget', { url: url || 'about:blank' })).targetId;
@@ -1092,14 +1122,16 @@ async function openJob(job) {
   const done = (ok, text) => { log(`🌐 ${job.bot.name}：${text}`); return api('runner/done', { id: job.id, ok, text }).catch(() => { }); };
   const hide = job.url === 'octa:hide';
   try {
-    if (hide && !(await cdpInfo(portOf(job.bot.id)))) return done(true, '我的瀏覽器已經收起來了。');
-    const port = await ensureBrowser(job.bot);
+    const ports = [...new Set([browsers.get(job.bot.id)?.port, cfg.embed && job.bot.browser !== 'mine' ? embedPortOf(job.bot.id) : 0, portOf(job.bot.id)].filter(Boolean))];
+    if (hide && (await Promise.all(ports.map(p => cdpInfo(p)))).every(v => !v)) return done(true, '我的瀏覽器已經收起來了。');
+    const port = await ensureBrowser(job.bot, { show: !hide });
     await showBrowser(port, hide ? '' : job.url, hide);
     touchBrowser(job.bot.id);
     if (hide && shareBrowser) await syncOut(port);   // signed in by hand: every bot gets it
+    const where = browsers.get(job.bot.id)?.embed ? 'OCTA 視窗右側' : '電腦上';
     return done(true, hide ? '我的瀏覽器已收到背景，我會繼續在裡面工作。'
-      : busyBots.has(job.bot.id) ? '我的瀏覽器已經在電腦上顯示，我正在裡面工作，先別操作；要幫我登入請等我停下來。'
-      : '我的瀏覽器已經在電腦上顯示。需要登入就直接在裡面登入，好了回來按「登入好了，繼續」。');
+      : busyBots.has(job.bot.id) ? `我的瀏覽器已經在${where}，我正在裡面工作，先別操作；要幫我登入請等我停下來。`
+      : `我的瀏覽器已經在${where}。需要登入就直接在裡面登入，好了回來按「登入好了，繼續」。`);
   } catch (e) { return done(false, '⚠ 無法打開瀏覽器：' + e.message); }
 }
 // ---------- 監看網頁: check pages in the bot's own browser, start the routine only when they change ----------
@@ -1127,7 +1159,7 @@ async function checkWatches() {
     if (busyBots.has(w.bot) || sessions.get(w.bot)?.turn) continue;   // don't disturb a bot at work
     lastLook.set(w.id, Date.now());
     try {
-      const port = await ensureBrowser({ id: w.bot, name: '監看' });
+      const port = await ensureBrowser({ id: w.bot, name: '監看' }, { show: false });
       const text = (await readPage(port, w.url, w.sel)).replace(/\d{1,2}:\d{2}(:\d{2})?/g, '').trim();   // ignore clocks on the page
       const hash = createHash('sha1').update(text).digest('hex');
       const r = await api('runner/watched', { id: w.id, hash, text });
@@ -1139,8 +1171,7 @@ async function checkWatches() {
 // browsers idle for 30 minutes and not on screen are closed to save memory (tabs come back next time)
 // OCTA is closing: close every bot's browser (also ones a previous run left open), so the next start doesn't pile up windows
 export async function closeAllBrowsers() {
-  let m = {}; try { m = JSON.parse(readFileSync(join(workDir, 'ports.json'), 'utf8')); } catch { }
-  await Promise.all(Object.values(m).map(async p => { if (await cdpInfo(p)) await cdp(p, send => send('Browser.close')).catch(() => { }); }));
+  await Promise.all(savedPorts().map(async p => { if (await cdpInfo(p)) await cdp(p, send => send('Browser.close')).catch(() => { }); }));
   for (const ws of tags.values()) { try { ws.close(); } catch { } }
   tags.clear(); browsers.clear(); onDesk.clear();
 }

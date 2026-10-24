@@ -2,6 +2,9 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
+<script>
+(function(){try{var q=new URLSearchParams(location.search).get('theme');var s=localStorage.getItem('octa_theme');var t=(q==='light'||q==='dark')?q:(s||'dark');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#12110e">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,11 +21,27 @@
 <style>
 /* Dark-gold theme. Desktop: rail + chat pane. Phone: list ⇄ chat. */
 :root{
-  --bg:#12110e; --panel:#1f1c17; --panel2:#27231c; --ink:#efe8da; --mute:#9b927f; --faint:#5f584c;
+  --bg:#12110e; --panel:#1f1c17; --panel2:#27231c; --card:#27231c; --ink:#efe8da; --mute:#9b927f; --faint:#5f584c;
   --gold:#c9a96a; --gold2:#e4cb93; --line:rgba(201,169,106,.22); --line2:rgba(239,232,218,.08);
-  --done:#8fb08a; --in:#8ea7c4; --prio:#e08a6d; --r:12px;
+  --done:#8fb08a; --in:#8ea7c4; --prio:#e08a6d; --r:14px;
+  --on-gold:#12110e; --on-prio:#12110e; --on-done:#12110e;
+  --veil:rgba(0,0,0,.6); --shadow:rgba(0,0,0,.45); --drop:rgba(18,17,14,.85); --track:rgba(239,232,218,.08); --shade:#8d7344;
   --sans:"Noto Sans TC",system-ui,sans-serif; --serif:"Cormorant Garamond","Noto Serif TC",serif; --tc:"Noto Serif TC",serif;
   color-scheme:dark;
+}
+html[data-theme="light"]{
+  --bg:#fbf6e9; --panel:#f3ead3; --panel2:#fffdf6; --card:#fffdf6; --ink:#362b20; --mute:#6e5a44; --faint:#8d7760;
+  --gold:#b07a12; --gold2:#8c5a07; --line:#e8dcbf; --line2:rgba(184,154,106,.42);
+  --done:#3d6b38; --in:#3d5c7a; --prio:#b5523a;
+  --on-gold:#362b20; --on-prio:#fffdf6; --on-done:#fffdf6;
+  --veil:rgba(54,43,32,.4); --shadow:rgba(54,43,32,.16); --drop:rgba(251,246,233,.94); --track:rgba(54,43,32,.08); --shade:#c4923a;
+  color-scheme:light;
+}
+html[data-theme="light"] body{
+  background:
+    radial-gradient(900px 420px at 0% -10%, rgba(227,162,26,.18), transparent 55%),
+    radial-gradient(700px 360px at 100% 0%, rgba(176,122,18,.1), transparent 50%),
+    var(--bg);
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -74,11 +93,11 @@ a.btn{text-decoration:none}
 .login p{margin:0 0 8px;color:var(--mute);font-size:13px;line-height:1.7}
 .field{display:grid;gap:6px;font-size:12px;color:var(--mute);letter-spacing:.1em}
 .field input,.field textarea{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 12px;color:var(--ink);font:inherit;font-size:15px;letter-spacing:0}
-.btn{background:var(--gold);color:#12110e;border:0;border-radius:10px;padding:11px 18px;font-weight:500}
+.btn{background:var(--gold);color:var(--on-gold);border:0;border-radius:10px;padding:11px 18px;font-weight:500}
 .link{background:none;border:0;color:var(--gold2);font-size:13px;padding:4px}
 .errmsg{color:var(--prio);font-size:13px;min-height:1em}
 /* ---------- app ---------- */
-.app{height:100%;display:grid;grid-template-columns:300px minmax(0,1fr);max-width:1200px;margin:0 auto}
+.app{height:100%;display:grid;grid-template-columns:minmax(280px,320px) minmax(0,1fr);max-width:1320px;margin:0 auto}
 .app.rail-collapsed{grid-template-columns:minmax(0,1fr)}
 .app.rail-collapsed .rail{display:none}
 @media (max-width:760px){.app.rail-collapsed{grid-template-columns:minmax(0,1fr)}.app.rail-collapsed .rail{display:flex}}
@@ -101,7 +120,7 @@ a.btn{text-decoration:none}
 @media (hover:none){.more{opacity:1;background:none}}
 .sec{display:flex;align-items:center;justify-content:space-between}
 .sec .more{position:static;transform:none;opacity:.7;width:24px;height:22px;background:none}
-.menu{position:fixed;z-index:30;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:grid}
+.menu{position:fixed;z-index:30;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px var(--shadow);display:grid}
 .menu button{display:flex;gap:10px;align-items:center;border:0;background:none;text-align:left;padding:9px 10px;border-radius:8px;font-size:14px}
 .menu button:hover{background:var(--panel2)}
 .menu .lab{font-size:11px;color:var(--faint);padding:6px 10px 2px;letter-spacing:.1em}
@@ -117,7 +136,7 @@ a.btn{text-decoration:none}
 .sw{flex:none;width:42px;height:24px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);position:relative;padding:0}
 .sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--faint);transition:transform .15s}
 .sw.on{background:var(--gold);border-color:var(--gold)}
-.sw.on::after{transform:translateX(18px);background:#12110e}
+.sw.on::after{transform:translateX(18px);background:var(--on-gold)}
 .rform{display:grid;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px}
 .times{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .times input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--ink);font:inherit;font-size:13px}
@@ -162,12 +181,12 @@ form.in{display:flex;gap:10px;border-top:1px solid var(--line2);padding:12px max
 form.in textarea{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;color:var(--ink);font:inherit;resize:none;height:46px;min-height:46px;max-height:140px;box-sizing:border-box;line-height:1.5;overflow-y:auto}
 form.in{align-items:flex-end}
 form.in .send,form.in .clip{height:46px}
-.send{border:0;background:var(--gold);color:#12110e;border-radius:var(--r);padding:0 18px;font-weight:500}
+.send{border:0;background:var(--gold);color:var(--on-gold);border-radius:var(--r);padding:0 18px;font-weight:500}
 .note{text-align:center;font-size:11px;color:var(--faint);padding-bottom:6px}
 .blank{flex:1;display:grid;place-items:center;color:var(--faint);font-family:var(--tc);padding:24px;text-align:center;line-height:1.8}
 /* ---------- sheet ---------- */
-.veil{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:20;padding:16px}
-.sheet{width:min(480px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:14px;max-height:90vh;overflow:auto}
+.veil{position:fixed;inset:0;background:var(--veil);display:grid;place-items:center;z-index:20;padding:16px}
+.sheet{width:min(560px,100%);background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px 22px 18px;display:grid;gap:16px;max-height:min(880px,92vh);overflow:auto;box-shadow:0 24px 64px var(--shadow)}
 .sheet.wide{width:min(860px,100%)}
 .cstat{display:flex;gap:6px;flex-wrap:wrap}
 .cdiff{max-height:260px}
@@ -220,7 +239,7 @@ form.in .send,form.in .clip{height:46px}
 .steps{display:grid;gap:4px;counter-reset:st}
 .step{display:grid;grid-template-columns:28px 1fr;gap:4px 12px;padding:12px 0;border-top:1px solid var(--line2)}
 .step .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:1px solid var(--line);color:var(--gold2);font-family:var(--serif)}
-.step.ok .n{background:var(--done);border-color:var(--done);color:#12110e}
+.step.ok .n{background:var(--done);border-color:var(--done);color:var(--on-done)}
 .step.bad .n{border-color:var(--prio);color:var(--prio)}
 .step b{font-family:var(--tc);font-weight:500;font-size:15px}
 .step .bd{grid-column:2;display:grid;gap:8px;font-size:13px;color:var(--mute);line-height:1.7;min-width:0}
@@ -269,13 +288,13 @@ pre.code{max-width:100%;box-sizing:border-box;margin:0;background:var(--bg);bord
   .msgs,.mention{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .task{margin-left:max(16px,env(safe-area-inset-left,0px));margin-right:16px}
 }
-.ub{font-style:normal;flex:none;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--gold);color:#12110e;font-size:11px;font-weight:500;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.ub{font-style:normal;flex:none;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--gold);color:var(--on-gold);font-size:11px;font-weight:500;display:grid;place-items:center;font-variant-numeric:tabular-nums}
 .search{padding-bottom:10px}
 .search input{width:100%;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:8px 12px;color:var(--ink);font:inherit;font-size:13px}
 .search input:focus{border-color:var(--line);outline:none}
 .pane{position:relative}
-.pane.drop::after{content:"放開以附加檔案";position:absolute;inset:8px;border:2px dashed var(--gold);border-radius:16px;display:grid;place-items:center;background:rgba(18,17,14,.85);color:var(--gold2);font-family:var(--tc);z-index:5;pointer-events:none}
-.jump{position:absolute;left:50%;transform:translateX(-50%);bottom:140px;z-index:4;border:1px solid var(--line);background:var(--panel2);color:var(--gold2);border-radius:99px;padding:6px 14px;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.4);animation:pop .2s ease}
+.pane.drop::after{content:"放開以附加檔案";position:absolute;inset:8px;border:2px dashed var(--gold);border-radius:16px;display:grid;place-items:center;background:var(--drop);color:var(--gold2);font-family:var(--tc);z-index:5;pointer-events:none}
+.jump{position:absolute;left:50%;transform:translateX(-50%);bottom:140px;z-index:4;border:1px solid var(--line);background:var(--panel2);color:var(--gold2);border-radius:99px;padding:6px 14px;font-size:12px;box-shadow:0 6px 18px var(--shadow);animation:pop .2s ease}
 .meta{font-size:11px;color:var(--faint);margin-top:3px;display:flex;gap:8px;align-items:center;min-height:16px;font-variant-numeric:tabular-nums}
 .m.me .meta{justify-content:flex-end}
 .cp{border:0;background:none;color:var(--faint);font-size:11px;padding:0;opacity:0;transition:opacity .15s}
@@ -297,7 +316,7 @@ pre.code{max-width:100%;box-sizing:border-box;margin:0;background:var(--bg);bord
 .menu{animation:menuin .14s ease}
 @keyframes menuin{from{opacity:0;transform:translateY(-4px)}}
 .item{transition:background .15s}
-.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;z-index:40;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:99px;padding:9px 18px;font-size:13px;transition:opacity .2s,transform .2s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;z-index:40;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:99px;padding:9px 18px;font-size:13px;transition:opacity .2s,transform .2s;pointer-events:none;box-shadow:0 8px 24px var(--shadow)}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 @media (max-width:760px){.app.chat .pane{animation:slidein .22s cubic-bezier(.2,.8,.2,1)}.app:not(.chat) .rail{animation:fadein .18s ease}}
 @keyframes slidein{from{transform:translateX(24px);opacity:.4}}
@@ -306,24 +325,31 @@ pre.code{max-width:100%;box-sizing:border-box;margin:0;background:var(--bg);bord
 .boot.done{opacity:0;pointer-events:none}
 .boot img{width:92px;height:92px;border-radius:22px;animation:breathe 2.4s ease-in-out infinite}
 @keyframes breathe{50%{transform:scale(1.04);filter:drop-shadow(0 0 14px rgba(228,203,147,.35))}}
-.ytrack{position:relative;width:min(320px,76vw);height:6px;border-radius:99px;background:rgba(239,232,218,.08);overflow:hidden}
-.yfill{position:absolute;inset:0 auto 0 0;width:0;border-radius:99px;background:linear-gradient(90deg,#8d7344,var(--gold),var(--gold2));transition:width .35s ease}
+.ytrack{position:relative;width:min(320px,76vw);height:6px;border-radius:99px;background:var(--track);overflow:hidden}
+.yfill{position:absolute;inset:0 auto 0 0;width:0;border-radius:99px;background:linear-gradient(90deg,var(--shade),var(--gold),var(--gold2));transition:width .35s ease}
 .yfill::after,.ytop div::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:shine 1.4s linear infinite}
 @keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 .yrow{width:min(320px,76vw);display:flex;justify-content:space-between;font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
 .yzm{font-family:var(--serif);font-weight:700;color:var(--gold2);letter-spacing:.08em}
 .ytop{position:fixed;top:0;left:0;right:0;height:3px;z-index:90;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .2s}
-.ytop div{position:absolute;inset:0 auto 0 0;width:40%;background:linear-gradient(90deg,#8d7344,var(--gold),var(--gold2));overflow:hidden;animation:ymove 1.1s ease-in-out infinite}
+.ytop div{position:absolute;inset:0 auto 0 0;width:40%;background:linear-gradient(90deg,var(--shade),var(--gold),var(--gold2));overflow:hidden;animation:ymove 1.1s ease-in-out infinite}
 @keyframes ymove{0%{left:-40%}100%{left:100%}}
 body.yloading .ytop{opacity:1}
-body.yblock::before{content:"";position:fixed;inset:0;z-index:89;background:rgba(18,17,14,.35);cursor:progress}
+body.yblock::before{content:"";position:fixed;inset:0;z-index:89;background:var(--veil);cursor:progress}
 /* settings pages */
 .shd{display:flex;align-items:center;gap:6px}
 .back2{border:0;background:none;color:var(--gold);font-size:26px;line-height:1;padding:0 6px 2px 0}
-.smenu{display:grid;border:1px solid var(--line2);border-radius:12px;overflow:hidden}
-.smenu button{display:flex;align-items:center;gap:12px;border:0;border-top:1px solid var(--line2);background:var(--bg);text-align:left;padding:11px 14px}
-.smenu button:first-child{border-top:0}
-.smenu button:hover{background:var(--panel2)}
+.smenu{display:grid;gap:8px;border:0;overflow:visible;background:transparent}
+.smenu button{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:16px;background:var(--card);text-align:left;padding:13px 14px;transition:border-color .15s,background .15s}
+.smenu button:hover{background:var(--panel2);border-color:var(--gold)}
+.theme-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.theme-pick button{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:12px;text-align:left;display:grid;gap:2px}
+.theme-pick button.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.theme-pick b{font-weight:500;font-size:14px}
+.theme-pick small{color:var(--mute);font-size:12px}
+.swatch{display:block;height:28px;border-radius:8px;border:1px solid var(--line);margin-bottom:6px}
+.swatch.dark{background:linear-gradient(135deg,#12110e 42%,#c9a96a)}
+.swatch.light{background:linear-gradient(135deg,#fbf6e9 42%,#e3a21a)}
 .si{width:24px;text-align:center;font-size:17px;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
 .st{flex:1;min-width:0;display:grid;gap:1px}
 .st b{font-weight:500;font-size:14px}
@@ -374,16 +400,16 @@ pre.notes{margin:0;white-space:pre-wrap;font:inherit;font-size:13px;color:var(--
 .tlearn{color:var(--faint)}
 .tk{color:var(--gold2);font-variant-numeric:tabular-nums}
 .iw .item .need,.iw .item .ub{margin-right:26px}
-.need{font-style:normal;flex:none;border-radius:99px;padding:1px 8px;font-size:11px;background:var(--prio);color:#12110e;white-space:nowrap}
+.need{font-style:normal;flex:none;border-radius:99px;padding:1px 8px;font-size:11px;background:var(--prio);color:var(--on-prio);white-space:nowrap}
 .atpop button small{color:var(--faint);font-size:12px;margin-left:auto;padding-left:12px}
 .atpop{max-height:300px;overflow-y:auto}
-#mic.rec{background:var(--prio);color:#12110e;border-color:var(--prio)}
+#mic.rec{background:var(--prio);color:var(--on-prio);border-color:var(--prio)}
 .prog{margin-left:8px;color:var(--mute)}
 .prog::before{content:'· '}
 .quick{display:flex;gap:6px;flex-wrap:wrap;padding:0 20px 6px}
 .quick button{border:1px dashed var(--line);background:none;border-radius:99px;padding:4px 10px;font-size:12px;color:var(--gold2);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .quick button:hover{background:var(--panel)}
-.atpop{position:absolute;left:20px;bottom:76px;z-index:6;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:grid}
+.atpop{position:absolute;left:20px;bottom:76px;z-index:6;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px var(--shadow);display:grid}
 .atpop button{display:flex;gap:8px;align-items:center;border:0;background:none;text-align:left;padding:7px 8px;border-radius:8px;font-size:14px}
 .atpop button.on,.atpop button:hover{background:var(--panel2)}
 @media (max-width:760px){.quick{padding-left:max(16px,env(safe-area-inset-left,0px))}.atpop{left:16px}}
@@ -394,7 +420,7 @@ pre.notes{margin:0;white-space:pre-wrap;font:inherit;font-size:13px;color:var(--
 .offb{margin:10px 20px 0;padding:9px 12px;border:1px solid rgba(224,138,109,.35);background:rgba(224,138,109,.08);border-radius:var(--r);font-size:13px;color:var(--ink);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .offb span{flex:1;min-width:0}
 .offb .ghost{padding:4px 10px}
-.danger-btn{background:var(--prio);color:#12110e}
+.danger-btn{background:var(--prio);color:var(--on-prio)}
 .cfl{margin:0;padding-left:20px;font-size:13px;color:var(--mute);line-height:1.8}
 .mv{border:1px solid var(--line2);background:none;border-radius:6px;width:26px;height:24px;color:var(--mute);font-size:12px;padding:0}
 .mv:hover{color:var(--gold2);border-color:var(--line)}
@@ -414,7 +440,7 @@ details.adv[open]{display:grid;gap:8px}
   .askp[hidden]{display:none}
   @keyframes askin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
   .askt{font-size:12px;color:var(--gold2);letter-spacing:.04em;display:flex;align-items:center;gap:6px;padding:0 4px}
-  .askc{background:var(--panel2);border:1px solid var(--gold);border-radius:14px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:8px}
+  .askc{background:var(--panel2);border:1px solid var(--gold);border-radius:14px;padding:12px;box-shadow:0 10px 30px var(--shadow);display:flex;flex-direction:column;gap:8px}
   .askh{display:flex;align-items:center;gap:8px}.askh .av{width:28px;height:28px;font-size:13px;flex:none}.askh b{font-weight:600}.askh small{color:var(--mute);flex:1}
   .askx{background:none;border:0;color:var(--mute);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}.askx:hover{color:var(--ink)}
   .askq{font-size:13px;line-height:1.6;color:var(--ink);white-space:pre-wrap;max-height:150px;overflow:auto;border-left:2px solid var(--line);padding-left:8px}
@@ -423,7 +449,7 @@ details.adv[open]{display:grid;gap:8px}
   .askc .row2{gap:8px}
   @media (min-width:1100px){body.asking #msgs{padding-right:360px}}
   @media (max-width:760px){.askp{left:10px;right:10px;width:auto;top:auto;bottom:calc(150px + env(safe-area-inset-bottom,0px));max-height:58vh;gap:8px}
-    .askp .askt{background:var(--panel2);border:1px solid var(--gold);border-radius:999px;padding:9px 14px;font-size:13px;justify-content:space-between;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+    .askp .askt{background:var(--panel2);border:1px solid var(--gold);border-radius:999px;padding:9px 14px;font-size:13px;justify-content:space-between;cursor:pointer;box-shadow:0 6px 20px var(--shadow)}
     .askp .askt::after{content:'▴';color:var(--gold2)}.askp.open .askt::after{content:'▾'}
     .askp:not(.open) .askc{display:none}
     body.asking #msgs{padding-bottom:64px}}
@@ -442,7 +468,7 @@ details.adv[open]{display:grid;gap:8px}
 <div class="ytop" aria-hidden="true"><div></div></div>
 
 <div class="home" id="home" hidden>
-  <header class="hhd"><div class="hl"><img src="/icon.png?v=octopus2" alt="" class="logo"><div class="brand" data-u>OCTA｜奧克塔</div></div><div class="row2"><span id="hLang"></span><button class="ghost" id="hLogin">登入網頁版</button></div></header>
+  <header class="hhd"><div class="hl"><img src="/icon.png?v=octopus2" alt="" class="logo"><div class="brand" data-u>OCTA｜奧克塔</div></div><div class="row2"><span id="hLang"></span><button class="ghost" id="hTheme" data-theme-btn type="button">紙色</button><button class="ghost" id="hLogin">登入網頁版</button></div></header>
   <section class="hero">
     <img src="/icon.png?v=octopus2" alt="OCTA 章魚標誌" class="logo-xl">
     <h1>你的 AI 同事團隊<br>交代一次，它自己做完</h1>
@@ -462,7 +488,7 @@ details.adv[open]{display:grid;gap:8px}
     <h2>能做什麼</h2>
     <div class="hgrid">
       <div><b>自己理解、自己做完</b><span>交代目標就好。它會自己規劃步驟、打開網站一路做完，做完列出需要你決定的事並附上建議。</span></div>
-      <div><b>操作你登入的網站</b><span>每個機器人有一個一直開著的專屬瀏覽器。遇到登入或驗證碼，把它的瀏覽器叫到螢幕上，幫它登入後按「繼續」。</span></div>
+      <div><b>操作你登入的網站</b><span>桌面版把機器人的瀏覽器嵌在 OCTA 右側，你看得到它怎麼點。遇到登入或驗證碼，就在那個畫面登入，再按「繼續」。</span></div>
       <div><b>重要的事先問你</b><span>發訊息、付款這類動作會先擬好等你核准，可以選「只這次」或「一律允許」。</span></div>
       <div><b>排程與持續巡查</b><span>說「每天 8 點」「每 30 分鐘」就會自己建好例行任務；卡住或需要你時通知手機、電腦、Telegram 或 LINE。</span></div>
       <div><b>會記住、會學技能</b><span>記得你的偏好和規則；做順的流程可以存成技能，輸入 / 就能再叫它做一次。</span></div>
@@ -500,6 +526,7 @@ details.adv[open]{display:grid;gap:8px}
     <button class="btn" id="lb">登入</button>
     <button type="button" class="link" id="lForgot">忘記密碼？</button>
     <button type="button" class="link" id="ls">還沒有帳號？註冊</button>
+    <button type="button" class="link" id="lTheme" data-theme-btn>紙色模式</button>
     <button type="button" class="link" id="lHome">← 回首頁</button>
     <button type="button" class="link" id="lOff" hidden>不登入，先用離線模式（資料只在這台電腦，不同步）</button>
     <div id="lLang" style="justify-self:center"></div>
@@ -520,7 +547,7 @@ details.adv[open]{display:grid;gap:8px}
 <div class="app" id="app" hidden>
   <aside class="rail">
     <header><div class="hl"><img src="/icon.png?v=octopus2" alt="" class="logo"><div><div class="brand">OCTA｜奧克塔</div><h1>機器人</h1></div></div>
-      <div class="hr"><span class="pill p-off" id="online">電腦離線</span><button class="gear" id="settings">設定</button></div></header>
+      <div class="hr"><span class="pill p-off" id="online">電腦離線</span><button class="gear" id="theme" data-theme-btn type="button" aria-label="切換外觀">紙色</button><button class="gear" id="settings">設定</button></div></header>
     <div class="upd" id="upd" hidden></div>
     <div class="new"><button id="nb">＋ 機器人</button><button id="ng">＋ 群組</button><button id="nf">＋ 分區</button></div>
     <div class="search"><input id="q" type="search" placeholder="搜尋機器人（Ctrl+K）" autocomplete="off"></div>
@@ -558,6 +585,23 @@ let MSG={};
 try{cur=localStorage.getItem('ebot_cur')}catch(e){}
 
 const DESK=()=>CFG.local||!!window.octaDesktop;
+function currentTheme(){return document.documentElement.dataset.theme==='light'?'light':'dark'}
+function applyTheme(t,persist){
+  const light=t==='light';
+  if(light)document.documentElement.dataset.theme='light';else delete document.documentElement.dataset.theme;
+  if(persist!==false){try{localStorage.setItem('octa_theme',light?'light':'dark')}catch(e){}}
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute('content',light?'#FBF6E9':'#12110e');
+  document.querySelectorAll('[data-theme-btn]').forEach(b=>{b.textContent=light?'深色':'紙色';b.setAttribute('aria-pressed',light?'true':'false')});
+}
+applyTheme(currentTheme(),false);
+document.addEventListener('click',e=>{
+  const set=e.target.closest('[data-set-theme]');
+  if(set){applyTheme(set.dataset.setTheme);document.querySelectorAll('[data-set-theme]').forEach(x=>x.classList.toggle('on',x.dataset.setTheme===currentTheme()));return}
+  const b=e.target.closest('[data-theme-btn]');if(b)applyTheme(currentTheme()==='light'?'dark':'light');
+});
+function showBrowserLabel(){return window.octaDesktop?'在 OCTA 右側顯示':'在電腦版顯示它的瀏覽器'}
+function browserHint(){return window.octaDesktop?'OCTA 右側的內建瀏覽器':'電腦版 OCTA 右側的內建瀏覽器'}
 /* YZ progress: thin bar for slow requests, full overlay (blocks input) for heavy ones */
 const ybar={n:0,t:null,on(block){this.n++;clearTimeout(this.t);this.t=setTimeout(()=>{document.body.classList.add('yloading');if(block)document.body.classList.add('yblock')},block?0:250)},
   off(){if(--this.n<=0){this.n=0;clearTimeout(this.t);document.body.classList.remove('yloading','yblock')}}};
@@ -725,7 +769,7 @@ function retryHtml(m){if(!/^⚠/.test(m.text)||NEEDLOGIN.test(m.text))return '';
 const NEEDLOGIN=/需要使用者在電腦上登入|需要.{0,6}登入/;
 function loginHtml(m){const b=bot(m.by);if(!b||b.browser==='mine'||!NEEDLOGIN.test(m.text))return '';
   if(convMsgs(m.conv).some(x=>x.id>m.id&&x.by===m.by))return '';
-  return `<div class="appr"><button type="button" class="btn" data-openb="${esc(m.by)}">🖥 在電腦上顯示它的瀏覽器</button><button type="button" class="no" data-retry="${m.id}">✓ 登入好了，繼續</button><button type="button" class="no" data-usemine="${m.id}">改用我的 Chrome（用已儲存的密碼自動填入）</button><small class="hint2">機器人停在登入頁。在電腦上顯示的視窗裡登入（不用關掉），再按「登入好了，繼續」。或改讓它在你自己的 Chrome 裡工作：由 Chrome 自動填入你存的密碼，機器人看不到密碼本身。</small></div>`}
+  return `<div class="appr"><button type="button" class="btn" data-openb="${esc(m.by)}">🖥 ${showBrowserLabel()}</button><button type="button" class="no" data-retry="${m.id}">✓ 登入好了，繼續</button><button type="button" class="no" data-usemine="${m.id}">改用我的 Chrome（用已儲存的密碼自動填入）</button><small class="hint2">機器人停在登入頁。在${browserHint()}裡登入（不用關掉），再按「登入好了，繼續」。或改讓它在你自己的 Chrome 裡工作：由 Chrome 自動填入你存的密碼，機器人看不到密碼本身。</small></div>`}
 function apprHtml(m){const a=m.text.match(APPR);if(!a)return '';
   const later=convMsgs(m.conv).some(x=>x.id>m.id&&(x.by==='me'||x.by===m.by));
   if(later)return '';
@@ -894,7 +938,7 @@ $('msgs').onclick=e=>{if(e.target.id==='stop')api('cancel','POST',{conv:cur}).th
 let atSel=0;
 // "/" at the start: built-in actions, saved instructions and the bot's skills
 function slashItems(){const c=conv(cur);if(!c)return [];const ids=isG(cur)?c.members:[cur];
-  const items=[{k:'browser',t:'/瀏覽器',d:I18N.t('在電腦上顯示它的瀏覽器')},{k:'hide',t:'/收起瀏覽器',d:I18N.t('收到背景')},{k:'stop',t:'/停止',d:I18N.t('停止目前的工作')},
+  const items=[{k:'browser',t:'/瀏覽器',d:I18N.t(showBrowserLabel())},{k:'hide',t:'/收起瀏覽器',d:I18N.t('收到背景')},{k:'stop',t:'/停止',d:I18N.t('停止目前的工作')},
     {k:'shots',t:'/截圖',d:I18N.t('看最後的畫面')},{k:'edit',t:'/任務設定',d:I18N.t('名稱、任務、排程、記憶')},{k:'clear',t:'/清空對話',d:I18N.t('清空對話紀錄')}];
   for(const id of ids)for(const k of ((S.skills||{})[id]||[]))items.push({k:'skill',t:'/'+k.name,d:'🧩 '+(isG(cur)?bot(id)?.name+' · ':'')+I18N.t('技能'),v:k.name,b:id});
   ((S.quick||{})[cur]||[]).forEach(q=>items.push({k:'quick',t:'⚡ '+(q.length>30?q.slice(0,30)+'…':q),d:I18N.t('常用指令'),v:q}));
@@ -1066,28 +1110,28 @@ function alertSheet(t,p){$('veil').innerHTML=`<div class="sheet"><h2>${esc(t)}</
 const ago=t=>{const m=Math.round((Date.now()-t)/60000),rt=new Intl.RelativeTimeFormat(I18N.lang,{numeric:'auto'});return m<60?rt.format(-m,'minute'):m<1440?rt.format(-Math.round(m/60),'hour'):rt.format(-Math.round(m/1440),'day')};
 /* ---------- bot browsers ---------- */
 async function openBrowser(id,url,hide){const b=bot(id);if(!b)return;
-  try{await api('open','POST',{bot:id,conv:cur,url:url||'',hide:!!hide});toast(I18N.t(!S.runnerOnline?'主機電腦離線，連上後就會處理':hide?'已收到背景':'已在電腦上顯示，請看電腦畫面'));refresh()}
+  try{await api('open','POST',{bot:id,conv:cur,url:url||'',hide:!!hide});toast(I18N.t(!S.runnerOnline?'主機電腦離線，連上後就會處理':hide?'已收到背景':(window.octaDesktop?'已在右側打開':'已請電腦版把瀏覽器顯示出來')));refresh()}
   catch(e){toast(e.message)}}
 $('browser').onclick=e=>{
   const c=conv(cur);if(!c)return;e.stopPropagation();
   const ids=isG(cur)?c.members.filter(bot):[cur];
   const one=id=>{const b=bot(id);return b.browser==='mine'
     ?`<div class="lab" data-u>${esc(b.name)}</div><button data-a="note" data-v="${id}"><span class="ck">ⓘ</span>使用你的 Chrome（在 Chrome 看它的分頁群組）</button>`
-    :`${isG(cur)?`<div class="lab" data-u>${esc(b.name)}</div>`:''}<button data-a="open" data-v="${id}"><span class="ck">🖥</span>在電腦上顯示它的瀏覽器</button><button data-a="hide" data-v="${id}"><span class="ck">⤓</span>收到背景</button>${isG(cur)?'':`<button data-a="url" data-v="${id}"><span class="ck">🔗</span>讓它打開網址…</button>`}`};
+    :`${isG(cur)?`<div class="lab" data-u>${esc(b.name)}</div>`:''}<button data-a="open" data-v="${id}"><span class="ck">🖥</span>${showBrowserLabel()}</button><button data-a="hide" data-v="${id}"><span class="ck">⤓</span>收到背景</button>${isG(cur)?'':`<button data-a="url" data-v="${id}"><span class="ck">🔗</span>讓它打開網址…</button>`}`};
   popMenu($('browser'),ids.map(one).join('<hr>')+`<hr><button data-a="shots"><span class="ck">🖼</span>看最後的畫面（截圖）</button>`,
     {open:id=>openBrowser(id),hide:id=>openBrowser(id,'',true),url:id=>urlSheet(id),shots:()=>shotSheet(ids),note:()=>toast(I18N.t('這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。'))})};
 function urlSheet(id){const b=bot(id);
-  $('veil').innerHTML=`<form class="sheet" id="uf"><h2>讓它打開網址</h2><p>在電腦上用「<span data-u>${esc(b.name)}</span>」的瀏覽器打開：</p>
+  $('veil').innerHTML=`<form class="sheet" id="uf"><h2>讓它打開網址</h2><p>用「<span data-u>${esc(b.name)}</span>」的瀏覽器打開，畫面在${browserHint()}：</p>
   <label class="field">網址<input id="uu" required placeholder="https://" value="${esc(b.page||'')}"></label>
   <div class="acts"><button type="button" class="no" id="sx">取消</button><button class="btn">在電腦上開啟</button></div></form>`;
   $('veil').hidden=false;$('uu').focus();$('uu').select();$('sx').onclick=closeSheet;
   $('uf').onsubmit=ev=>{ev.preventDefault();const u=$('uu').value.trim();closeSheet();openBrowser(id,u)}}
 function shotSheet(ids){
   $('veil').innerHTML=`<div class="sheet"><h2>機器人的瀏覽器</h2>
-  <p>每個機器人在主機電腦上有一個自己的瀏覽器，平常在背景開著（獨立的分頁、登入和 Cookie），上次的分頁會留著接著用。按「在電腦上顯示」就會跳到螢幕上，你可以看它在做什麼、幫它登入；看完按「收到背景」。</p>
+  <p>${window.octaDesktop?'這個視窗右側就是它的瀏覽器。你看得到游標和點擊，登入也在同一個畫面完成。收到背景後它繼續在裡面工作。頁面上的數字它只能照這次看得到的抄，看不清會直說。':'每個機器人在電腦版 OCTA 裡有自己的瀏覽器，3.0.4 起嵌在視窗右側（較舊的電腦版會另外開 Chrome）。按下面的按鈕就會把它顯示出來，你可以看它在做什麼、幫它登入。'}</p>
   ${ids.map(id=>{const b=bot(id);return `<div class="bw" data-id="${id}"><div class="hd"><span class="av sm" data-u>${avOf(b.id)}</span><b data-u>${esc(b.name)}</b>${S.busy.some(x=>x.bot_id===id&&x.status==='running')?'<span class="pill p-pr">工作中</span>':''}</div>
     ${b.shot_ts?`<img class="shot" alt="${esc(b.name)}" id="img_${id}"><div class="meta">截圖：${ago(b.shot_ts)}${b.page?' · <span data-u>'+esc(b.page)+'</span>':''}</div>`:`<div class="noshot">還沒有畫面。機器人用過瀏覽器後，這裡會顯示它最後停在哪一頁。</div>`}
-    ${b.browser==='mine'?`<div class="meta">這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。</div>`:`<div class="row2"><button class="btn" data-open="${id}">在電腦上顯示</button><button class="ghost" data-hide="${id}">收到背景</button><button class="ghost" data-url="${id}">讓它打開網址…</button></div>`}</div>`}).join('')}
+    ${b.browser==='mine'?`<div class="meta">這個機器人使用你的 Chrome，直接在你的 Chrome 裡查看它的分頁群組即可。</div>`:`<div class="row2"><button class="btn" data-open="${id}">${showBrowserLabel()}</button><button class="ghost" data-hide="${id}">收到背景</button><button class="ghost" data-url="${id}">讓它打開網址…</button></div>`}</div>`}).join('')}
   <div class="acts"><button class="btn" id="sx">關閉</button></div></div>`;
   $('veil').hidden=false;$('sx').onclick=closeSheet;
   ids.forEach(id=>{if(bot(id).shot_ts)api('shot/'+id).then(d=>d.file?fileData(d.file):d).then(d=>{const im=$('img_'+id);if(im&&d.data)im.src=`data:${d.mime};base64,${d.data}`}).catch(e=>{const im=$('img_'+id);if(im)im.replaceWith(Object.assign(document.createElement('div'),{className:'noshot',textContent:e.message}))})});
@@ -1278,7 +1322,12 @@ function openSettings(){
     ['logs','📋','工作紀錄','最近 100 筆'],
     ['guide','🧭','設定指引','從頭設定一次'],
     ['ver','✨','最新版本',(window._upd&&['available','ready'].includes(window._upd.state))?'有新版本':'版本與更新內容']];
+  const theme=currentTheme();
   $('veil').innerHTML=`<div class="sheet"><h2>設定</h2>
+  <div class="theme-pick" role="group" aria-label="外觀">
+    <button type="button" data-set-theme="dark" class="${theme==='dark'?'on':''}"><span class="swatch dark"></span><b>深色</b><small>金線暗底</small></button>
+    <button type="button" data-set-theme="light" class="${theme==='light'?'on':''}"><span class="swatch light"></span><b>紙色</b><small>YourZone 奶油紙</small></button>
+  </div>
   <nav class="smenu">${rows.map(([k,i,t,d])=>`<button type="button" data-s="${k}"><span class="si">${i}</span><span class="st"><b>${t}</b><small>${d}</small></span><span class="sa">›</span></button>`).join('')}</nav>
   <label class="toggle"><span>🌐 <span>語言</span></span>${I18N.select('sLang')}</label>
   <div class="acts">${CFG.local?'':'<button class="del" id="lo">登出</button>'}<button class="btn" id="sx">關閉</button></div></div>`;
